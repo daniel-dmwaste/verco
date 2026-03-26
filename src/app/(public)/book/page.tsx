@@ -1,26 +1,19 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { BookingStepper } from '@/components/booking/booking-stepper'
+import { AddressAutocomplete } from '@/components/booking/address-autocomplete'
 import type { Database } from '@/lib/supabase/types'
 
 type EligibleProperty = Database['public']['Tables']['eligible_properties']['Row']
-
-interface PlaceSuggestion {
-  place_id: string
-  description: string
-}
 
 export default function AddressPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  const [query, setQuery] = useState('')
-  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([])
-  const [isSearching, setIsSearching] = useState(false)
   const [selectedProperty, setSelectedProperty] = useState<EligibleProperty | null>(null)
   const [notFound, setNotFound] = useState(false)
 
@@ -97,50 +90,17 @@ export default function AddressPage() {
     },
   })
 
-  const searchAddress = useCallback(
-    async (input: string) => {
-      if (input.length < 3) {
-        setSuggestions([])
-        return
-      }
-      setIsSearching(true)
-      try {
-        // Call the google-places-proxy Edge Function
-        const { data, error } = await supabase.functions.invoke(
-          'google-places-proxy',
-          {
-            body: { input, types: 'address', components: 'country:au' },
-          }
-        )
-        if (!error && data?.predictions) {
-          setSuggestions(
-            (data.predictions as Array<{ place_id: string; description: string }>).map(
-              (p) => ({
-                place_id: p.place_id,
-                description: p.description,
-              })
-            )
-          )
-        }
-      } finally {
-        setIsSearching(false)
-      }
-    },
-    [supabase]
-  )
-
-  async function handleSelectSuggestion(suggestion: PlaceSuggestion) {
-    setQuery(suggestion.description)
-    setSuggestions([])
+  async function handleAddressSelect(placeId: string, description: string) {
     setNotFound(false)
     setSelectedProperty(null)
 
-    // Look up the address in eligible_properties
+    // Look up the address in eligible_properties (case-insensitive contains on street)
+    const streetPart = description.split(',')[0] ?? description
     const { data: properties } = await supabase
       .from('eligible_properties')
       .select('*')
       .or(
-        `google_place_id.eq.${suggestion.place_id},address.ilike.%${suggestion.description.split(',')[0]}%`
+        `google_place_id.eq.${placeId},formatted_address.ilike.%${streetPart}%,address.ilike.%${streetPart}%`
       )
       .limit(1)
 
@@ -190,44 +150,16 @@ export default function AddressPage() {
         {/* Search card */}
         <div className="rounded-xl bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="address"
-              className="text-xs font-medium text-gray-700"
-            >
+            <label className="text-xs font-medium text-gray-700">
               Search your property address
             </label>
-            <input
-              id="address"
-              type="text"
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value)
-                void searchAddress(e.target.value)
-              }}
+            <AddressAutocomplete
+              onSelect={(placeId, description) =>
+                void handleAddressSelect(placeId, description)
+              }
               placeholder="Start typing your address..."
-              className="w-full rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-300 focus:border-[#293F52] focus:border-2 focus:bg-white"
             />
           </div>
-
-          {/* Suggestions */}
-          {suggestions.length > 0 && (
-            <div className="mt-1 flex flex-col gap-0.5">
-              {suggestions.map((s) => (
-                <button
-                  key={s.place_id}
-                  type="button"
-                  onClick={() => void handleSelectSuggestion(s)}
-                  className="rounded-lg bg-white px-3.5 py-3 text-left text-[13px] text-gray-700 hover:bg-gray-50"
-                >
-                  {s.description}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {isSearching && (
-            <p className="mt-2 text-xs text-gray-400">Searching...</p>
-          )}
 
           {/* Property found banner */}
           {selectedProperty && (

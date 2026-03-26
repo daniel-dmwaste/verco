@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { HeroSearch } from './hero-search'
 
 interface ClientBranding {
   name: string
@@ -142,33 +143,7 @@ export default async function LandingPage() {
           </p>
 
           {/* Search box */}
-          <div className="flex max-w-[560px] items-center gap-3 rounded-[14px] bg-white p-2 pl-5 shadow-[0_8px_32px_rgba(0,0,0,0.2)]">
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#B0B0B0"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="shrink-0"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-            <input
-              type="text"
-              placeholder="Enter your property address to get started..."
-              className="flex-1 border-none bg-transparent text-[15px] text-gray-900 outline-none placeholder:text-gray-300"
-            />
-            <Link
-              href="/book"
-              className="shrink-0 rounded-[10px] bg-[#293F52] px-6 py-3 font-[family-name:var(--font-heading)] text-sm font-semibold text-white"
-            >
-              Check Eligibility &rarr;
-            </Link>
-          </div>
+          <HeroSearch />
 
           <p className="mt-2.5 text-xs text-[#8FA5B8]">
             e.g. 23 Leda Blvd, Wellard WA 6170
