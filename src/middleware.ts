@@ -95,12 +95,22 @@ export async function middleware(request: NextRequest) {
   }
   // /book/* and /survey/* are public — no guard
 
-  // --- 4. Set tenant headers on response ---
-  supabaseResponse.headers.set('x-client-id', client.id)
-  supabaseResponse.headers.set('x-client-slug', client.slug)
-  supabaseResponse.headers.set('x-contractor-id', client.contractor_id)
+  // --- 4. Forward tenant info as request headers for server components/actions ---
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-client-id', client.id)
+  requestHeaders.set('x-client-slug', client.slug)
+  requestHeaders.set('x-contractor-id', client.contractor_id)
 
-  return supabaseResponse
+  const response = NextResponse.next({
+    request: { headers: requestHeaders },
+  })
+
+  // Transfer supabase auth cookies to the final response
+  supabaseResponse.cookies.getAll().forEach((cookie) => {
+    response.cookies.set(cookie)
+  })
+
+  return response
 }
 
 export const config = {
