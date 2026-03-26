@@ -41,13 +41,13 @@ export function ConfirmForm() {
     queryKey: ['booking-summary', itemsParam, collectionDateId],
     enabled: selectedItems.size > 0 && !!collectionDateId,
     queryFn: async () => {
-      const serviceTypeIds = Array.from(selectedItems.keys())
+      const serviceIds = Array.from(selectedItems.keys())
 
-      const [serviceTypesResult, dateResult, fyResult] = await Promise.all([
+      const [servicesResult, dateResult, fyResult] = await Promise.all([
         supabase
-          .from('service_type')
-          .select('id, name, category!inner(name, capacity_bucket)')
-          .in('id', serviceTypeIds),
+          .from('service')
+          .select('id, name, category!inner(name, code)')
+          .in('id', serviceIds),
         supabase
           .from('collection_date')
           .select('date')
@@ -66,7 +66,7 @@ export function ConfirmForm() {
         const { data: items } = await supabase
           .from('booking_item')
           .select(
-            'no_services, service_type_id, booking!inner(property_id, fy_id, status)'
+            'no_services, service_id, booking!inner(property_id, fy_id, status)'
           )
           .eq('booking.property_id', propertyId)
           .eq('booking.fy_id', fyResult.data.id)
@@ -75,8 +75,8 @@ export function ConfirmForm() {
         if (items) {
           for (const item of items) {
             usage.set(
-              item.service_type_id,
-              (usage.get(item.service_type_id) ?? 0) + item.no_services
+              item.service_id,
+              (usage.get(item.service_id) ?? 0) + item.no_services
             )
           }
         }
@@ -85,19 +85,19 @@ export function ConfirmForm() {
       // Get service rules for pricing
       const { data: rules } = await supabase
         .from('service_rules')
-        .select('service_type_id, max_collections, extra_unit_price')
+        .select('service_id, max_collections, extra_unit_price')
         .eq('collection_area_id', collectionAreaId)
-        .in('service_type_id', serviceTypeIds)
+        .in('service_id', serviceIds)
 
       const rulesMap = new Map(
-        (rules ?? []).map((r) => [r.service_type_id, r])
+        (rules ?? []).map((r) => [r.service_id, r])
       )
 
       // Build line items with free/paid breakdown
-      type ServiceTypeWithCategory = {
+      type ServiceWithCategory = {
         id: string
         name: string
-        category: { name: string; capacity_bucket: string }
+        category: { name: string; code: string }
       }
 
       const included: Array<{ name: string; qty: number }> = []
@@ -108,8 +108,8 @@ export function ConfirmForm() {
         lineTotal: number
       }> = []
 
-      if (serviceTypesResult.data) {
-        for (const st of serviceTypesResult.data as unknown as ServiceTypeWithCategory[]) {
+      if (servicesResult.data) {
+        for (const st of servicesResult.data as unknown as ServiceWithCategory[]) {
           const qty = selectedItems.get(st.id) ?? 0
           const rule = rulesMap.get(st.id)
           const used = usage.get(st.id) ?? 0
@@ -148,8 +148,8 @@ export function ConfirmForm() {
     try {
       // Build items array for the Edge Function
       const items = Array.from(selectedItems.entries()).map(
-        ([service_type_id, no_services]) => ({
-          service_type_id,
+        ([service_id, no_services]) => ({
+          service_id,
           no_services,
         })
       )

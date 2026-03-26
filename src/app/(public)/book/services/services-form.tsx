@@ -10,18 +10,18 @@ import type { BookingItem } from '@/lib/booking/schemas'
 
 interface ServiceRuleRow {
   id: string
-  service_type_id: string
+  service_id: string
   max_collections: number
   extra_unit_price: number
   collection_area_id: string
-  service_type: {
+  service: {
     id: string
     name: string
     category_id: string
     category: {
       id: string
       name: string
-      capacity_bucket: string
+      code: string
     }
   }
 }
@@ -35,7 +35,7 @@ export function ServicesForm() {
 
   const supabase = createClient()
 
-  // Quantities map: service_type_id → quantity
+  // Quantities map: service_id → quantity
   const [quantities, setQuantities] = useState<Map<string, number>>(new Map())
 
   // Fetch service rules for this collection area
@@ -46,7 +46,7 @@ export function ServicesForm() {
       const { data } = await supabase
         .from('service_rules')
         .select(
-          '*, service_type!inner(id, name, category_id, category!inner(id, name, capacity_bucket))'
+          '*, service!inner(id, name, category_id, category!inner(id, name, code))'
         )
         .eq('collection_area_id', collectionAreaId)
 
@@ -70,7 +70,7 @@ export function ServicesForm() {
       const { data: items } = await supabase
         .from('booking_item')
         .select(
-          'no_services, service_type_id, booking!inner(property_id, fy_id, status)'
+          'no_services, service_id, booking!inner(property_id, fy_id, status)'
         )
         .eq('booking.property_id', propertyId)
         .eq('booking.fy_id', fy.id)
@@ -80,8 +80,8 @@ export function ServicesForm() {
       if (items) {
         for (const item of items) {
           usage.set(
-            item.service_type_id,
-            (usage.get(item.service_type_id) ?? 0) + item.no_services
+            item.service_id,
+            (usage.get(item.service_id) ?? 0) + item.no_services
           )
         }
       }
@@ -97,7 +97,7 @@ export function ServicesForm() {
     const anc: ServiceRuleRow[] = []
 
     for (const rule of serviceRules) {
-      const bucket = rule.service_type.category.capacity_bucket
+      const bucket = rule.service.category.code
       if (bucket === 'bulk') bulk.push(rule)
       else if (bucket === 'anc') anc.push(rule)
     }
@@ -115,7 +115,7 @@ export function ServicesForm() {
     let totalUsed = 0
     for (const rule of rules) {
       totalMax += rule.max_collections
-      totalUsed += fyUsage?.get(rule.service_type_id) ?? 0
+      totalUsed += fyUsage?.get(rule.service_id) ?? 0
     }
     return {
       totalMax,
@@ -129,20 +129,20 @@ export function ServicesForm() {
     if (!serviceRules || !fyUsage) return []
 
     return serviceRules
-      .filter((rule) => (quantities.get(rule.service_type_id) ?? 0) > 0)
+      .filter((rule) => (quantities.get(rule.service_id) ?? 0) > 0)
       .map((rule) => {
-        const qty = quantities.get(rule.service_type_id) ?? 0
-        const used = fyUsage.get(rule.service_type_id) ?? 0
+        const qty = quantities.get(rule.service_id) ?? 0
+        const used = fyUsage.get(rule.service_id) ?? 0
         const remainingFree = Math.max(0, rule.max_collections - used)
         const freeUnits = Math.min(qty, remainingFree)
         const paidUnits = qty - freeUnits
         const unitPriceCents = Math.round(rule.extra_unit_price * 100)
 
         return {
-          service_type_id: rule.service_type_id,
-          service_name: rule.service_type.name,
-          category_name: rule.service_type.category.name,
-          capacity_bucket: rule.service_type.category.capacity_bucket as
+          service_id: rule.service_id,
+          service_name: rule.service.name,
+          category_name: rule.service.category.name,
+          code: rule.service.category.code as
             | 'bulk'
             | 'anc'
             | 'id',
@@ -212,7 +212,7 @@ export function ServicesForm() {
     const extraRows = pricingItems.filter(
       (item) =>
         item.paid_units > 0 &&
-        rules.some((r) => r.service_type_id === item.service_type_id)
+        rules.some((r) => r.service_id === item.service_id)
     )
 
     return (
@@ -229,7 +229,7 @@ export function ServicesForm() {
         </div>
         <div className="flex flex-col gap-2">
           {rules.map((rule) => {
-            const qty = quantities.get(rule.service_type_id) ?? 0
+            const qty = quantities.get(rule.service_id) ?? 0
             return (
               <div
                 key={rule.id}
@@ -241,17 +241,17 @@ export function ServicesForm() {
                   />
                   <div className="flex flex-col gap-0.5">
                     <span className="text-[15px] font-semibold text-gray-900">
-                      {rule.service_type.name}
+                      {rule.service.name}
                     </span>
                     <span className="text-xs text-gray-500">
-                      {rule.service_type.category.name}
+                      {rule.service.category.name}
                     </span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2.5 rounded-full bg-gray-50 px-2.5 py-1">
                   <button
                     type="button"
-                    onClick={() => updateQty(rule.service_type_id, -1)}
+                    onClick={() => updateQty(rule.service_id, -1)}
                     className="flex size-7 items-center justify-center rounded-full text-lg font-semibold text-gray-700"
                   >
                     &minus;
@@ -261,7 +261,7 @@ export function ServicesForm() {
                   </span>
                   <button
                     type="button"
-                    onClick={() => updateQty(rule.service_type_id, 1)}
+                    onClick={() => updateQty(rule.service_id, 1)}
                     className="flex size-7 items-center justify-center rounded-full bg-[#293F52] text-lg font-semibold text-white"
                   >
                     +
@@ -274,7 +274,7 @@ export function ServicesForm() {
           {/* Extra cost rows */}
           {extraRows.map((item) => (
             <div
-              key={`extra-${item.service_type_id}`}
+              key={`extra-${item.service_id}`}
               className="flex items-center justify-between rounded-lg border border-[#00B864] bg-[#F0FBF5] px-3.5 py-2.5 text-[13px]"
             >
               <div className="flex items-center gap-2 text-gray-700">

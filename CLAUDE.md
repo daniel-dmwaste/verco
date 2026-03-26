@@ -45,7 +45,17 @@ Contractor          e.g. D&M Waste Management
               └── Collection Area   e.g. KWN-1, VV-COT — the atomic booking unit
                     └── Eligible Property   e.g. 23 Leda Blvd, Wellard
                           └── Booking
+
+Category (Bulk / Ancillary / Illegal Dumping)
+  └── Service (General, Green, Mattress, E-Waste, Whitegoods)
 ```
+
+**Schema naming:**
+- `category` table = capacity grouping: Bulk, Ancillary, Illegal Dumping (has `code` column: 'bulk', 'anc', 'id')
+- `service` table = individual service types: General, Green, Mattress, E-Waste, Whitegoods (FK `category_id` → category)
+- `allocation_rules` = per collection_area per category (max collections per FY)
+- `service_rules` = per collection_area per service (max collections + overage price)
+- `booking_item.service_id` → FK to `service` table (not `service_type`)
 
 **Key rules:**
 - A resident portal is branded at the **client** level (e.g. `kwn.verco.au`)

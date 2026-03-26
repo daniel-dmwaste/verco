@@ -1,10 +1,10 @@
 import { z } from 'zod'
 
 export const BookingItemSchema = z.object({
-  service_type_id: z.string().uuid(),
+  service_id: z.string().uuid(),
   service_name: z.string(),
   category_name: z.string(),
-  capacity_bucket: z.enum(['bulk', 'anc', 'id']),
+  code: z.enum(['bulk', 'anc', 'id']),
   no_services: z.number().int().min(0),
   free_units: z.number().int().min(0),
   paid_units: z.number().int().min(0),

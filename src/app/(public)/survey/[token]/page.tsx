@@ -37,7 +37,7 @@ export default async function SurveyPage({ params }: SurveyPageProps) {
       `ref,
        booking_item(
          no_services, is_extra,
-         service_type!inner(name),
+         service!inner(name),
          collection_date!inner(date)
        )`
     )
@@ -48,14 +48,14 @@ export default async function SurveyPage({ params }: SurveyPageProps) {
   const items = (booking?.booking_item ?? []) as Array<{
     no_services: number
     is_extra: boolean
-    service_type: { name: string }
+    service: { name: string }
     collection_date: { date: string }
   }>
 
   const collectionDate = items.length > 0 ? items[0]?.collection_date?.date ?? '' : ''
 
   const serviceChips = items.map((item) => ({
-    name: (item.service_type as { name: string }).name,
+    name: (item.service as { name: string }).name,
     qty: item.no_services,
     isExtra: item.is_extra,
   }))

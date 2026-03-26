@@ -84,7 +84,7 @@ export default async function AdminDashboardPage() {
   const { data: fyItems } = fy
     ? await supabase
         .from('booking_item')
-        .select('no_services, service_type!inner(name, category!inner(name, capacity_bucket)), booking!inner(fy_id, status)')
+        .select('no_services, service!inner(name, category!inner(name, code)), booking!inner(fy_id, status)')
         .eq('booking.fy_id', fy.id)
         .not('booking.status', 'in', '("Cancelled","Pending Payment")')
     : { data: null }
@@ -93,7 +93,7 @@ export default async function AdminDashboardPage() {
   const serviceUsage = new Map<string, number>()
   if (fyItems) {
     for (const item of fyItems) {
-      const st = item.service_type as unknown as { name: string; category: { name: string; capacity_bucket: string } }
+      const st = item.service as unknown as { name: string; category: { name: string; code: string } }
       serviceUsage.set(st.name, (serviceUsage.get(st.name) ?? 0) + item.no_services)
     }
   }
@@ -109,15 +109,15 @@ export default async function AdminDashboardPage() {
   // Get total allocation maximums from allocation rules
   const { data: allocRules } = await supabase
     .from('allocation_rules')
-    .select('max_collections, category!inner(capacity_bucket)')
+    .select('max_collections, category!inner(code)')
 
   let bulkMax = 0
   let ancMax = 0
   if (allocRules) {
     for (const rule of allocRules) {
-      const cat = rule.category as unknown as { capacity_bucket: string }
-      if (cat.capacity_bucket === 'bulk') bulkMax += rule.max_collections
-      else if (cat.capacity_bucket === 'anc') ancMax += rule.max_collections
+      const cat = rule.category as unknown as { code: string }
+      if (cat.code === 'bulk') bulkMax += rule.max_collections
+      else if (cat.code === 'anc') ancMax += rule.max_collections
     }
   }
   if (bulkMax === 0) bulkMax = 1

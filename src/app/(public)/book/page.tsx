@@ -17,14 +17,13 @@ export default function AddressPage() {
   const [selectedProperty, setSelectedProperty] = useState<EligibleProperty | null>(null)
   const [notFound, setNotFound] = useState(false)
 
-  // Fetch FY allocation info when a property is selected
+  // Fetch FY allocation at category level when a property is selected
   const { data: allocationData } = useQuery({
     queryKey: ['allocations', selectedProperty?.id],
     enabled: !!selectedProperty,
     queryFn: async () => {
       if (!selectedProperty) return null
 
-      // Get current FY
       const { data: fy } = await supabase
         .from('financial_year')
         .select('id, label')
@@ -33,60 +32,56 @@ export default function AddressPage() {
 
       if (!fy) return null
 
-      // Get allocation rules for this collection area
+      // Get allocation rules joined with category (Bulk / Ancillary)
       const { data: rules } = await supabase
         .from('allocation_rules')
-        .select('*, category!inner(name, capacity_bucket)')
+        .select('max_collections, category!inner(name, code)')
         .eq('collection_area_id', selectedProperty.collection_area_id)
 
-      // Get existing bookings for this property in this FY
-      const { data: existingItems } = await supabase
+      // Get FY usage grouped by category code for this property
+      const { data: usageItems } = await supabase
         .from('booking_item')
-        .select('no_services, service_type_id, booking!inner(property_id, fy_id, status)')
+        .select(
+          'no_services, service!inner(category!inner(code)), booking!inner(property_id, fy_id, status)'
+        )
         .eq('booking.property_id', selectedProperty.id)
         .eq('booking.fy_id', fy.id)
         .not('booking.status', 'in', '("Cancelled","Pending Payment")')
 
-      // Get bookings for history display
-      const { data: bookings } = await supabase
-        .from('booking')
-        .select('ref, status, created_at, booking_item(no_services, service_type_id, service_type!inner(name))')
-        .eq('property_id', selectedProperty.id)
-        .eq('fy_id', fy.id)
-        .not('status', 'in', '("Cancelled","Pending Payment")')
-        .order('created_at', { ascending: false })
-
-      // Sum usage per capacity bucket
-      type RuleWithCategory = NonNullable<typeof rules>[number]
-      const bucketUsage = new Map<string, number>()
-
-      if (existingItems) {
-        for (const item of existingItems) {
-          const bucket = 'bulk' // default; we'll refine below
-          bucketUsage.set(bucket, (bucketUsage.get(bucket) ?? 0) + item.no_services)
+      // Sum usage per category code
+      const usageByCode = new Map<string, number>()
+      if (usageItems) {
+        for (const item of usageItems) {
+          const svc = item.service as unknown as { category: { code: string } }
+          const code = svc.category.code
+          usageByCode.set(code, (usageByCode.get(code) ?? 0) + item.no_services)
         }
       }
 
-      // Build allocation summary per category
-      const allocations = (rules ?? []).map((rule: RuleWithCategory) => {
-        const category = rule.category as unknown as { name: string; capacity_bucket: string }
-        const used = existingItems
-          ? existingItems.reduce((sum, item) => sum + item.no_services, 0)
-          : 0
+      // Build exactly two category-level tiles
+      const allocations = (rules ?? []).map((rule) => {
+        const cat = rule.category as unknown as { name: string; code: string }
+        const used = usageByCode.get(cat.code) ?? 0
         return {
-          categoryName: category.name,
-          bucket: category.capacity_bucket,
+          categoryName: cat.name,
+          code: cat.code,
           maxCollections: rule.max_collections,
           used: Math.min(used, rule.max_collections),
           remaining: Math.max(0, rule.max_collections - used),
         }
       })
 
-      return {
-        fy,
-        allocations,
-        bookings: bookings ?? [],
-      }
+      // Get bookings for history display
+      const { data: bookings } = await supabase
+        .from('booking')
+        .select('ref, status, created_at')
+        .eq('property_id', selectedProperty.id)
+        .eq('fy_id', fy.id)
+        .not('status', 'in', '("Cancelled","Pending Payment")')
+        .order('created_at', { ascending: false })
+        .limit(5)
+
+      return { fy, allocations, bookings: bookings ?? [] }
     },
   })
 
@@ -94,7 +89,6 @@ export default function AddressPage() {
     setNotFound(false)
     setSelectedProperty(null)
 
-    // Look up the address in eligible_properties (case-insensitive contains on street)
     const streetPart = description.split(',')[0] ?? description
     console.log('[AddressStep] Looking up property:', { placeId, description, streetPart })
 
@@ -143,8 +137,8 @@ export default function AddressPage() {
 
       <BookingStepper currentStep={1} />
 
-      {/* Content */}
-      <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-8 pb-24 pt-6">
+      {/* Content — max-w-2xl centered */}
+      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 overflow-y-auto px-5 pb-24 pt-6">
         <div>
           <h1 className="font-[family-name:var(--font-heading)] text-[22px] font-bold leading-tight text-[#293F52]">
             Book a Collection
@@ -155,7 +149,7 @@ export default function AddressPage() {
           </p>
         </div>
 
-        {/* Search card */}
+        {/* Search card — full width */}
         <div className="rounded-xl bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-gray-700">
@@ -169,7 +163,7 @@ export default function AddressPage() {
             />
           </div>
 
-          {/* Property found banner */}
+          {/* Property found banner — full width */}
           {selectedProperty && (
             <div className="mt-3 flex items-center gap-2.5 rounded-[10px] border border-[#00B864] bg-[#E8FDF0] px-4 py-3 text-[13px] font-medium text-[#006A38]">
               <span className="shrink-0 text-base">&#10003;</span>
@@ -196,76 +190,76 @@ export default function AddressPage() {
           )}
         </div>
 
-        {/* Property location */}
-        {selectedProperty && (
-          <div className="overflow-hidden rounded-xl bg-white shadow-sm">
-            <div className="flex items-center gap-2.5 px-4 py-3.5">
-              <span className="text-base text-[#00B864]">&#x1F4CD;</span>
-              <div>
-                <div className="text-[13px] font-semibold text-[#293F52]">
-                  Property Location
-                </div>
-                <div className="mt-px text-xs text-[#00B864]">
-                  {selectedProperty.formatted_address ??
-                    selectedProperty.address}
+        {/* Two-column grid: Map (left) + Allocations (right) */}
+        {selectedProperty && allocationData && (
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Left: Property location + map */}
+            <div className="overflow-hidden rounded-xl bg-white shadow-sm">
+              <div className="flex items-center gap-2.5 px-4 py-3.5">
+                <span className="text-base text-[#00B864]">&#x1F4CD;</span>
+                <div>
+                  <div className="text-[13px] font-semibold text-[#293F52]">
+                    Property Location
+                  </div>
+                  <div className="mt-px text-xs text-[#00B864]">
+                    {selectedProperty.formatted_address ??
+                      selectedProperty.address}
+                  </div>
                 </div>
               </div>
-            </div>
-            {/* Map placeholder */}
-            <div className="flex h-[190px] items-center justify-center bg-[#dde8d4]">
-              <span className="text-sm text-gray-500">Map view</span>
-            </div>
-          </div>
-        )}
-
-        {/* Service Allocations */}
-        {selectedProperty && allocationData && (
-          <div className="rounded-xl bg-white p-5 shadow-sm">
-            <div className="mb-3.5 flex items-center gap-2">
-              <span className="text-base">&#x1F4E6;</span>
-              <span className="font-[family-name:var(--font-heading)] text-sm font-semibold text-[#293F52]">
-                Service Allocations &mdash; {allocationData.fy.label}
-              </span>
+              <div className="flex h-[190px] items-center justify-center bg-[#dde8d4]">
+                <span className="text-sm text-gray-500">Map view</span>
+              </div>
             </div>
 
-            <div className="flex flex-col gap-2">
-              {allocationData.allocations.map((alloc) => (
-                <div
-                  key={alloc.categoryName}
-                  className="flex items-center justify-between rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3"
-                >
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900">
-                      {alloc.categoryName}
-                    </div>
-                    <div className="mt-0.5 text-[11px] text-gray-500">
-                      {alloc.used} of {alloc.maxCollections} included used
-                    </div>
-                  </div>
+            {/* Right: Allocation tiles + Book button */}
+            <div className="rounded-xl bg-white p-5 shadow-sm">
+              <div className="mb-3.5 flex items-center gap-2">
+                <span className="text-base">&#x1F4E6;</span>
+                <span className="font-[family-name:var(--font-heading)] text-sm font-semibold text-[#293F52]">
+                  Service Allocations &mdash; {allocationData.fy.label}
+                </span>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                {allocationData.allocations.map((alloc) => (
                   <div
-                    className={`whitespace-nowrap rounded-full border px-3 py-1 text-[11px] font-medium ${
-                      alloc.bucket === 'bulk'
-                        ? 'border-[#00B864] bg-[#E8FDF0] text-[#006A38]'
-                        : 'border-[#C7D3DD] bg-[#E8EEF2] text-[#293F52]'
-                    }`}
+                    key={alloc.code}
+                    className="flex items-center justify-between rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3"
                   >
-                    {alloc.remaining} remaining
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">
+                        {alloc.categoryName}
+                      </div>
+                      <div className="mt-0.5 text-[11px] text-gray-500">
+                        {alloc.used} of {alloc.maxCollections} included used
+                      </div>
+                    </div>
+                    <div
+                      className={`whitespace-nowrap rounded-full border px-3 py-1 text-[11px] font-medium ${
+                        alloc.code === 'bulk'
+                          ? 'border-[#00B864] bg-[#E8FDF0] text-[#006A38]'
+                          : 'border-[#C7D3DD] bg-[#E8EEF2] text-[#293F52]'
+                      }`}
+                    >
+                      {alloc.remaining} remaining
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
 
-            <button
-              type="button"
-              onClick={handleContinue}
-              className="mt-4 flex h-12 w-full items-center justify-center rounded-xl bg-[#293F52] font-[family-name:var(--font-heading)] text-sm font-semibold text-white transition-opacity hover:opacity-90"
-            >
-              Book New Collection &rarr;
-            </button>
+              <button
+                type="button"
+                onClick={handleContinue}
+                className="mt-4 flex h-12 w-full items-center justify-center rounded-xl bg-[#293F52] font-[family-name:var(--font-heading)] text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              >
+                Book New Collection &rarr;
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Booking history */}
+        {/* Booking history — full width below the grid */}
         {selectedProperty && allocationData && (
           <div className="rounded-xl bg-white p-5 shadow-sm">
             <div className="mb-3 flex items-center gap-2">

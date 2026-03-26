@@ -284,7 +284,7 @@ export type Database = {
           id: string
           is_extra: boolean
           no_services: number
-          service_type_id: string
+          service_id: string
           unit_price_cents: number
           updated_at: string
         }
@@ -296,7 +296,7 @@ export type Database = {
           id?: string
           is_extra?: boolean
           no_services?: number
-          service_type_id: string
+          service_id: string
           unit_price_cents?: number
           updated_at?: string
         }
@@ -308,7 +308,7 @@ export type Database = {
           id?: string
           is_extra?: boolean
           no_services?: number
-          service_type_id?: string
+          service_id?: string
           unit_price_cents?: number
           updated_at?: string
         }
@@ -328,10 +328,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "booking_item_service_type_id_fkey"
-            columns: ["service_type_id"]
+            foreignKeyName: "booking_item_service_id_fkey"
+            columns: ["service_id"]
             isOneToOne: false
-            referencedRelation: "service_type"
+            referencedRelation: "service"
             referencedColumns: ["id"]
           },
         ]
@@ -545,24 +545,33 @@ export type Database = {
       }
       category: {
         Row: {
-          capacity_bucket: Database["public"]["Enums"]["capacity_bucket"]
+          code: string
           created_at: string
+          description: string | null
           id: string
+          is_active: boolean
           name: string
+          sort_order: number
           updated_at: string
         }
         Insert: {
-          capacity_bucket: Database["public"]["Enums"]["capacity_bucket"]
+          code: string
           created_at?: string
+          description?: string | null
           id?: string
+          is_active?: boolean
           name: string
+          sort_order?: number
           updated_at?: string
         }
         Update: {
-          capacity_bucket?: Database["public"]["Enums"]["capacity_bucket"]
+          code?: string
           created_at?: string
+          description?: string | null
           id?: string
+          is_active?: boolean
           name?: string
+          sort_order?: number
           updated_at?: string
         }
         Relationships: []
@@ -1360,6 +1369,41 @@ export type Database = {
           },
         ]
       }
+      service: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "category"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_rules: {
         Row: {
           collection_area_id: string
@@ -1367,7 +1411,7 @@ export type Database = {
           extra_unit_price: number
           id: string
           max_collections: number
-          service_type_id: string
+          service_id: string
           updated_at: string
         }
         Insert: {
@@ -1376,7 +1420,7 @@ export type Database = {
           extra_unit_price?: number
           id?: string
           max_collections: number
-          service_type_id: string
+          service_id: string
           updated_at?: string
         }
         Update: {
@@ -1385,7 +1429,7 @@ export type Database = {
           extra_unit_price?: number
           id?: string
           max_collections?: number
-          service_type_id?: string
+          service_id?: string
           updated_at?: string
         }
         Relationships: [
@@ -1397,10 +1441,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "service_rules_service_type_id_fkey"
-            columns: ["service_type_id"]
+            foreignKeyName: "service_rules_service_id_fkey"
+            columns: ["service_id"]
             isOneToOne: false
-            referencedRelation: "service_type"
+            referencedRelation: "service"
             referencedColumns: ["id"]
           },
         ]
@@ -1493,41 +1537,6 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      service_type: {
-        Row: {
-          category_id: string
-          created_at: string
-          id: string
-          is_active: boolean
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          category_id: string
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          category_id?: string
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          name?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "service_type_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "category"
             referencedColumns: ["id"]
           },
         ]

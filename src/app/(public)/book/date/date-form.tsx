@@ -29,19 +29,19 @@ export function DateForm() {
     queryKey: ['needed-buckets', itemsParam],
     enabled: selectedItems.size > 0,
     queryFn: async () => {
-      const serviceTypeIds = Array.from(selectedItems.keys())
-      const { data: serviceTypes } = await supabase
-        .from('service_type')
-        .select('id, name, category!inner(capacity_bucket)')
-        .in('id', serviceTypeIds)
+      const serviceIds = Array.from(selectedItems.keys())
+      const { data: services } = await supabase
+        .from('service')
+        .select('id, name, category!inner(code)')
+        .in('id', serviceIds)
 
       const buckets = new Set<string>()
       const names: Array<{ name: string; qty: number }> = []
 
-      if (serviceTypes) {
-        for (const st of serviceTypes) {
-          const category = st.category as unknown as { capacity_bucket: string }
-          buckets.add(category.capacity_bucket)
+      if (services) {
+        for (const st of services) {
+          const category = st.category as unknown as { code: string }
+          buckets.add(category.code)
           names.push({ name: st.name, qty: selectedItems.get(st.id) ?? 0 })
         }
       }

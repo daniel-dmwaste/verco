@@ -13,7 +13,7 @@ interface BookingItem {
   is_extra: boolean
   unit_price_cents: number
   actual_services: number | null
-  service_type: { name: string }
+  service: { name: string }
   collection_date: { date: string }
 }
 
@@ -173,7 +173,7 @@ export function RunSheetClient({ bookings }: RunSheetClientProps) {
                           : 'bg-[#E8EEF2] text-[#293F52]'
                       }`}
                     >
-                      {(item.service_type as { name: string }).name} &times;{' '}
+                      {(item.service as { name: string }).name} &times;{' '}
                       {item.no_services}
                       {item.is_extra && ' (extra)'}
                     </span>
@@ -287,7 +287,7 @@ export function RunSheetClient({ bookings }: RunSheetClientProps) {
                       key={item.id}
                       className="inline-flex rounded-full bg-[#E8EEF2] px-2.5 py-0.5 text-[11px] font-medium text-[#293F52]"
                     >
-                      {(item.service_type as { name: string }).name} &times;{' '}
+                      {(item.service as { name: string }).name} &times;{' '}
                       {item.no_services}
                     </span>
                   ))}

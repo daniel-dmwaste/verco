@@ -71,14 +71,14 @@ export async function createIdBooking(
 
   // Find the ID service type (Illegal Dumping category)
   const { data: serviceType } = await supabase
-    .from('service_type')
-    .select('id, category!inner(capacity_bucket)')
-    .eq('category.capacity_bucket', 'id')
+    .from('service')
+    .select('id, category!inner(code)')
+    .eq('category.code', 'id')
     .limit(1)
     .single()
 
   if (!serviceType) {
-    return { ok: false, error: 'ID service type not configured.' }
+    return { ok: false, error: 'ID service not configured.' }
   }
 
   // Generate ID booking ref: KWN-ID-XXXX
@@ -125,7 +125,7 @@ export async function createIdBooking(
     .from('booking_item')
     .insert({
       booking_id: booking.id,
-      service_type_id: serviceType.id,
+      service_id: serviceType.id,
       collection_date_id: input.collection_date_id,
       no_services: 1,
       is_extra: false,

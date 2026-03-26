@@ -21,7 +21,7 @@ export default async function BookingCloseoutPage({
        eligible_properties:property_id(address, formatted_address, latitude, longitude),
        booking_item(
          id, no_services, is_extra, unit_price_cents, actual_services,
-         service_type!inner(name),
+         service!inner(name),
          collection_date!inner(date)
        )`
     )

@@ -144,7 +144,8 @@ CREATE TYPE booking_type AS ENUM (
   'Call Back - Client'
 );
 
-CREATE TYPE capacity_bucket AS ENUM ('bulk', 'anc', 'id');
+-- capacity_bucket enum removed — replaced by `category` table with code column
+-- See category table definition below
 
 CREATE TYPE ncn_reason AS ENUM (
   'Collection Limit Exceeded',
@@ -381,27 +382,30 @@ CREATE TABLE account_job_area (
 
 #### `category`
 ```sql
+-- Capacity grouping: Bulk, Ancillary, Illegal Dumping
+-- Replaces the old capacity_bucket enum
 CREATE TABLE category (
-  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  name             text NOT NULL UNIQUE,
-  capacity_bucket  capacity_bucket NOT NULL,  -- NEW: replaces hardcoded mapping
-  created_at       timestamptz NOT NULL DEFAULT now(),
-  updated_at       timestamptz NOT NULL DEFAULT now()
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name         text NOT NULL UNIQUE,   -- 'Bulk', 'Ancillary', 'Illegal Dumping'
+  code         text NOT NULL UNIQUE,   -- 'bulk', 'anc', 'id'
+  description  text,
+  sort_order   integer NOT NULL DEFAULT 0,
+  is_active    boolean NOT NULL DEFAULT true,
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  updated_at   timestamptz NOT NULL DEFAULT now()
 );
 
 -- Seed data
-INSERT INTO category (name, capacity_bucket) VALUES
-  ('General',   'bulk'),
-  ('Green',     'bulk'),
-  ('Mattress',  'anc'),
-  ('E-Waste',   'anc'),
-  ('Whitegoods','anc'),
-  ('Illegal Dumping', 'id');
+INSERT INTO category (name, code, description, sort_order) VALUES
+  ('Bulk',            'bulk', 'General and Green Waste collections', 1),
+  ('Ancillary',       'anc',  'Mattress, E-Waste and Whitegoods collections', 2),
+  ('Illegal Dumping', 'id',   'Ranger-created illegal dumping collections', 3);
 ```
 
-#### `service_type`
+#### `service`
 ```sql
-CREATE TABLE service_type (
+-- Individual service types (was service in v1)
+CREATE TABLE service (
   id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name         text NOT NULL,
   category_id  uuid NOT NULL REFERENCES category(id),
@@ -431,12 +435,12 @@ CREATE TABLE allocation_rules (
 CREATE TABLE service_rules (
   id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   collection_area_id    uuid NOT NULL REFERENCES collection_area(id) ON DELETE CASCADE,
-  service_type_id       uuid NOT NULL REFERENCES service_type(id),
+  service_id            uuid NOT NULL REFERENCES service(id),
   max_collections       integer NOT NULL,
   extra_unit_price      numeric NOT NULL DEFAULT 0,  -- AUD, inclusive of GST
   created_at            timestamptz NOT NULL DEFAULT now(),
   updated_at            timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (collection_area_id, service_type_id)
+  UNIQUE (collection_area_id, service_id)
 );
 ```
 
@@ -558,7 +562,7 @@ CREATE INDEX idx_booking_ref ON booking(ref);
 CREATE TABLE booking_item (
   id                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   booking_id           uuid NOT NULL REFERENCES booking(id) ON DELETE CASCADE,
-  service_type_id      uuid NOT NULL REFERENCES service_type(id),
+  service_id      uuid NOT NULL REFERENCES service(id),
   collection_date_id   uuid NOT NULL REFERENCES collection_date(id),
   no_services          integer NOT NULL DEFAULT 1,      -- quantity booked
   actual_services      integer,                         -- filled by field staff (MUD)
@@ -1181,7 +1185,7 @@ Server-side only. Lives in `supabase/functions/calculate-price/index.ts` and `li
 
 ```typescript
 const BookingItemInput = z.object({
-  service_type_id:    z.string().uuid(),
+  service_id:    z.string().uuid(),
   collection_date_id: z.string().uuid(),
   quantity:           z.number().int().min(1).max(10),
 })
@@ -1211,27 +1215,27 @@ async function calculatePrice(
   // 2. Get service rules for this AJA
   const { data: rules } = await supabase
     .from('service_rules')
-    .select('service_type_id, max_collections, extra_unit_price')
+    .select('service_id, max_collections, extra_unit_price')
     .eq('account_job_area_id', property.account_job_area_id)
 
   // 3. Get FY usage per service type for this property
   const { data: usage } = await supabase
     .from('booking_item')
-    .select('service_type_id, no_services, booking!inner(status, fy_id, property_id)')
+    .select('service_id, no_services, booking!inner(status, fy_id, property_id)')
     .eq('booking.property_id', req.property_id)
     .eq('booking.fy_id', req.fy_id)
     .not('booking.status', 'in', '("Cancelled","Pending Payment")')
 
   // 4. Aggregate usage per service type
   const usageMap = usage.reduce((acc, item) => {
-    acc[item.service_type_id] = (acc[item.service_type_id] || 0) + item.no_services
+    acc[item.service_id] = (acc[item.service_id] || 0) + item.no_services
     return acc
   }, {} as Record<string, number>)
 
   // 5. Calculate per item
   const lineItems = req.items.map(item => {
-    const rule = rules.find(r => r.service_type_id === item.service_type_id)
-    const alreadyUsed = usageMap[item.service_type_id] || 0
+    const rule = rules.find(r => r.service_id === item.service_id)
+    const alreadyUsed = usageMap[item.service_id] || 0
     const maxFree = rule?.max_collections ?? 0
     const remainingFree = Math.max(0, maxFree - alreadyUsed)
     const freeUnits = Math.min(item.quantity, remainingFree)
@@ -1240,7 +1244,7 @@ async function calculatePrice(
     const lineChargeCents = paidUnits * unitPriceCents
 
     return {
-      service_type_id:   item.service_type_id,
+      service_id:   item.service_id,
       collection_date_id: item.collection_date_id,
       quantity:          item.quantity,
       free_units:        freeUnits,
@@ -1262,7 +1266,7 @@ async function calculatePrice(
 ```typescript
 type PriceCalculationResult = {
   line_items: {
-    service_type_id:    string
+    service_id:    string
     collection_date_id: string
     quantity:           number
     free_units:         number
@@ -1381,7 +1385,7 @@ Capacity validation and booking insert are wrapped in a serialisable transaction
 -- In the create-booking Edge Function, called via RPC
 CREATE OR REPLACE FUNCTION create_booking_with_capacity_check(
   p_collection_date_id uuid,
-  p_bucket capacity_bucket,
+  p_category_code text,
   p_units integer,
   -- ... other booking params
 )
@@ -1429,30 +1433,30 @@ BEGIN
       SELECT COALESCE(SUM(bi.no_services), 0)
       FROM booking_item bi
       JOIN booking b ON b.id = bi.booking_id
-      JOIN service_type st ON st.id = bi.service_type_id
+      JOIN service st ON st.id = bi.service_id
       JOIN category c ON c.id = st.category_id
       WHERE bi.collection_date_id = cd.id
-      AND c.capacity_bucket = 'bulk'
+      AND c.code = 'bulk'
       AND b.status NOT IN ('Cancelled', 'Pending Payment')
     ),
     anc_units_booked = (
       SELECT COALESCE(SUM(bi.no_services), 0)
       FROM booking_item bi
       JOIN booking b ON b.id = bi.booking_id
-      JOIN service_type st ON st.id = bi.service_type_id
+      JOIN service st ON st.id = bi.service_id
       JOIN category c ON c.id = st.category_id
       WHERE bi.collection_date_id = cd.id
-      AND c.capacity_bucket = 'anc'
+      AND c.code = 'anc'
       AND b.status NOT IN ('Cancelled', 'Pending Payment')
     ),
     id_units_booked = (
       SELECT COALESCE(SUM(bi.no_services), 0)
       FROM booking_item bi
       JOIN booking b ON b.id = bi.booking_id
-      JOIN service_type st ON st.id = bi.service_type_id
+      JOIN service st ON st.id = bi.service_id
       JOIN category c ON c.id = st.category_id
       WHERE bi.collection_date_id = cd.id
-      AND c.capacity_bucket = 'id'
+      AND c.code = 'id'
       AND b.status NOT IN ('Cancelled', 'Pending Payment')
     )
   WHERE cd.id = COALESCE(NEW.collection_date_id, OLD.collection_date_id);
@@ -1634,7 +1638,7 @@ RETURNS TABLE (
   longitude             numeric,
   location_on_property  text,
   notes                 text,
-  service_type_name     text,
+  service_name     text,
   no_services           integer,
   actual_services       integer,
   has_ncn               boolean,
@@ -1660,7 +1664,7 @@ RETURNS TABLE (
       || ',' || COALESCE(ep.longitude, b.longitude)::text                 AS google_maps_url
   FROM booking_item bi
   JOIN booking b ON b.id = bi.booking_id
-  JOIN service_type st ON st.id = bi.service_type_id
+  JOIN service st ON st.id = bi.service_id
   LEFT JOIN eligible_properties ep ON ep.id = b.property_id
   WHERE bi.collection_date_id = p_collection_date_id
   AND b.client_id = p_client_id

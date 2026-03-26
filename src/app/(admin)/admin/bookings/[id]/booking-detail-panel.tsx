@@ -16,7 +16,7 @@ interface BookingItem {
   no_services: number
   is_extra: boolean
   unit_price_cents: number
-  service_type: { name: string }
+  service: { name: string }
   collection_date: { date: string }
 }
 
@@ -185,7 +185,7 @@ export function BookingDetailPanel({
               className="flex items-center justify-between rounded-lg bg-[#E8FDF0] px-2.5 py-2 text-[13px]"
             >
               <span className="text-gray-900">
-                {(item.service_type as { name: string }).name} &times; {item.no_services}
+                {(item.service as { name: string }).name} &times; {item.no_services}
               </span>
               <span className="font-medium text-[#006A38]">Included</span>
             </div>
@@ -196,7 +196,7 @@ export function BookingDetailPanel({
               className="flex items-center justify-between rounded-lg bg-[#E8EEF2] px-2.5 py-2 text-[13px]"
             >
               <span className="text-gray-900">
-                {(item.service_type as { name: string }).name} &times; {item.no_services} (extra)
+                {(item.service as { name: string }).name} &times; {item.no_services} (extra)
               </span>
               <span className="font-semibold text-[#293F52]">
                 ${((item.unit_price_cents * item.no_services) / 100).toFixed(2)}

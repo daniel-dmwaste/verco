@@ -72,7 +72,7 @@ export function BookingsListClient() {
           `id, ref, status, type, location, created_at,
            eligible_properties:property_id(formatted_address, address),
            collection_area!inner(code, name),
-           booking_item(no_services, service_type!inner(name), collection_date!inner(date))`,
+           booking_item(no_services, service!inner(name), collection_date!inner(date))`,
           { count: 'exact' }
         )
         .not('status', 'eq', 'Pending Payment')
@@ -108,9 +108,9 @@ export function BookingsListClient() {
   }
 
   function getServicesSummary(booking: typeof bookings[number]): string {
-    const items = booking.booking_item as Array<{ no_services: number; service_type: { name: string } }>
+    const items = booking.booking_item as Array<{ no_services: number; service: { name: string } }>
     return items
-      .map((i) => `${(i.service_type as { name: string }).name} \u00d7 ${i.no_services}`)
+      .map((i) => `${(i.service as { name: string }).name} \u00d7 ${i.no_services}`)
       .join(', ')
   }
 

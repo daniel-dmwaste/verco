@@ -18,7 +18,7 @@ interface BookingItem {
   is_extra: boolean
   unit_price_cents: number
   actual_services: number | null
-  service_type: { name: string }
+  service: { name: string }
   collection_date: { date: string }
 }
 
@@ -60,7 +60,7 @@ function CloseoutInner({ booking }: { booking: Booking }) {
     : `https://maps.google.com/?q=${encodeURIComponent(address)}`
 
   const servicesSummary = booking.booking_item
-    .map((i) => `${(i.service_type as { name: string }).name} \u00d7 ${i.no_services}`)
+    .map((i) => `${(i.service as { name: string }).name} \u00d7 ${i.no_services}`)
     .join(', ')
 
   const isScheduled = booking.status === 'Scheduled'

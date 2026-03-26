@@ -13,7 +13,7 @@ interface BookingItem {
   no_services: number
   is_extra: boolean
   unit_price_cents: number
-  service_type: { name: string }
+  service: { name: string }
   collection_date: { date: string }
 }
 
@@ -356,7 +356,7 @@ export function DashboardClient({
                               : 'bg-[#E8EEF2] text-[#293F52]'
                           }`}
                         >
-                          {(item.service_type as { name: string }).name} &times;{' '}
+                          {(item.service as { name: string }).name} &times;{' '}
                           {item.no_services}
                           {item.is_extra &&
                             ` (extra · $${(
@@ -422,7 +422,7 @@ export function DashboardClient({
                         key={item.id}
                         className="inline-flex rounded-full bg-[#E8EEF2] px-2.5 py-0.5 text-[11px] font-medium text-[#293F52]"
                       >
-                        {(item.service_type as { name: string }).name} &times;{' '}
+                        {(item.service as { name: string }).name} &times;{' '}
                         {item.no_services}
                       </span>
                     ))}

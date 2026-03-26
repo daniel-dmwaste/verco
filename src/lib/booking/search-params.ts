@@ -2,17 +2,17 @@ import type { BookingItem } from './schemas'
 
 /**
  * Encode booking items into a URL-safe string for search params.
- * Format: service_type_id:qty pairs, comma-separated.
+ * Format: service_id:qty pairs, comma-separated.
  */
 export function encodeItems(items: BookingItem[]): string {
   return items
     .filter((item) => item.no_services > 0)
-    .map((item) => `${item.service_type_id}:${item.no_services}`)
+    .map((item) => `${item.service_id}:${item.no_services}`)
     .join(',')
 }
 
 /**
- * Decode booking items string back to a map of service_type_id → quantity.
+ * Decode booking items string back to a map of service_id → quantity.
  */
 export function decodeItems(
   encoded: string

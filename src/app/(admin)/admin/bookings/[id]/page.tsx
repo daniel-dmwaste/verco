@@ -22,7 +22,7 @@ export default async function AdminBookingDetailPage({
        contact:contact_id(full_name, mobile_e164, email),
        booking_item(
          id, no_services, is_extra, unit_price_cents,
-         service_type!inner(name),
+         service!inner(name),
          collection_date!inner(date)
        )`
     )

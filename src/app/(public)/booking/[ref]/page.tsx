@@ -38,7 +38,7 @@ export default async function BookingDetailPage({
         no_services,
         is_extra,
         unit_price_cents,
-        service_type!inner(name),
+        service!inner(name),
         collection_date!inner(date)
       )
     `
