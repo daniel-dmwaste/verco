@@ -13,7 +13,7 @@ const ADMIN_ROLES: AppRole[] = [
 
 const FIELD_ROLES: AppRole[] = ['field', 'ranger']
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient<Database>(
@@ -39,14 +39,30 @@ export async function middleware(request: NextRequest) {
 
   // --- 1. Resolve tenant from hostname ---
   const hostname = request.headers.get('host') ?? ''
-  const slug = hostname.split('.')[0]
+  console.log(`[proxy] hostname="${hostname}" NODE_ENV="${process.env.NODE_ENV}"`)
 
-  const { data: client } = await supabase
-    .from('client')
-    .select('id, slug, contractor_id')
-    .or(`slug.eq.${slug},custom_domain.eq.${hostname}`)
-    .eq('is_active', true)
-    .single()
+
+  // Local dev bypass: use first active client when running on localhost
+  const isLocalDev =
+    process.env.NODE_ENV === 'development' &&
+    (hostname.startsWith('localhost') || hostname.startsWith('127.0.0.1'))
+
+  const { data: client } = isLocalDev
+    ? await supabase
+        .from('client')
+        .select('id, slug, contractor_id')
+        .eq('is_active', true)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .single()
+    : await supabase
+        .from('client')
+        .select('id, slug, contractor_id')
+        .or(`slug.eq.${hostname.split('.')[0]},custom_domain.eq.${hostname}`)
+        .eq('is_active', true)
+        .single()
+
+  console.log(`[proxy] tenant resolution: isLocalDev=${isLocalDev} client=${client ? client.slug : 'null'}`)
 
   if (!client) {
     return new NextResponse('Not Found', { status: 404 })
