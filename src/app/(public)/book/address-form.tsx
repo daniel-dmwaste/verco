@@ -151,7 +151,7 @@ export function AddressForm() {
     selectedProperty.longitude !== null
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
+    <div className="flex flex-col">
       <BookingStepper currentStep={1} />
 
       {/* Content */}
@@ -167,7 +167,7 @@ export function AddressForm() {
         </div>
 
         {/* Search card — full width */}
-        <div className="rounded-xl bg-white p-5 shadow-sm">
+        <div className="rounded-xl bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-gray-700">
               Search your property address
@@ -257,7 +257,7 @@ export function AddressForm() {
             </div>
 
             {/* Right: Allocation tiles + Book button */}
-            <div className="rounded-xl bg-white p-5 shadow-sm">
+            <div className="rounded-xl bg-white p-6 shadow-sm">
               <div className="mb-3.5 flex items-center gap-2">
                 <span className="text-base">&#x1F4E6;</span>
                 <span className="font-[family-name:var(--font-heading)] text-sm font-semibold text-[#293F52]">
@@ -305,7 +305,7 @@ export function AddressForm() {
 
         {/* Booking history — full width below the grid */}
         {selectedProperty && allocationData && (
-          <div className="rounded-xl bg-white p-5 shadow-sm">
+          <div className="rounded-xl bg-white p-6 shadow-sm">
             <div className="mb-3 flex items-center gap-2">
               <span className="text-base">&#x1F550;</span>
               <span className="font-[family-name:var(--font-heading)] text-sm font-semibold text-[#293F52]">

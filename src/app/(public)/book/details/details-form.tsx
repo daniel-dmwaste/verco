@@ -45,7 +45,7 @@ export function DetailsForm() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
+    <div className="flex flex-col">
       <BookingStepper currentStep={4} />
 
       {/* Content */}
@@ -59,7 +59,7 @@ export function DetailsForm() {
           </p>
         </div>
 
-        <div className="rounded-xl bg-white p-5 shadow-sm">
+        <div className="rounded-xl bg-white p-6 shadow-sm">
           {/* Address */}
           <div className="mb-1 text-[13px] font-semibold text-[#293F52]">
             Address
@@ -113,7 +113,7 @@ export function DetailsForm() {
       </div>
 
       {/* Bottom nav */}
-      <div className="sticky bottom-0 flex gap-2.5 border-t border-gray-100 bg-white pb-5 pt-3">
+      <div className="sticky bottom-0 flex gap-2.5 pb-5 pt-3">
         <button
           type="button"
           onClick={handleBack}

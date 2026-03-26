@@ -100,7 +100,7 @@ export function DateForm() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
+    <div className="flex flex-col">
       <BookingStepper currentStep={3} />
 
       {/* Content */}
@@ -203,7 +203,7 @@ export function DateForm() {
       </div>
 
       {/* Bottom nav */}
-      <div className="sticky bottom-0 flex gap-2.5 border-t border-gray-100 bg-white pb-5 pt-3">
+      <div className="sticky bottom-0 flex gap-2.5 pb-5 pt-3">
         <button
           type="button"
           onClick={handleBack}

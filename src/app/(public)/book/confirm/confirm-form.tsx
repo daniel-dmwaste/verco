@@ -218,7 +218,7 @@ export function ConfirmForm() {
     : ''
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
+    <div className="flex flex-col">
       <BookingStepper currentStep={5} />
 
       {/* Content */}
@@ -236,7 +236,7 @@ export function ConfirmForm() {
         <form
           id="confirm-form"
           onSubmit={handleSubmit(onSubmit)}
-          className="rounded-xl bg-white p-5 shadow-sm"
+          className="rounded-xl bg-white p-6 shadow-sm"
         >
           <h2 className="mb-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52]">
             Contact Information
@@ -285,7 +285,7 @@ export function ConfirmForm() {
         </form>
 
         {/* Booking Summary */}
-        <div className="rounded-xl bg-white p-5 shadow-sm">
+        <div className="rounded-xl bg-white p-6 shadow-sm">
           <h2 className="mb-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52]">
             Booking Summary
           </h2>
@@ -315,7 +315,7 @@ export function ConfirmForm() {
 
         {/* Services breakdown */}
         {summaryData && (
-          <div className="rounded-xl bg-white p-5 shadow-sm">
+          <div className="rounded-xl bg-white p-6 shadow-sm">
             <h2 className="mb-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52]">
               Services
             </h2>
@@ -395,7 +395,7 @@ export function ConfirmForm() {
       </div>
 
       {/* Bottom nav */}
-      <div className="sticky bottom-0 flex gap-2.5 border-t border-gray-100 bg-white pb-5 pt-3">
+      <div className="sticky bottom-0 flex gap-2.5 pb-5 pt-3">
         <button
           type="button"
           onClick={handleBack}
