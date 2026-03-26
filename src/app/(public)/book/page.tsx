@@ -96,13 +96,21 @@ export default function AddressPage() {
 
     // Look up the address in eligible_properties (case-insensitive contains on street)
     const streetPart = description.split(',')[0] ?? description
-    const { data: properties } = await supabase
+    console.log('[AddressStep] Looking up property:', { placeId, description, streetPart })
+
+    const { data: properties, error: lookupError } = await supabase
       .from('eligible_properties')
       .select('*')
       .or(
         `google_place_id.eq.${placeId},formatted_address.ilike.%${streetPart}%,address.ilike.%${streetPart}%`
       )
       .limit(1)
+
+    console.log('[AddressStep] Lookup result:', {
+      count: properties?.length ?? 0,
+      error: lookupError?.message ?? null,
+      firstMatch: properties?.[0]?.formatted_address ?? null,
+    })
 
     if (properties && properties.length > 0) {
       setSelectedProperty(properties[0])

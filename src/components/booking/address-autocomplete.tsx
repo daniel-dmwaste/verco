@@ -68,6 +68,10 @@ export function AddressAutocomplete({
           }
         )
 
+        if (error) {
+          console.error('[AddressAutocomplete] google-places-proxy error:', error)
+        }
+
         if (
           !error &&
           data?.predictions &&

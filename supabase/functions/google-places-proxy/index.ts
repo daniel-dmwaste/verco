@@ -1,5 +1,4 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,22 +11,15 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
-  // Auth — require Bearer JWT
+  // Accept both authenticated (Bearer JWT) and anonymous (anon key) requests.
+  // The /book route is public — users may not have a session yet.
+  // API key security is handled server-side regardless of caller auth status.
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) {
-    return new Response('Unauthorized', { status: 401, headers: corsHeaders })
-  }
-
-  // Verify JWT by creating a client with it
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_ANON_KEY')!,
-    { global: { headers: { Authorization: authHeader } } }
-  )
-
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (authError || !user) {
-    return new Response('Unauthorized', { status: 401, headers: corsHeaders })
+    return new Response(
+      JSON.stringify({ error: 'Missing Authorization header. Pass the anon key or a Bearer JWT.' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
   }
 
   const apiKey = Deno.env.get('GOOGLE_PLACES_API_KEY')
@@ -85,6 +77,14 @@ serve(async (req) => {
     const res = await fetch(url.toString())
     const data = await res.json()
 
+    if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
+      console.error('Google Places API error:', data.status, data.error_message)
+      return new Response(
+        JSON.stringify({ predictions: [], error: data.error_message ?? data.status }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // Filter to only return place_id and description
     const predictions = (data.predictions ?? []).map(
       (p: { place_id: string; description: string }) => ({
@@ -98,7 +98,7 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (err) {
-    console.error(err)
+    console.error('google-places-proxy error:', err)
     return new Response(
       JSON.stringify({ error: 'Internal Server Error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
