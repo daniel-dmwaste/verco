@@ -1,7 +1,7 @@
 'use client'
 
 import { useSearchParams, useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -9,7 +9,12 @@ import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { BookingStepper } from '@/components/booking/booking-stepper'
 import { decodeItems } from '@/lib/booking/search-params'
-import { ContactSchema, type ContactFormData } from '@/lib/booking/schemas'
+import {
+  ContactSchema,
+  type ContactFormData,
+  formatAuMobileDisplay,
+  normaliseAuMobile,
+} from '@/lib/booking/schemas'
 
 export function ConfirmForm() {
   const router = useRouter()
@@ -27,14 +32,69 @@ export function ConfirmForm() {
   const supabase = createClient()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [mobileDisplay, setMobileDisplay] = useState('')
 
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<ContactFormData>({
     resolver: zodResolver(ContactSchema),
   })
+
+  // Pre-fill contact fields if user is logged in
+  useEffect(() => {
+    async function prefill() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('contact_id')
+        .eq('id', user.id)
+        .single()
+
+      if (!profile?.contact_id) return
+
+      const { data: contact } = await supabase
+        .from('contacts')
+        .select('full_name, email, mobile_e164')
+        .eq('id', profile.contact_id)
+        .single()
+
+      if (!contact) return
+
+      if (contact.full_name) setValue('full_name', contact.full_name)
+      if (contact.email) setValue('email', contact.email)
+      if (contact.mobile_e164) {
+        setValue('mobile', contact.mobile_e164)
+        setMobileDisplay(formatAuMobileDisplay(contact.mobile_e164))
+      }
+    }
+
+    void prefill()
+  }, [supabase, setValue])
+
+  // Handle mobile input with auto-formatting
+  function handleMobileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.value
+    // Strip to digits and leading +
+    const cleaned = raw.replace(/[^\d+]/g, '')
+
+    // Try to normalise and format for display
+    const e164 = normaliseAuMobile(cleaned)
+    if (e164) {
+      setMobileDisplay(formatAuMobileDisplay(e164))
+      setValue('mobile', e164, { shouldValidate: false })
+    } else {
+      // Show raw input while typing, store cleaned for validation
+      setMobileDisplay(raw)
+      setValue('mobile', cleaned, { shouldValidate: false })
+    }
+  }
 
   // Fetch service details + collection date for display
   const { data: summaryData } = useQuery({
@@ -61,7 +121,7 @@ export function ConfirmForm() {
       ])
 
       // Get FY usage to determine free vs paid
-      let usage = new Map<string, number>()
+      const usage = new Map<string, number>()
       if (fyResult.data) {
         const { data: items } = await supabase
           .from('booking_item')
@@ -146,7 +206,6 @@ export function ConfirmForm() {
     setSubmitError(null)
 
     try {
-      // Build items array for the Edge Function
       const items = Array.from(selectedItems.entries()).map(
         ([service_id, no_services]) => ({
           service_id,
@@ -186,10 +245,8 @@ export function ConfirmForm() {
       }
 
       if (result.requires_payment && result.checkout_url) {
-        // Redirect to Stripe
         window.location.href = result.checkout_url
       } else {
-        // Free booking — go to confirmation
         router.push(`/booking/${result.ref}?success=true`)
       }
     } catch {
@@ -271,10 +328,13 @@ export function ConfirmForm() {
             <div>
               <input
                 type="tel"
-                placeholder="Mobile number (e.g. +61 412 345 678)"
-                {...register('mobile')}
+                placeholder="Mobile number (e.g. 0412 345 678)"
+                value={mobileDisplay}
+                onChange={handleMobileChange}
                 className="w-full rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-300 focus:border-[#293F52] focus:bg-white"
               />
+              {/* Hidden field for react-hook-form */}
+              <input type="hidden" {...register('mobile')} />
               {errors.mobile && (
                 <p className="mt-1 text-[11px] text-red-500">
                   {errors.mobile.message}

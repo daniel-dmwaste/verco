@@ -14,14 +14,46 @@ export const BookingItemSchema = z.object({
 
 export type BookingItem = z.infer<typeof BookingItemSchema>
 
+/**
+ * Normalise an Australian mobile number to E.164 format (+614XXXXXXXX).
+ * Accepts: 04XXXXXXXX, +614XXXXXXXX, 614XXXXXXXX
+ * Returns null if invalid.
+ */
+export function normaliseAuMobile(raw: string): string | null {
+  const digits = raw.replace(/[\s\-()]+/g, '')
+
+  // +614XXXXXXXX (already E.164)
+  if (/^\+614\d{8}$/.test(digits)) return digits
+  // 614XXXXXXXX (missing +)
+  if (/^614\d{8}$/.test(digits)) return `+${digits}`
+  // 04XXXXXXXX (local format)
+  if (/^04\d{8}$/.test(digits)) return `+61${digits.slice(1)}`
+
+  return null
+}
+
+/**
+ * Format an E.164 AU mobile for display: 04XX XXX XXX
+ */
+export function formatAuMobileDisplay(e164: string): string {
+  // +614XXXXXXXX → 04XX XXX XXX
+  const local = '0' + e164.replace('+61', '')
+  if (local.length !== 10) return e164
+  return `${local.slice(0, 4)} ${local.slice(4, 7)} ${local.slice(7)}`
+}
+
 export const ContactSchema = z.object({
   full_name: z.string().min(1, 'Name is required').max(200),
-  email: z.string().email('Invalid email address'),
+  email: z.string().min(1, 'Email is required').email('Invalid email address'),
   mobile: z
     .string()
     .min(1, 'Mobile number is required')
-    .max(20)
-    .regex(/^\+?[0-9\s]+$/, 'Invalid mobile number'),
+    .transform((val) => val.replace(/[\s\-()]+/g, ''))
+    .refine(
+      (val) => normaliseAuMobile(val) !== null,
+      'Please enter a valid Australian mobile number (e.g. 0412 345 678)'
+    )
+    .transform((val) => normaliseAuMobile(val)!),
 })
 
 export type ContactFormData = z.infer<typeof ContactSchema>
