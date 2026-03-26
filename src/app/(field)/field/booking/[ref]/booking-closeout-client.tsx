@@ -1,0 +1,244 @@
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense } from 'react'
+import { BookingStatusBadge } from '@/components/booking/booking-status-badge'
+import { NcnForm } from './ncn-form'
+import { MudAllocationForm } from './mud-allocation-form'
+import { completeBooking, raiseNothingPresented } from './actions'
+import type { Database } from '@/lib/supabase/types'
+
+type BookingStatus = Database['public']['Enums']['booking_status']
+
+interface BookingItem {
+  id: string
+  no_services: number
+  is_extra: boolean
+  unit_price_cents: number
+  actual_services: number | null
+  service_type: { name: string }
+  collection_date: { date: string }
+}
+
+interface Booking {
+  id: string
+  ref: string
+  status: BookingStatus
+  type: string
+  location: string | null
+  notes: string | null
+  latitude: number | null
+  longitude: number | null
+  collection_area: { name: string; code: string }
+  eligible_properties: {
+    address: string
+    formatted_address: string | null
+    latitude: number | null
+    longitude: number | null
+  } | null
+  booking_item: BookingItem[]
+}
+
+function CloseoutInner({ booking }: { booking: Booking }) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const action = searchParams.get('action')
+  const isMud = searchParams.get('mud') === 'true' || booking.type === 'MUD'
+
+  const [isPending, setIsPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [showNpForm, setShowNpForm] = useState(action === 'np')
+
+  const prop = booking.eligible_properties as Booking['eligible_properties']
+  const address = prop?.formatted_address ?? prop?.address ?? ''
+  const lat = prop?.latitude ?? booking.latitude
+  const lng = prop?.longitude ?? booking.longitude
+  const mapsUrl = lat && lng
+    ? `https://maps.google.com/?q=${lat},${lng}`
+    : `https://maps.google.com/?q=${encodeURIComponent(address)}`
+
+  const servicesSummary = booking.booking_item
+    .map((i) => `${(i.service_type as { name: string }).name} \u00d7 ${i.no_services}`)
+    .join(', ')
+
+  const isScheduled = booking.status === 'Scheduled'
+
+  // Show NCN form
+  if (action === 'ncn' && isScheduled) {
+    return (
+      <NcnForm
+        bookingId={booking.id}
+        bookingRef={booking.ref}
+        address={address}
+      />
+    )
+  }
+
+  // Show MUD allocation form
+  if (isMud && isScheduled && booking.booking_item.length > 0) {
+    const firstItem = booking.booking_item[0]!
+    return (
+      <MudAllocationForm
+        bookingRef={booking.ref}
+        bookingItemId={firstItem.id}
+        address={address}
+        preBooked={firstItem.no_services}
+      />
+    )
+  }
+
+  async function handleComplete() {
+    setIsPending(true)
+    setError(null)
+    const result = await completeBooking(booking.id)
+    if (!result.ok) {
+      setError(result.error)
+      setIsPending(false)
+      return
+    }
+    router.push('/field/run-sheet')
+    router.refresh()
+  }
+
+  async function handleNp() {
+    if (!showNpForm) {
+      setShowNpForm(true)
+      return
+    }
+    setIsPending(true)
+    setError(null)
+    const result = await raiseNothingPresented(booking.id, '', [], false)
+    if (!result.ok) {
+      setError(result.error)
+      setIsPending(false)
+      return
+    }
+    router.push('/field/run-sheet')
+    router.refresh()
+  }
+
+  return (
+    <>
+      {/* Panel header */}
+      <div className="shrink-0 border-b border-gray-100 bg-white px-5 py-4">
+        <Link
+          href="/field/run-sheet"
+          className="mb-2.5 flex items-center gap-1.5 text-[13px] font-medium text-[#8FA5B8]"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+          Run Sheet
+        </Link>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="font-[family-name:var(--font-heading)] text-base font-bold text-[#293F52]">
+              {booking.ref}
+            </div>
+            <div className="mt-0.5 text-[13px] text-gray-500">{address}</div>
+          </div>
+          <BookingStatusBadge status={booking.status} />
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-5 pb-24 pt-4">
+        {/* Collection details — NO PII */}
+        <div className="flex flex-col gap-2 rounded-xl bg-white p-3.5 shadow-sm">
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+            Collection Details
+          </div>
+          <div className="flex justify-between border-b border-gray-100 py-1 text-[13px]">
+            <span className="text-xs text-gray-500">Location</span>
+            <span className="font-medium text-gray-900">{booking.location ?? '—'}</span>
+          </div>
+          <div className="flex justify-between border-b border-gray-100 py-1 text-[13px]">
+            <span className="text-xs text-gray-500">Services</span>
+            <span className="font-medium text-gray-900">{servicesSummary}</span>
+          </div>
+          <div className="flex justify-between py-1 text-[13px]">
+            <span className="text-xs text-gray-500">Notes</span>
+            <span className="font-medium italic text-gray-500">
+              {booking.notes ?? '—'}
+            </span>
+          </div>
+        </div>
+
+        {/* Maps link */}
+        <a
+          href={mapsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 rounded-[10px] bg-[#E8EEF2] px-3 py-3 text-[13px] font-semibold text-[#293F52]"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+          Open in Google Maps
+        </a>
+
+        {/* Close out actions */}
+        {isScheduled && (
+          <div className="flex flex-col gap-2 rounded-xl bg-white p-3.5 shadow-sm">
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+              Close Out
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={handleComplete}
+                disabled={isPending}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#00E47C] px-3.5 py-3.5 text-sm font-semibold text-[#293F52] disabled:opacity-50"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                {isPending ? 'Completing...' : 'Mark as Completed'}
+              </button>
+              <div className="flex gap-2">
+                <Link
+                  href={`/field/booking/${booking.ref}?action=ncn`}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border-[1.5px] border-[#E53E3E] bg-[#FFF0F0] px-3 py-3.5 text-sm font-semibold text-[#E53E3E]"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  </svg>
+                  Raise NCN
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleNp}
+                  disabled={isPending}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border-[1.5px] border-[#FF8C42] bg-[#FFF3EA] px-3 py-3.5 text-sm font-semibold text-[#8B4000] disabled:opacity-50"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                  </svg>
+                  Nothing Presented
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
+            {error}
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
+
+export function BookingCloseoutClient({ booking }: { booking: Booking }) {
+  return (
+    <Suspense>
+      <CloseoutInner booking={booking} />
+    </Suspense>
+  )
+}
