@@ -1,5 +1,6 @@
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { PublicNav } from '@/components/public/public-nav'
 
 interface ClientBranding {
   name: string
@@ -40,6 +41,11 @@ export default async function PublicLayout({
         { '--color-primary': primaryColour } as React.CSSProperties
       }
     >
+      <PublicNav
+        serviceName={branding?.service_name ?? 'Verge Collection'}
+        logoUrl={branding?.logo_light_url ?? null}
+        showPoweredBy={branding?.show_powered_by ?? true}
+      />
       {children}
     </div>
   )

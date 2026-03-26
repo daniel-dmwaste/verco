@@ -152,20 +152,10 @@ export function AddressForm() {
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50">
-      {/* Header */}
-      <div className="flex h-14 items-center gap-3 bg-white px-5 shadow-sm">
-        <div className="flex size-8 items-center justify-center rounded-lg bg-[#00E47C] font-[family-name:var(--font-heading)] text-lg font-bold text-[#293F52]">
-          V
-        </div>
-        <span className="font-[family-name:var(--font-heading)] text-[17px] font-bold text-[#293F52]">
-          VERCO
-        </span>
-      </div>
-
       <BookingStepper currentStep={1} />
 
-      {/* Content — max-w-2xl centered */}
-      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 overflow-y-auto px-5 pb-24 pt-6">
+      {/* Content */}
+      <div className="flex flex-1 flex-col gap-4 overflow-y-auto pb-24 pt-6">
         <div>
           <h1 className="font-[family-name:var(--font-heading)] text-[22px] font-bold leading-tight text-[#293F52]">
             Book a Collection
@@ -237,8 +227,8 @@ export function AddressForm() {
               {/* Map or placeholder */}
               {hasCoords ? (
                 <PropertyMap
-                  lat={selectedProperty.latitude!}
-                  lng={selectedProperty.longitude!}
+                  lat={Number(selectedProperty.latitude)}
+                  lng={Number(selectedProperty.longitude)}
                   address={
                     selectedProperty.formatted_address ??
                     selectedProperty.address
@@ -291,9 +281,9 @@ export function AddressForm() {
                     </div>
                     <div
                       className={`whitespace-nowrap rounded-full border px-3 py-1 text-[11px] font-medium ${
-                        alloc.code === 'bulk'
+                        alloc.remaining > 0
                           ? 'border-[#00B864] bg-[#E8FDF0] text-[#006A38]'
-                          : 'border-[#C7D3DD] bg-[#E8EEF2] text-[#293F52]'
+                          : 'border-[#E53E3E] bg-[#FFF0F0] text-[#E53E3E]'
                       }`}
                     >
                       {alloc.remaining} remaining

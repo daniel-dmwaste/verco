@@ -46,20 +46,10 @@ export function DetailsForm() {
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50">
-      {/* Header */}
-      <div className="flex h-14 items-center gap-3 bg-white px-5 shadow-sm">
-        <div className="flex size-8 items-center justify-center rounded-lg bg-[#00E47C] font-[family-name:var(--font-heading)] text-lg font-bold text-[#293F52]">
-          V
-        </div>
-        <span className="font-[family-name:var(--font-heading)] text-[17px] font-bold text-[#293F52]">
-          VERCO
-        </span>
-      </div>
-
       <BookingStepper currentStep={4} />
 
       {/* Content */}
-      <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-8 pb-24 pt-6">
+      <div className="flex flex-1 flex-col gap-4 overflow-y-auto pb-24 pt-6">
         <div>
           <h1 className="font-[family-name:var(--font-heading)] text-[22px] font-bold leading-tight text-[#293F52]">
             Collection Details
@@ -123,7 +113,7 @@ export function DetailsForm() {
       </div>
 
       {/* Bottom nav */}
-      <div className="sticky bottom-0 flex gap-2.5 border-t border-gray-100 bg-white px-8 pb-5 pt-3">
+      <div className="sticky bottom-0 flex gap-2.5 border-t border-gray-100 bg-white pb-5 pt-3">
         <button
           type="button"
           onClick={handleBack}

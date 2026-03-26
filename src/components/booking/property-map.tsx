@@ -11,6 +11,7 @@ interface PropertyMapProps {
 }
 
 export function PropertyMap({ lat, lng, address }: PropertyMapProps) {
+  console.log('[PropertyMap] coords:', { lat, lng })
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
 

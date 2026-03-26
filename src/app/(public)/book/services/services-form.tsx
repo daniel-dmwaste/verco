@@ -35,7 +35,7 @@ export function ServicesForm() {
 
   const supabase = createClient()
 
-  // Quantities map: service_id → quantity
+  // Quantities map: service_id → quantity (current form selections)
   const [quantities, setQuantities] = useState<Map<string, number>>(new Map())
 
   // Fetch service rules for this collection area
@@ -54,9 +54,64 @@ export function ServicesForm() {
     },
   })
 
-  // Fetch current FY usage for this property
-  const { data: fyUsage } = useQuery({
-    queryKey: ['fy-usage', propertyId],
+  // Fetch allocation_rules at category level (Bulk max, Ancillary max)
+  const { data: categoryAllocations } = useQuery({
+    queryKey: ['category-allocations', collectionAreaId],
+    enabled: !!collectionAreaId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('allocation_rules')
+        .select('max_collections, category!inner(code)')
+        .eq('collection_area_id', collectionAreaId)
+
+      const result = new Map<string, number>()
+      if (data) {
+        for (const rule of data) {
+          const cat = rule.category as unknown as { code: string }
+          result.set(cat.code, rule.max_collections)
+        }
+      }
+      return result
+    },
+  })
+
+  // Fetch existing FY usage grouped by category code
+  const { data: fyUsageByCategory } = useQuery({
+    queryKey: ['fy-usage-by-category', propertyId],
+    enabled: !!propertyId,
+    queryFn: async () => {
+      const { data: fy } = await supabase
+        .from('financial_year')
+        .select('id')
+        .eq('is_current', true)
+        .single()
+
+      if (!fy) return new Map<string, number>()
+
+      const { data: items } = await supabase
+        .from('booking_item')
+        .select(
+          'no_services, service!inner(category!inner(code)), booking!inner(property_id, fy_id, status)'
+        )
+        .eq('booking.property_id', propertyId)
+        .eq('booking.fy_id', fy.id)
+        .not('booking.status', 'in', '("Cancelled","Pending Payment")')
+
+      const usage = new Map<string, number>()
+      if (items) {
+        for (const item of items) {
+          const svc = item.service as unknown as { category: { code: string } }
+          const code = svc.category.code
+          usage.set(code, (usage.get(code) ?? 0) + item.no_services)
+        }
+      }
+      return usage
+    },
+  })
+
+  // Also fetch per-service FY usage (for individual service pricing calc)
+  const { data: fyUsageByService } = useQuery({
+    queryKey: ['fy-usage-by-service', propertyId],
     enabled: !!propertyId,
     queryFn: async () => {
       const { data: fy } = await supabase
@@ -89,7 +144,7 @@ export function ServicesForm() {
     },
   })
 
-  // Group services by capacity bucket
+  // Group services by category code
   const grouped = useMemo(() => {
     if (!serviceRules) return { bulk: [], anc: [] }
 
@@ -97,63 +152,74 @@ export function ServicesForm() {
     const anc: ServiceRuleRow[] = []
 
     for (const rule of serviceRules) {
-      const bucket = rule.service.category.code
-      if (bucket === 'bulk') bulk.push(rule)
-      else if (bucket === 'anc') anc.push(rule)
+      const code = rule.service.category.code
+      if (code === 'bulk') bulk.push(rule)
+      else if (code === 'anc') anc.push(rule)
     }
 
     return { bulk, anc }
   }, [serviceRules])
 
-  // Calculate remaining allocation per bucket
-  function getBucketRemaining(rules: ServiceRuleRow[]): {
-    totalMax: number
-    totalUsed: number
-    remaining: number
-  } {
-    let totalMax = 0
-    let totalUsed = 0
-    for (const rule of rules) {
-      totalMax += rule.max_collections
-      totalUsed += fyUsage?.get(rule.service_id) ?? 0
+  // Build pricing items AND category budget consumption in a single pass.
+  // The categoryFreeUsed map tracks how many FREE units each category bucket
+  // has consumed — this is used for both pricing AND badge display.
+  const { pricingItems, categoryFreeUsed } = useMemo(() => {
+    if (!serviceRules || !fyUsageByService || !categoryAllocations || !fyUsageByCategory) {
+      return { pricingItems: [] as BookingItem[], categoryFreeUsed: new Map<string, number>() }
     }
-    return {
-      totalMax,
-      totalUsed: Math.min(totalUsed, totalMax),
-      remaining: Math.max(0, totalMax - totalUsed),
-    }
+
+    const formUsed = new Map<string, number>()
+
+    const activeRules = serviceRules.filter(
+      (rule) => (quantities.get(rule.service_id) ?? 0) > 0
+    )
+
+    const items = activeRules.map((rule) => {
+      const qty = quantities.get(rule.service_id) ?? 0
+      const catCode = rule.service.category.code
+
+      // Service-level remaining
+      const serviceUsed = fyUsageByService.get(rule.service_id) ?? 0
+      const serviceRemaining = Math.max(0, rule.max_collections - serviceUsed)
+
+      // Category-level remaining (minus free units already consumed by earlier items in this form)
+      const catMax = categoryAllocations.get(catCode) ?? 0
+      const catFyUsed = fyUsageByCategory.get(catCode) ?? 0
+      const catAlreadyConsumedByForm = formUsed.get(catCode) ?? 0
+      const categoryRemaining = Math.max(0, catMax - catFyUsed - catAlreadyConsumedByForm)
+
+      // Dual-limit: free units = MIN(qty, category_remaining, service_remaining)
+      const freeUnits = Math.min(qty, categoryRemaining, serviceRemaining)
+      const paidUnits = qty - freeUnits
+
+      // Only free units consume category budget — paid units do not
+      formUsed.set(catCode, catAlreadyConsumedByForm + freeUnits)
+
+      const unitPriceCents = Math.round(rule.extra_unit_price * 100)
+
+      return {
+        service_id: rule.service_id,
+        service_name: rule.service.name,
+        category_name: rule.service.category.name,
+        code: catCode as 'bulk' | 'anc' | 'id',
+        no_services: qty,
+        free_units: freeUnits,
+        paid_units: paidUnits,
+        unit_price_cents: unitPriceCents,
+        line_charge_cents: paidUnits * unitPriceCents,
+      }
+    })
+
+    return { pricingItems: items, categoryFreeUsed: formUsed }
+  }, [serviceRules, fyUsageByService, fyUsageByCategory, categoryAllocations, quantities])
+
+  // Badge remaining: max - fyUsed - freeUnitsConsumedByForm
+  function getLiveRemaining(categoryCode: string): number {
+    const max = categoryAllocations?.get(categoryCode) ?? 0
+    const fyUsed = fyUsageByCategory?.get(categoryCode) ?? 0
+    const formFreeUsed = categoryFreeUsed.get(categoryCode) ?? 0
+    return Math.max(0, max - fyUsed - formFreeUsed)
   }
-
-  // Build pricing items
-  const pricingItems: BookingItem[] = useMemo(() => {
-    if (!serviceRules || !fyUsage) return []
-
-    return serviceRules
-      .filter((rule) => (quantities.get(rule.service_id) ?? 0) > 0)
-      .map((rule) => {
-        const qty = quantities.get(rule.service_id) ?? 0
-        const used = fyUsage.get(rule.service_id) ?? 0
-        const remainingFree = Math.max(0, rule.max_collections - used)
-        const freeUnits = Math.min(qty, remainingFree)
-        const paidUnits = qty - freeUnits
-        const unitPriceCents = Math.round(rule.extra_unit_price * 100)
-
-        return {
-          service_id: rule.service_id,
-          service_name: rule.service.name,
-          category_name: rule.service.category.name,
-          code: rule.service.category.code as
-            | 'bulk'
-            | 'anc'
-            | 'id',
-          no_services: qty,
-          free_units: freeUnits,
-          paid_units: paidUnits,
-          unit_price_cents: unitPriceCents,
-          line_charge_cents: paidUnits * unitPriceCents,
-        }
-      })
-  }, [serviceRules, fyUsage, quantities])
 
   const totalChargeCents = pricingItems.reduce(
     (sum, item) => sum + item.line_charge_cents,
@@ -165,15 +231,15 @@ export function ServicesForm() {
     0
   )
 
-  function updateQty(serviceTypeId: string, delta: number) {
+  function updateQty(serviceId: string, delta: number) {
     setQuantities((prev) => {
       const next = new Map(prev)
-      const current = next.get(serviceTypeId) ?? 0
+      const current = next.get(serviceId) ?? 0
       const updated = Math.max(0, current + delta)
       if (updated === 0) {
-        next.delete(serviceTypeId)
+        next.delete(serviceId)
       } else {
-        next.set(serviceTypeId, updated)
+        next.set(serviceId, updated)
       }
       return next
     })
@@ -197,18 +263,19 @@ export function ServicesForm() {
 
   function renderServiceSection(
     title: string,
-    rules: ServiceRuleRow[],
-    accentColor: 'green' | 'navy'
+    categoryCode: string,
+    rules: ServiceRuleRow[]
   ) {
-    const { totalMax, remaining } = getBucketRemaining(rules)
+    const max = categoryAllocations?.get(categoryCode) ?? 0
+    const remaining = getLiveRemaining(categoryCode)
     const badgeClass =
-      accentColor === 'green'
+      remaining > 0
         ? 'bg-[#E8FDF0] text-[#006A38]'
-        : 'bg-[#E8EEF2] text-[#293F52]'
+        : 'bg-[#FFF0F0] text-[#E53E3E]'
     const accentBg =
-      accentColor === 'green' ? 'bg-[#00B864]' : 'bg-[#293F52]'
+      categoryCode === 'bulk' ? 'bg-[#00B864]' : 'bg-[#293F52]'
 
-    // Calculate extra cost rows for this section
+    // Extra cost rows for this section
     const extraRows = pricingItems.filter(
       (item) =>
         item.paid_units > 0 &&
@@ -224,7 +291,7 @@ export function ServicesForm() {
           <span
             className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${badgeClass}`}
           >
-            {remaining} of {totalMax} remaining
+            {remaining} of {max} remaining
           </span>
         </div>
         <div className="flex flex-col gap-2">
@@ -294,20 +361,10 @@ export function ServicesForm() {
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50">
-      {/* Header */}
-      <div className="flex h-14 items-center gap-3 bg-white px-5 shadow-sm">
-        <div className="flex size-8 items-center justify-center rounded-lg bg-[#00E47C] font-[family-name:var(--font-heading)] text-lg font-bold text-[#293F52]">
-          V
-        </div>
-        <span className="font-[family-name:var(--font-heading)] text-[17px] font-bold text-[#293F52]">
-          VERCO
-        </span>
-      </div>
-
       <BookingStepper currentStep={2} />
 
       {/* Content */}
-      <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-8 pb-24 pt-6">
+      <div className="flex flex-1 flex-col gap-4 overflow-y-auto pb-24 pt-6">
         <div>
           <h1 className="font-[family-name:var(--font-heading)] text-[22px] font-bold leading-tight text-[#293F52]">
             Select Services
@@ -318,10 +375,10 @@ export function ServicesForm() {
         </div>
 
         {grouped.bulk.length > 0 &&
-          renderServiceSection('Bulk Collection', grouped.bulk, 'green')}
+          renderServiceSection('Bulk Collection', 'bulk', grouped.bulk)}
 
         {grouped.anc.length > 0 &&
-          renderServiceSection('Ancillary Collection', grouped.anc, 'navy')}
+          renderServiceSection('Ancillary Collection', 'anc', grouped.anc)}
 
         {/* Total bar */}
         {totalChargeCents > 0 && (
@@ -337,7 +394,7 @@ export function ServicesForm() {
       </div>
 
       {/* Bottom nav */}
-      <div className="sticky bottom-0 flex gap-2.5 border-t border-gray-100 bg-white px-8 pb-5 pt-3">
+      <div className="sticky bottom-0 flex gap-2.5 border-t border-gray-100 bg-white pb-5 pt-3">
         <button
           type="button"
           onClick={handleBack}
