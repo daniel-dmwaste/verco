@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { OtpVerifyForm } from './otp-verify-form'
 
 export default function VerifyPage() {
@@ -18,7 +19,9 @@ export default function VerifyPage() {
         </div>
 
         {/* OTP form card */}
-        <OtpVerifyForm />
+        <Suspense>
+          <OtpVerifyForm />
+        </Suspense>
 
         {/* Powered by */}
         <div className="flex items-center justify-center gap-1.5 pt-8 text-[11px] text-gray-300">
