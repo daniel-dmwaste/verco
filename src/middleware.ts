@@ -1,15 +1,29 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import type { Database } from '@/lib/supabase/types'
+
+type AppRole = Database['public']['Enums']['app_role']
+
+const ADMIN_ROLES: AppRole[] = [
+  'client-admin',
+  'client-staff',
+  'contractor-admin',
+  'contractor-staff',
+]
+
+const FIELD_ROLES: AppRole[] = ['field', 'ranger']
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
-  const supabase = createServerClient(
+  const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() { return request.cookies.getAll() },
+        getAll() {
+          return request.cookies.getAll()
+        },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
@@ -23,16 +37,68 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Refresh session
+  // --- 1. Resolve tenant from hostname ---
+  const hostname = request.headers.get('host') ?? ''
+  const slug = hostname.split('.')[0]
+
+  const { data: client } = await supabase
+    .from('client')
+    .select('id, slug, contractor_id')
+    .or(`slug.eq.${slug},custom_domain.eq.${hostname}`)
+    .eq('is_active', true)
+    .single()
+
+  if (!client) {
+    return new NextResponse('Not Found', { status: 404 })
+  }
+
+  // --- 2. Refresh Supabase auth session ---
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Route guards
+  // --- 3. Route guards ---
   const path = request.nextUrl.pathname
-  if (path.startsWith('/admin') || path.startsWith('/field')) {
+
+  if (path.startsWith('/admin')) {
+    if (!user) {
+      return NextResponse.redirect(new URL('/auth', request.url))
+    }
+
+    const { data: userRole } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single()
+
+    if (!userRole || !ADMIN_ROLES.includes(userRole.role)) {
+      return NextResponse.redirect(new URL('/auth', request.url))
+    }
+  } else if (path.startsWith('/field')) {
+    if (!user) {
+      return NextResponse.redirect(new URL('/auth', request.url))
+    }
+
+    const { data: userRole } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single()
+
+    if (!userRole || !FIELD_ROLES.includes(userRole.role)) {
+      return NextResponse.redirect(new URL('/auth', request.url))
+    }
+  } else if (path.startsWith('/dashboard') || path.startsWith('/booking')) {
     if (!user) {
       return NextResponse.redirect(new URL('/auth', request.url))
     }
   }
+  // /book/* and /survey/* are public — no guard
+
+  // --- 4. Set tenant headers on response ---
+  supabaseResponse.headers.set('x-client-id', client.id)
+  supabaseResponse.headers.set('x-client-slug', client.slug)
+  supabaseResponse.headers.set('x-contractor-id', client.contractor_id)
 
   return supabaseResponse
 }
