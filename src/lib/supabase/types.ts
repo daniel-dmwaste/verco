@@ -1,1 +1,2103 @@
-export type Database = Record<string, never>
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.4"
+  }
+  public: {
+    Tables: {
+      allocation_rules: {
+        Row: {
+          category_id: string
+          collection_area_id: string
+          created_at: string
+          id: string
+          max_collections: number
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          collection_area_id: string
+          created_at?: string
+          id?: string
+          max_collections: number
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          collection_area_id?: string
+          created_at?: string
+          id?: string
+          max_collections?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "allocation_rules_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "category"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "allocation_rules_collection_area_id_fkey"
+            columns: ["collection_area_id"]
+            isOneToOne: false
+            referencedRelation: "collection_area"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_module: {
+        Row: {
+          app: string
+          category: string
+          icon: string | null
+          id: string
+          name: string
+          route: string | null
+          sort_order: number
+        }
+        Insert: {
+          app: string
+          category: string
+          icon?: string | null
+          id: string
+          name: string
+          route?: string | null
+          sort_order?: number
+        }
+        Update: {
+          app?: string
+          category?: string
+          icon?: string | null
+          id?: string
+          name?: string
+          route?: string | null
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      audit_log: {
+        Row: {
+          action: string
+          changed_by: string | null
+          client_id: string | null
+          contractor_id: string | null
+          created_at: string
+          id: string
+          new_data: Json | null
+          old_data: Json | null
+          record_id: string
+          table_name: string
+        }
+        Insert: {
+          action: string
+          changed_by?: string | null
+          client_id?: string | null
+          contractor_id?: string | null
+          created_at?: string
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          record_id: string
+          table_name: string
+        }
+        Update: {
+          action?: string
+          changed_by?: string | null
+          client_id?: string | null
+          contractor_id?: string | null
+          created_at?: string
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          record_id?: string
+          table_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_log_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_log_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking: {
+        Row: {
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_id: string
+          collection_area_id: string
+          contact_id: string | null
+          contractor_id: string
+          created_at: string
+          crew_id: string | null
+          deleted_at: string | null
+          fy_id: string
+          geo_address: string | null
+          id: string
+          latitude: number | null
+          location: string | null
+          longitude: number | null
+          notes: string | null
+          optimo_stop_id: string | null
+          property_id: string | null
+          ref: string
+          status: Database["public"]["Enums"]["booking_status"]
+          type: Database["public"]["Enums"]["booking_type"]
+          updated_at: string
+        }
+        Insert: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          client_id: string
+          collection_area_id: string
+          contact_id?: string | null
+          contractor_id: string
+          created_at?: string
+          crew_id?: string | null
+          deleted_at?: string | null
+          fy_id: string
+          geo_address?: string | null
+          id?: string
+          latitude?: number | null
+          location?: string | null
+          longitude?: number | null
+          notes?: string | null
+          optimo_stop_id?: string | null
+          property_id?: string | null
+          ref: string
+          status?: Database["public"]["Enums"]["booking_status"]
+          type?: Database["public"]["Enums"]["booking_type"]
+          updated_at?: string
+        }
+        Update: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          client_id?: string
+          collection_area_id?: string
+          contact_id?: string | null
+          contractor_id?: string
+          created_at?: string
+          crew_id?: string | null
+          deleted_at?: string | null
+          fy_id?: string
+          geo_address?: string | null
+          id?: string
+          latitude?: number | null
+          location?: string | null
+          longitude?: number | null
+          notes?: string | null
+          optimo_stop_id?: string | null
+          property_id?: string | null
+          ref?: string
+          status?: Database["public"]["Enums"]["booking_status"]
+          type?: Database["public"]["Enums"]["booking_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_collection_area_id_fkey"
+            columns: ["collection_area_id"]
+            isOneToOne: false
+            referencedRelation: "collection_area"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_fy_id_fkey"
+            columns: ["fy_id"]
+            isOneToOne: false
+            referencedRelation: "financial_year"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "eligible_properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_item: {
+        Row: {
+          actual_services: number | null
+          booking_id: string
+          collection_date_id: string
+          created_at: string
+          id: string
+          is_extra: boolean
+          no_services: number
+          service_type_id: string
+          unit_price_cents: number
+          updated_at: string
+        }
+        Insert: {
+          actual_services?: number | null
+          booking_id: string
+          collection_date_id: string
+          created_at?: string
+          id?: string
+          is_extra?: boolean
+          no_services?: number
+          service_type_id: string
+          unit_price_cents?: number
+          updated_at?: string
+        }
+        Update: {
+          actual_services?: number | null
+          booking_id?: string
+          collection_date_id?: string
+          created_at?: string
+          id?: string
+          is_extra?: boolean
+          no_services?: number
+          service_type_id?: string
+          unit_price_cents?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_item_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "booking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_item_collection_date_id_fkey"
+            columns: ["collection_date_id"]
+            isOneToOne: false
+            referencedRelation: "collection_date"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_item_service_type_id_fkey"
+            columns: ["service_type_id"]
+            isOneToOne: false
+            referencedRelation: "service_type"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_payment: {
+        Row: {
+          amount_cents: number
+          booking_id: string
+          client_id: string
+          contractor_id: string
+          created_at: string
+          currency: string
+          id: string
+          status: string
+          stripe_charge_id: string | null
+          stripe_payment_intent: string | null
+          stripe_session_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          booking_id: string
+          client_id: string
+          contractor_id: string
+          created_at?: string
+          currency?: string
+          id?: string
+          status?: string
+          stripe_charge_id?: string | null
+          stripe_payment_intent?: string | null
+          stripe_session_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          booking_id?: string
+          client_id?: string
+          contractor_id?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          status?: string
+          stripe_charge_id?: string | null
+          stripe_payment_intent?: string | null
+          stripe_session_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_payment_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "booking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_payment_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_payment_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_survey: {
+        Row: {
+          booking_id: string
+          client_id: string
+          created_at: string
+          id: string
+          responses: Json | null
+          submitted_at: string | null
+          token: string
+        }
+        Insert: {
+          booking_id: string
+          client_id: string
+          created_at?: string
+          id?: string
+          responses?: Json | null
+          submitted_at?: string | null
+          token: string
+        }
+        Update: {
+          booking_id?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+          responses?: Json | null
+          submitted_at?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_survey_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "booking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_survey_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bug_report: {
+        Row: {
+          assigned_to: string | null
+          browser_info: string | null
+          category: Database["public"]["Enums"]["bug_report_category"]
+          client_id: string | null
+          collection_area_id: string | null
+          created_at: string
+          display_id: string
+          id: string
+          linear_issue_id: string | null
+          linear_issue_url: string | null
+          page_url: string | null
+          priority: Database["public"]["Enums"]["bug_report_priority"]
+          reporter_id: string
+          resolution_notes: string | null
+          resolved_at: string | null
+          source_app: string
+          status: Database["public"]["Enums"]["bug_report_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          browser_info?: string | null
+          category?: Database["public"]["Enums"]["bug_report_category"]
+          client_id?: string | null
+          collection_area_id?: string | null
+          created_at?: string
+          display_id: string
+          id?: string
+          linear_issue_id?: string | null
+          linear_issue_url?: string | null
+          page_url?: string | null
+          priority?: Database["public"]["Enums"]["bug_report_priority"]
+          reporter_id: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          source_app: string
+          status?: Database["public"]["Enums"]["bug_report_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          browser_info?: string | null
+          category?: Database["public"]["Enums"]["bug_report_category"]
+          client_id?: string | null
+          collection_area_id?: string | null
+          created_at?: string
+          display_id?: string
+          id?: string
+          linear_issue_id?: string | null
+          linear_issue_url?: string | null
+          page_url?: string | null
+          priority?: Database["public"]["Enums"]["bug_report_priority"]
+          reporter_id?: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          source_app?: string
+          status?: Database["public"]["Enums"]["bug_report_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bug_report_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bug_report_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bug_report_collection_area_id_fkey"
+            columns: ["collection_area_id"]
+            isOneToOne: false
+            referencedRelation: "collection_area"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bug_report_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      category: {
+        Row: {
+          capacity_bucket: Database["public"]["Enums"]["capacity_bucket"]
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          capacity_bucket: Database["public"]["Enums"]["capacity_bucket"]
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          capacity_bucket?: Database["public"]["Enums"]["capacity_bucket"]
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      client: {
+        Row: {
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          contractor_id: string
+          created_at: string
+          custom_domain: string | null
+          email_footer_html: string | null
+          email_from_name: string | null
+          faq_items: Json | null
+          hero_banner_url: string | null
+          id: string
+          is_active: boolean
+          landing_headline: string | null
+          landing_subheading: string | null
+          logo_dark_url: string | null
+          logo_light_url: string | null
+          name: string
+          primary_colour: string | null
+          privacy_policy_url: string | null
+          reply_to_email: string | null
+          service_name: string | null
+          show_powered_by: boolean
+          slug: string
+          sms_reminder_days_before: number | null
+          sms_sender_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          contractor_id: string
+          created_at?: string
+          custom_domain?: string | null
+          email_footer_html?: string | null
+          email_from_name?: string | null
+          faq_items?: Json | null
+          hero_banner_url?: string | null
+          id?: string
+          is_active?: boolean
+          landing_headline?: string | null
+          landing_subheading?: string | null
+          logo_dark_url?: string | null
+          logo_light_url?: string | null
+          name: string
+          primary_colour?: string | null
+          privacy_policy_url?: string | null
+          reply_to_email?: string | null
+          service_name?: string | null
+          show_powered_by?: boolean
+          slug: string
+          sms_reminder_days_before?: number | null
+          sms_sender_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          contractor_id?: string
+          created_at?: string
+          custom_domain?: string | null
+          email_footer_html?: string | null
+          email_from_name?: string | null
+          faq_items?: Json | null
+          hero_banner_url?: string | null
+          id?: string
+          is_active?: boolean
+          landing_headline?: string | null
+          landing_subheading?: string | null
+          logo_dark_url?: string | null
+          logo_light_url?: string | null
+          name?: string
+          primary_colour?: string | null
+          privacy_policy_url?: string | null
+          reply_to_email?: string | null
+          service_name?: string | null
+          show_powered_by?: boolean
+          slug?: string
+          sms_reminder_days_before?: number | null
+          sms_sender_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_survey_config: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          questions: Json
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          questions?: Json
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          questions?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_survey_config_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      collection_area: {
+        Row: {
+          client_id: string
+          code: string
+          contractor_id: string
+          created_at: string
+          dm_job_code: string | null
+          id: string
+          is_active: boolean
+          name: string
+          sub_client_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          code: string
+          contractor_id: string
+          created_at?: string
+          dm_job_code?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          sub_client_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          code?: string
+          contractor_id?: string
+          created_at?: string
+          dm_job_code?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          sub_client_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collection_area_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collection_area_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collection_area_sub_client_id_fkey"
+            columns: ["sub_client_id"]
+            isOneToOne: false
+            referencedRelation: "sub_client"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      collection_date: {
+        Row: {
+          anc_capacity_limit: number
+          anc_is_closed: boolean
+          anc_units_booked: number
+          bulk_capacity_limit: number
+          bulk_is_closed: boolean
+          bulk_units_booked: number
+          collection_area_id: string
+          created_at: string
+          date: string
+          for_mud: boolean
+          id: string
+          id_capacity_limit: number
+          id_is_closed: boolean
+          id_units_booked: number
+          is_open: boolean
+          updated_at: string
+        }
+        Insert: {
+          anc_capacity_limit?: number
+          anc_is_closed?: boolean
+          anc_units_booked?: number
+          bulk_capacity_limit?: number
+          bulk_is_closed?: boolean
+          bulk_units_booked?: number
+          collection_area_id: string
+          created_at?: string
+          date: string
+          for_mud?: boolean
+          id?: string
+          id_capacity_limit?: number
+          id_is_closed?: boolean
+          id_units_booked?: number
+          is_open?: boolean
+          updated_at?: string
+        }
+        Update: {
+          anc_capacity_limit?: number
+          anc_is_closed?: boolean
+          anc_units_booked?: number
+          bulk_capacity_limit?: number
+          bulk_is_closed?: boolean
+          bulk_units_booked?: number
+          collection_area_id?: string
+          created_at?: string
+          date?: string
+          for_mud?: boolean
+          id?: string
+          id_capacity_limit?: number
+          id_is_closed?: boolean
+          id_units_booked?: number
+          is_open?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collection_date_collection_area_id_fkey"
+            columns: ["collection_area_id"]
+            isOneToOne: false
+            referencedRelation: "collection_area"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contacts: {
+        Row: {
+          attio_person_id: string | null
+          attio_person_web_url: string | null
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          last_synced_by: string | null
+          mobile_e164: string
+          updated_at: string
+        }
+        Insert: {
+          attio_person_id?: string | null
+          attio_person_web_url?: string | null
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          last_synced_by?: string | null
+          mobile_e164: string
+          updated_at?: string
+        }
+        Update: {
+          attio_person_id?: string | null
+          attio_person_web_url?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          last_synced_by?: string | null
+          mobile_e164?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      contractor: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      eligible_properties: {
+        Row: {
+          address: string
+          collection_area_id: string
+          created_at: string
+          formatted_address: string | null
+          google_place_id: string | null
+          has_geocode: boolean
+          id: string
+          is_mud: boolean
+          latitude: number | null
+          longitude: number | null
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          collection_area_id: string
+          created_at?: string
+          formatted_address?: string | null
+          google_place_id?: string | null
+          has_geocode?: boolean
+          id?: string
+          is_mud?: boolean
+          latitude?: number | null
+          longitude?: number | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          collection_area_id?: string
+          created_at?: string
+          formatted_address?: string | null
+          google_place_id?: string | null
+          has_geocode?: boolean
+          id?: string
+          is_mud?: boolean
+          latitude?: number | null
+          longitude?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eligible_properties_collection_area_id_fkey"
+            columns: ["collection_area_id"]
+            isOneToOne: false
+            referencedRelation: "collection_area"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_year: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          is_current: boolean
+          label: string
+          rollover_date: string
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          is_current?: boolean
+          label: string
+          rollover_date: string
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          is_current?: boolean
+          label?: string
+          rollover_date?: string
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      non_conformance_notice: {
+        Row: {
+          booking_id: string
+          client_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          photos: string[]
+          reason: Database["public"]["Enums"]["ncn_reason"]
+          reported_at: string
+          reported_by: string | null
+          rescheduled_booking_id: string | null
+          rescheduled_date: string | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["ncn_status"]
+          updated_at: string
+        }
+        Insert: {
+          booking_id: string
+          client_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          photos?: string[]
+          reason: Database["public"]["Enums"]["ncn_reason"]
+          reported_at?: string
+          reported_by?: string | null
+          rescheduled_booking_id?: string | null
+          rescheduled_date?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["ncn_status"]
+          updated_at?: string
+        }
+        Update: {
+          booking_id?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          photos?: string[]
+          reason?: Database["public"]["Enums"]["ncn_reason"]
+          reported_at?: string
+          reported_by?: string | null
+          rescheduled_booking_id?: string | null
+          rescheduled_date?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["ncn_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "non_conformance_notice_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "booking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "non_conformance_notice_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "non_conformance_notice_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "non_conformance_notice_rescheduled_booking_id_fkey"
+            columns: ["rescheduled_booking_id"]
+            isOneToOne: false
+            referencedRelation: "booking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "non_conformance_notice_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nothing_presented: {
+        Row: {
+          booking_id: string
+          client_id: string
+          created_at: string
+          dm_fault: boolean
+          id: string
+          notes: string | null
+          photos: string[]
+          reported_at: string
+          reported_by: string | null
+          rescheduled_booking_id: string | null
+          rescheduled_date: string | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["np_status"]
+          updated_at: string
+        }
+        Insert: {
+          booking_id: string
+          client_id: string
+          created_at?: string
+          dm_fault?: boolean
+          id?: string
+          notes?: string | null
+          photos?: string[]
+          reported_at?: string
+          reported_by?: string | null
+          rescheduled_booking_id?: string | null
+          rescheduled_date?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["np_status"]
+          updated_at?: string
+        }
+        Update: {
+          booking_id?: string
+          client_id?: string
+          created_at?: string
+          dm_fault?: boolean
+          id?: string
+          notes?: string | null
+          photos?: string[]
+          reported_at?: string
+          reported_by?: string | null
+          rescheduled_booking_id?: string | null
+          rescheduled_date?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["np_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nothing_presented_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "booking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nothing_presented_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nothing_presented_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nothing_presented_rescheduled_booking_id_fkey"
+            columns: ["rescheduled_booking_id"]
+            isOneToOne: false
+            referencedRelation: "booking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nothing_presented_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_log: {
+        Row: {
+          booking_id: string | null
+          channel: string
+          client_id: string
+          contact_id: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          notification_type: string
+          status: string
+          to_address: string
+        }
+        Insert: {
+          booking_id?: string | null
+          channel: string
+          client_id: string
+          contact_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          notification_type: string
+          status?: string
+          to_address: string
+        }
+        Update: {
+          booking_id?: string | null
+          channel?: string
+          client_id?: string
+          contact_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          notification_type?: string
+          status?: string
+          to_address?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_log_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "booking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_log_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          contact_id: string | null
+          created_at: string
+          display_name: string | null
+          email: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          contact_id?: string | null
+          created_at?: string
+          display_name?: string | null
+          email: string
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          contact_id?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      refund_request: {
+        Row: {
+          amount_cents: number
+          booking_id: string
+          client_id: string
+          contact_id: string
+          created_at: string
+          id: string
+          reason: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          stripe_refund_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          booking_id: string
+          client_id: string
+          contact_id: string
+          created_at?: string
+          id?: string
+          reason?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          stripe_refund_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          booking_id?: string
+          client_id?: string
+          contact_id?: string
+          created_at?: string
+          id?: string
+          reason?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          stripe_refund_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refund_request_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "booking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refund_request_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refund_request_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refund_request_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      role_permissions: {
+        Row: {
+          action: Database["public"]["Enums"]["app_permission_action"]
+          created_at: string
+          id: string
+          module_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+        }
+        Insert: {
+          action: Database["public"]["Enums"]["app_permission_action"]
+          created_at?: string
+          id?: string
+          module_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Update: {
+          action?: Database["public"]["Enums"]["app_permission_action"]
+          created_at?: string
+          id?: string
+          module_id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "app_module"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_rules: {
+        Row: {
+          collection_area_id: string
+          created_at: string
+          extra_unit_price: number
+          id: string
+          max_collections: number
+          service_type_id: string
+          updated_at: string
+        }
+        Insert: {
+          collection_area_id: string
+          created_at?: string
+          extra_unit_price?: number
+          id?: string
+          max_collections: number
+          service_type_id: string
+          updated_at?: string
+        }
+        Update: {
+          collection_area_id?: string
+          created_at?: string
+          extra_unit_price?: number
+          id?: string
+          max_collections?: number
+          service_type_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_rules_collection_area_id_fkey"
+            columns: ["collection_area_id"]
+            isOneToOne: false
+            referencedRelation: "collection_area"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_rules_service_type_id_fkey"
+            columns: ["service_type_id"]
+            isOneToOne: false
+            referencedRelation: "service_type"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_ticket: {
+        Row: {
+          assigned_to: string | null
+          attio_record_id: string | null
+          booking_id: string | null
+          category: Database["public"]["Enums"]["ticket_category"]
+          channel: Database["public"]["Enums"]["ticket_channel"]
+          client_id: string
+          closed_at: string | null
+          contact_id: string
+          created_at: string
+          display_id: string
+          first_response_at: string | null
+          id: string
+          message: string
+          priority: Database["public"]["Enums"]["ticket_priority"]
+          resolved_at: string | null
+          status: Database["public"]["Enums"]["ticket_status"]
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          attio_record_id?: string | null
+          booking_id?: string | null
+          category?: Database["public"]["Enums"]["ticket_category"]
+          channel?: Database["public"]["Enums"]["ticket_channel"]
+          client_id: string
+          closed_at?: string | null
+          contact_id: string
+          created_at?: string
+          display_id: string
+          first_response_at?: string | null
+          id?: string
+          message: string
+          priority?: Database["public"]["Enums"]["ticket_priority"]
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["ticket_status"]
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          attio_record_id?: string | null
+          booking_id?: string | null
+          category?: Database["public"]["Enums"]["ticket_category"]
+          channel?: Database["public"]["Enums"]["ticket_channel"]
+          client_id?: string
+          closed_at?: string | null
+          contact_id?: string
+          created_at?: string
+          display_id?: string
+          first_response_at?: string | null
+          id?: string
+          message?: string
+          priority?: Database["public"]["Enums"]["ticket_priority"]
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["ticket_status"]
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_ticket_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_ticket_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "booking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_ticket_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_ticket_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_type: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_type_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "category"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sla_config: {
+        Row: {
+          client_id: string
+          created_at: string
+          first_response_hours: number
+          id: string
+          is_active: boolean
+          priority: Database["public"]["Enums"]["ticket_priority"]
+          resolution_hours: number
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          first_response_hours?: number
+          id?: string
+          is_active?: boolean
+          priority: Database["public"]["Enums"]["ticket_priority"]
+          resolution_hours?: number
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          first_response_hours?: number
+          id?: string
+          is_active?: boolean
+          priority?: Database["public"]["Enums"]["ticket_priority"]
+          resolution_hours?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sla_config_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      strata_user_properties: {
+        Row: {
+          created_at: string
+          id: string
+          property_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          property_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          property_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "strata_user_properties_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "eligible_properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "strata_user_properties_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sub_client: {
+        Row: {
+          client_id: string
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sub_client_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sync_log: {
+        Row: {
+          attio_record_id: string | null
+          created_at: string
+          direction: string
+          entity_id: string
+          entity_type: string
+          error_message: string | null
+          id: string
+          payload: Json | null
+          status: string
+        }
+        Insert: {
+          attio_record_id?: string | null
+          created_at?: string
+          direction: string
+          entity_id: string
+          entity_type: string
+          error_message?: string | null
+          id?: string
+          payload?: Json | null
+          status?: string
+        }
+        Update: {
+          attio_record_id?: string | null
+          created_at?: string
+          direction?: string
+          entity_id?: string
+          entity_type?: string
+          error_message?: string | null
+          id?: string
+          payload?: Json | null
+          status?: string
+        }
+        Relationships: []
+      }
+      ticket_response: {
+        Row: {
+          author_id: string
+          author_type: string
+          channel: string
+          created_at: string
+          id: string
+          is_internal: boolean
+          message: string
+          ticket_id: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          author_type: string
+          channel?: string
+          created_at?: string
+          id?: string
+          is_internal?: boolean
+          message: string
+          ticket_id: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          author_type?: string
+          channel?: string
+          created_at?: string
+          id?: string
+          is_internal?: boolean
+          message?: string
+          ticket_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_response_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_response_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "service_ticket"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          client_id: string | null
+          contractor_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_id?: string | null
+          contractor_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string | null
+          contractor_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_roles_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      accessible_client_ids: { Args: never; Returns: string[] }
+      current_user_client_id: { Args: never; Returns: string }
+      current_user_contact_id: { Args: never; Returns: string }
+      current_user_contractor_id: { Args: never; Returns: string }
+      current_user_role: {
+        Args: never
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: { check_role: Database["public"]["Enums"]["app_role"] }
+        Returns: boolean
+      }
+      is_client_staff: { Args: never; Returns: boolean }
+      is_contractor_user: { Args: never; Returns: boolean }
+      is_field_user: { Args: never; Returns: boolean }
+    }
+    Enums: {
+      app_permission_action: "view" | "create" | "edit" | "delete" | "manage"
+      app_role:
+        | "contractor-admin"
+        | "contractor-staff"
+        | "field"
+        | "client-admin"
+        | "client-staff"
+        | "ranger"
+        | "resident"
+        | "strata"
+      booking_status:
+        | "Pending Payment"
+        | "Submitted"
+        | "Confirmed"
+        | "Scheduled"
+        | "Completed"
+        | "Cancelled"
+        | "Non-conformance"
+        | "Nothing Presented"
+        | "Rebooked"
+        | "Missed Collection"
+      booking_type:
+        | "Residential"
+        | "MUD"
+        | "Illegal Dumping"
+        | "Call Back - DM"
+        | "Call Back - Client"
+      bug_report_category:
+        | "ui"
+        | "data"
+        | "performance"
+        | "access"
+        | "booking"
+        | "collection"
+        | "billing"
+        | "other"
+      bug_report_priority: "low" | "medium" | "high" | "critical"
+      bug_report_status:
+        | "new"
+        | "triaged"
+        | "in_progress"
+        | "resolved"
+        | "closed"
+        | "wont_fix"
+      capacity_bucket: "bulk" | "anc" | "id"
+      ncn_reason:
+        | "Collection Limit Exceeded"
+        | "Items Obstructed or Not On Verge"
+        | "Building Waste"
+        | "Car Parts"
+        | "Asbestos / Fibre Fence"
+        | "Food or Domestic Waste"
+        | "Glass"
+        | "Medical Waste"
+        | "Tyres"
+        | "Greens in Container"
+        | "Hazardous Waste"
+        | "Items Oversize"
+        | "Other"
+      ncn_status: "Open" | "Under Review" | "Resolved" | "Rescheduled"
+      np_status: "Open" | "Under Review" | "Resolved" | "Rebooked"
+      ticket_category:
+        | "general"
+        | "booking"
+        | "billing"
+        | "service"
+        | "complaint"
+        | "other"
+      ticket_channel: "portal" | "phone" | "email" | "form"
+      ticket_priority: "low" | "normal" | "high" | "urgent"
+      ticket_status:
+        | "open"
+        | "in_progress"
+        | "waiting_on_customer"
+        | "resolved"
+        | "closed"
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+}
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      app_permission_action: ["view", "create", "edit", "delete", "manage"],
+      app_role: [
+        "contractor-admin",
+        "contractor-staff",
+        "field",
+        "client-admin",
+        "client-staff",
+        "ranger",
+        "resident",
+        "strata",
+      ],
+      booking_status: [
+        "Pending Payment",
+        "Submitted",
+        "Confirmed",
+        "Scheduled",
+        "Completed",
+        "Cancelled",
+        "Non-conformance",
+        "Nothing Presented",
+        "Rebooked",
+        "Missed Collection",
+      ],
+      booking_type: [
+        "Residential",
+        "MUD",
+        "Illegal Dumping",
+        "Call Back - DM",
+        "Call Back - Client",
+      ],
+      bug_report_category: [
+        "ui",
+        "data",
+        "performance",
+        "access",
+        "booking",
+        "collection",
+        "billing",
+        "other",
+      ],
+      bug_report_priority: ["low", "medium", "high", "critical"],
+      bug_report_status: [
+        "new",
+        "triaged",
+        "in_progress",
+        "resolved",
+        "closed",
+        "wont_fix",
+      ],
+      capacity_bucket: ["bulk", "anc", "id"],
+      ncn_reason: [
+        "Collection Limit Exceeded",
+        "Items Obstructed or Not On Verge",
+        "Building Waste",
+        "Car Parts",
+        "Asbestos / Fibre Fence",
+        "Food or Domestic Waste",
+        "Glass",
+        "Medical Waste",
+        "Tyres",
+        "Greens in Container",
+        "Hazardous Waste",
+        "Items Oversize",
+        "Other",
+      ],
+      ncn_status: ["Open", "Under Review", "Resolved", "Rescheduled"],
+      np_status: ["Open", "Under Review", "Resolved", "Rebooked"],
+      ticket_category: [
+        "general",
+        "booking",
+        "billing",
+        "service",
+        "complaint",
+        "other",
+      ],
+      ticket_channel: ["portal", "phone", "email", "form"],
+      ticket_priority: ["low", "normal", "high", "urgent"],
+      ticket_status: [
+        "open",
+        "in_progress",
+        "waiting_on_customer",
+        "resolved",
+        "closed",
+      ],
+    },
+  },
+} as const
