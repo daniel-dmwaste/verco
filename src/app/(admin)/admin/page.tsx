@@ -1,0 +1,381 @@
+import { createClient } from '@/lib/supabase/server'
+import { format, startOfWeek, endOfWeek, formatDistanceToNow } from 'date-fns'
+import { BookingStatusBadge } from '@/components/booking/booking-status-badge'
+import Link from 'next/link'
+import type { Database } from '@/lib/supabase/types'
+
+type BookingStatus = Database['public']['Enums']['booking_status']
+
+export default async function AdminDashboardPage() {
+  const supabase = await createClient()
+
+  const now = new Date()
+  const weekStart = startOfWeek(now, { weekStartsOn: 1 }).toISOString()
+  const weekEnd = endOfWeek(now, { weekStartsOn: 1 }).toISOString()
+
+  // Get current FY
+  const { data: fy } = await supabase
+    .from('financial_year')
+    .select('id, label')
+    .eq('is_current', true)
+    .single()
+
+  // Parallel data fetches (RLS-scoped)
+  const [
+    weekBookingsResult,
+    completedResult,
+    ncnResult,
+    npResult,
+    ticketsResult,
+    upcomingDatesResult,
+    weeklySubmitted,
+    weeklyConfirmed,
+    weeklyCompleted,
+    weeklyCancelled,
+    weeklyNcn,
+    weeklyNp,
+    openTicketsResult,
+  ] = await Promise.all([
+    supabase
+      .from('booking')
+      .select('id', { count: 'exact', head: true })
+      .gte('created_at', weekStart)
+      .lte('created_at', weekEnd),
+    supabase
+      .from('booking')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'Completed'),
+    supabase
+      .from('booking')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'Non-conformance'),
+    supabase
+      .from('booking')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'Nothing Presented'),
+    supabase
+      .from('service_ticket')
+      .select('id', { count: 'exact', head: true })
+      .in('status', ['open', 'in_progress']),
+    supabase
+      .from('collection_date')
+      .select('id, date, bulk_capacity_limit, bulk_units_booked, anc_capacity_limit, anc_units_booked, collection_area!inner(name, code)')
+      .eq('is_open', true)
+      .gte('date', now.toISOString().split('T')[0])
+      .order('date', { ascending: true })
+      .limit(5),
+    supabase.from('booking').select('id', { count: 'exact', head: true }).eq('status', 'Submitted').gte('created_at', weekStart).lte('created_at', weekEnd),
+    supabase.from('booking').select('id', { count: 'exact', head: true }).eq('status', 'Confirmed').gte('created_at', weekStart).lte('created_at', weekEnd),
+    supabase.from('booking').select('id', { count: 'exact', head: true }).eq('status', 'Completed').gte('created_at', weekStart).lte('created_at', weekEnd),
+    supabase.from('booking').select('id', { count: 'exact', head: true }).eq('status', 'Cancelled').gte('created_at', weekStart).lte('created_at', weekEnd),
+    supabase.from('booking').select('id', { count: 'exact', head: true }).eq('status', 'Non-conformance').gte('created_at', weekStart).lte('created_at', weekEnd),
+    supabase.from('booking').select('id', { count: 'exact', head: true }).eq('status', 'Nothing Presented').gte('created_at', weekStart).lte('created_at', weekEnd),
+    supabase
+      .from('service_ticket')
+      .select('id, display_id, subject, status, priority, created_at, contact!inner(full_name)')
+      .in('status', ['open', 'in_progress'])
+      .order('created_at', { ascending: false })
+      .limit(5),
+  ])
+
+  const openExceptions = (ncnResult.count ?? 0) + (npResult.count ?? 0)
+
+  // FY allocation consumption — aggregate booking items by service type
+  const { data: fyItems } = fy
+    ? await supabase
+        .from('booking_item')
+        .select('no_services, service_type!inner(name, category!inner(name, capacity_bucket)), booking!inner(fy_id, status)')
+        .eq('booking.fy_id', fy.id)
+        .not('booking.status', 'in', '("Cancelled","Pending Payment")')
+    : { data: null }
+
+  // Sum by service type name
+  const serviceUsage = new Map<string, number>()
+  if (fyItems) {
+    for (const item of fyItems) {
+      const st = item.service_type as unknown as { name: string; category: { name: string; capacity_bucket: string } }
+      serviceUsage.set(st.name, (serviceUsage.get(st.name) ?? 0) + item.no_services)
+    }
+  }
+
+  const generalCount = serviceUsage.get('General') ?? 0
+  const greenCount = serviceUsage.get('Green') ?? 0
+  const mattressCount = serviceUsage.get('Mattress') ?? 0
+  const ewasteCount = serviceUsage.get('E-Waste') ?? 0
+  const whitegoodsCount = serviceUsage.get('Whitegoods') ?? 0
+  const bulkTotal = generalCount + greenCount
+  const ancTotal = mattressCount + ewasteCount + whitegoodsCount
+
+  // Get total allocation maximums from allocation rules
+  const { data: allocRules } = await supabase
+    .from('allocation_rules')
+    .select('max_collections, category!inner(capacity_bucket)')
+
+  let bulkMax = 0
+  let ancMax = 0
+  if (allocRules) {
+    for (const rule of allocRules) {
+      const cat = rule.category as unknown as { capacity_bucket: string }
+      if (cat.capacity_bucket === 'bulk') bulkMax += rule.max_collections
+      else if (cat.capacity_bucket === 'anc') ancMax += rule.max_collections
+    }
+  }
+  if (bulkMax === 0) bulkMax = 1
+  if (ancMax === 0) ancMax = 1
+
+  const upcomingDates = upcomingDatesResult.data ?? []
+  const openTickets = openTicketsResult.data ?? []
+
+  type UpcomingDate = typeof upcomingDates[number]
+
+  function getCapacityColor(booked: number, limit: number): string {
+    const pct = limit > 0 ? booked / limit : 0
+    if (pct >= 0.9) return 'bg-[#E53E3E]'
+    if (pct >= 0.6) return 'bg-[#FF8C42]'
+    return 'bg-[#00E47C]'
+  }
+
+  return (
+    <>
+      {/* Page header */}
+      <div className="flex items-center justify-between border-b border-gray-100 bg-white px-7 pb-5 pt-6">
+        <div>
+          <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
+            Dashboard
+          </h1>
+          <p className="mt-0.5 text-[13px] text-gray-500">
+            {fy?.label ?? ''} &middot; {format(now, 'EEEE d MMMM yyyy')}
+          </p>
+        </div>
+        <div className="flex items-center gap-2.5">
+          <Link
+            href="/admin/bookings"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#293F52] px-4 py-2 text-[13px] font-semibold text-white"
+          >
+            + New Booking
+          </Link>
+        </div>
+      </div>
+
+      {/* Stat cards */}
+      <div className="grid grid-cols-4 gap-4 px-7 pt-5">
+        <div className="rounded-xl bg-white p-5 shadow-sm">
+          <div className="mb-2.5 flex size-9 items-center justify-center rounded-[10px] bg-[#E8FDF0] text-[#00B864]">
+            <svg width="20" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+          </div>
+          <div className="mb-2 text-xs font-medium text-gray-500">Bookings This Week</div>
+          <div className="font-[family-name:var(--font-heading)] text-[28px] font-bold text-[#293F52]">
+            {weekBookingsResult.count ?? 0}
+          </div>
+        </div>
+
+        <div className="rounded-xl bg-white p-5 shadow-sm">
+          <div className="mb-2.5 flex size-9 items-center justify-center rounded-[10px] bg-[#E8EEF2] text-[#293F52]">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div className="mb-2 text-xs font-medium text-gray-500">Collections Completed</div>
+          <div className="font-[family-name:var(--font-heading)] text-[28px] font-bold text-[#293F52]">
+            {completedResult.count ?? 0}
+          </div>
+          <div className="mt-1 text-xs text-gray-500">FY total to date</div>
+        </div>
+
+        <div className="rounded-xl bg-white p-5 shadow-sm">
+          <div className="mb-2.5 flex size-9 items-center justify-center rounded-[10px] bg-[#FFF3EA] text-[#FF8C42]">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div className="mb-2 text-xs font-medium text-gray-500">Open Incidents</div>
+          <div className="font-[family-name:var(--font-heading)] text-[28px] font-bold text-[#293F52]">
+            {openExceptions}
+          </div>
+          <div className="mt-1 text-xs text-[#E53E3E]">
+            {ncnResult.count ?? 0} NCN &middot; {npResult.count ?? 0} NP
+          </div>
+        </div>
+
+        <div className="rounded-xl bg-white p-5 shadow-sm">
+          <div className="mb-2.5 flex size-9 items-center justify-center rounded-[10px] bg-[#FFF0F0] text-[#E53E3E]">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div className="mb-2 text-xs font-medium text-gray-500">Open Tickets</div>
+          <div className="font-[family-name:var(--font-heading)] text-[28px] font-bold text-[#293F52]">
+            {ticketsResult.count ?? 0}
+          </div>
+        </div>
+      </div>
+
+      {/* Two-column grid */}
+      <div className="grid grid-cols-2 gap-4 px-7 py-5">
+        {/* Upcoming collection dates */}
+        <div className="rounded-xl bg-white p-5 shadow-sm">
+          <div className="mb-3.5 flex items-center justify-between font-[family-name:var(--font-heading)] text-sm font-semibold text-[#293F52]">
+            Upcoming Collection Dates
+            <Link href="/admin/collection-dates" className="text-xs font-medium text-[#00B864]">View all &rarr;</Link>
+          </div>
+          {upcomingDates.map((d: UpcomingDate) => {
+            const area = d.collection_area as unknown as { name: string; code: string }
+            const pctBulk = d.bulk_capacity_limit > 0 ? (d.bulk_units_booked / d.bulk_capacity_limit) * 100 : 0
+            return (
+              <div key={d.id} className="flex items-center justify-between border-b border-gray-100 py-2.5 last:border-b-0 last:pb-0">
+                <div>
+                  <div className="text-[13px] font-medium text-[#293F52]">
+                    {format(new Date(d.date + 'T00:00:00'), 'EEE d MMMM yyyy')}
+                  </div>
+                  <div className="text-[11px] text-gray-500">{area.name}</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-1.5 w-20 overflow-hidden rounded-full bg-gray-100">
+                    <div
+                      className={`h-full rounded-full ${getCapacityColor(d.bulk_units_booked, d.bulk_capacity_limit)}`}
+                      style={{ width: `${Math.min(pctBulk, 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-gray-500">
+                    {d.bulk_units_booked}/{d.bulk_capacity_limit}
+                  </span>
+                </div>
+              </div>
+            )
+          })}
+          {upcomingDates.length === 0 && (
+            <p className="py-4 text-center text-sm text-gray-400">No upcoming dates</p>
+          )}
+        </div>
+
+        {/* Weekly summary */}
+        <div className="rounded-xl bg-white p-5 shadow-sm">
+          <div className="mb-3.5 font-[family-name:var(--font-heading)] text-sm font-semibold text-[#293F52]">
+            This Week&apos;s Summary
+          </div>
+          <div className="grid grid-cols-2 gap-2.5">
+            {[
+              { label: 'Submitted', value: weeklySubmitted.count ?? 0 },
+              { label: 'Confirmed', value: weeklyConfirmed.count ?? 0, color: 'text-[#00B864]' },
+              { label: 'Completed', value: weeklyCompleted.count ?? 0, color: 'text-[#00B864]' },
+              { label: 'Cancelled', value: weeklyCancelled.count ?? 0, color: 'text-[#FF8C42]' },
+              { label: 'Non-Conformance', value: weeklyNcn.count ?? 0, color: 'text-[#E53E3E]' },
+              { label: 'Nothing Presented', value: weeklyNp.count ?? 0, color: 'text-[#FF8C42]' },
+            ].map((stat) => (
+              <div key={stat.label} className="rounded-lg bg-gray-50 px-3.5 py-3">
+                <div className="mb-1 text-[11px] text-gray-500">{stat.label}</div>
+                <div className={`font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52] ${stat.color ?? ''}`}>
+                  {stat.value}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Open service tickets */}
+        <div className="rounded-xl bg-white p-5 shadow-sm">
+          <div className="mb-3.5 flex items-center justify-between font-[family-name:var(--font-heading)] text-sm font-semibold text-[#293F52]">
+            Open Service Tickets
+            <Link href="/admin/service-tickets" className="text-xs font-medium text-[#00B864]">View all &rarr;</Link>
+          </div>
+          {openTickets.map((ticket) => {
+            const contact = ticket.contact as unknown as { full_name: string }
+            const initials = contact.full_name
+              .split(' ')
+              .map((n) => n[0])
+              .join('')
+              .toUpperCase()
+              .slice(0, 2)
+            return (
+              <div key={ticket.id} className="flex items-center gap-3 border-b border-gray-100 py-2.5 last:border-b-0 last:pb-0">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#E8EEF2] text-xs font-semibold text-[#293F52]">
+                  {initials}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[13px] font-medium text-gray-900">{contact.full_name}</div>
+                  <div className="truncate text-xs text-gray-500">{ticket.subject}</div>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <BookingStatusBadge
+                    status={ticket.priority === 'high' || ticket.priority === 'urgent' ? 'Nothing Presented' : 'Submitted'}
+                    className={
+                      ticket.priority === 'high' || ticket.priority === 'urgent'
+                        ? 'bg-[#FFF3EA] text-[#C05A00]'
+                        : 'bg-[#EBF5FF] text-[#3182CE]'
+                    }
+                  />
+                  <span className="text-[11px] text-gray-300">
+                    {formatDistanceToNow(new Date(ticket.created_at), { addSuffix: false })}
+                  </span>
+                </div>
+              </div>
+            )
+          })}
+          {openTickets.length === 0 && (
+            <p className="py-4 text-center text-sm text-gray-400">No open tickets</p>
+          )}
+        </div>
+
+        {/* FY allocation consumption */}
+        <div className="rounded-xl bg-white p-5 shadow-sm">
+          <div className="mb-3.5 font-[family-name:var(--font-heading)] text-sm font-semibold text-[#293F52]">
+            {fy?.label ?? 'FY'} Allocation Consumption
+          </div>
+          <div className="flex flex-col gap-5">
+            {/* Bulk */}
+            <div>
+              <div className="mb-2 flex items-baseline justify-between">
+                <span className="text-[13px] font-semibold text-[#293F52]">Bulk</span>
+                <span className="text-[11px] text-gray-500">{bulkTotal} / {bulkMax} used</span>
+              </div>
+              <div className="flex h-3.5 overflow-hidden rounded-full bg-gray-100">
+                <div className="h-full bg-[#00E47C]" style={{ width: `${(generalCount / bulkMax) * 100}%` }} title={`General: ${generalCount}`} />
+                <div className="h-full bg-[#00B864]" style={{ width: `${(greenCount / bulkMax) * 100}%` }} title={`Green: ${greenCount}`} />
+              </div>
+              <div className="mt-2 flex gap-4">
+                <div className="flex items-center gap-1.5">
+                  <div className="size-2.5 shrink-0 rounded-sm bg-[#00E47C]" />
+                  <span className="text-[11px] text-gray-700">General</span>
+                  <span className="text-[11px] text-gray-500">{generalCount}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="size-2.5 shrink-0 rounded-sm bg-[#00B864]" />
+                  <span className="text-[11px] text-gray-700">Green</span>
+                  <span className="text-[11px] text-gray-500">{greenCount}</span>
+                </div>
+                <span className="ml-auto text-[11px] text-gray-400">Max {bulkMax}</span>
+              </div>
+            </div>
+
+            <div className="h-px bg-gray-100" />
+
+            {/* Ancillary */}
+            <div>
+              <div className="mb-2 flex items-baseline justify-between">
+                <span className="text-[13px] font-semibold text-[#293F52]">Ancillary</span>
+                <span className="text-[11px] text-gray-500">{ancTotal} / {ancMax} used</span>
+              </div>
+              <div className="flex h-3.5 overflow-hidden rounded-full bg-gray-100">
+                <div className="h-full bg-[#8FA5B8]" style={{ width: `${(mattressCount / ancMax) * 100}%` }} title={`Mattress: ${mattressCount}`} />
+                <div className="h-full bg-[#FF8C42]" style={{ width: `${(ewasteCount / ancMax) * 100}%` }} title={`E-Waste: ${ewasteCount}`} />
+                <div className="h-full bg-[#3A5A73]" style={{ width: `${(whitegoodsCount / ancMax) * 100}%` }} title={`Whitegoods: ${whitegoodsCount}`} />
+              </div>
+              <div className="mt-2 flex gap-4">
+                <div className="flex items-center gap-1.5">
+                  <div className="size-2.5 shrink-0 rounded-sm bg-[#8FA5B8]" />
+                  <span className="text-[11px] text-gray-700">Mattress</span>
+                  <span className="text-[11px] text-gray-500">{mattressCount}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="size-2.5 shrink-0 rounded-sm bg-[#FF8C42]" />
+                  <span className="text-[11px] text-gray-700">E-Waste</span>
+                  <span className="text-[11px] text-gray-500">{ewasteCount}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="size-2.5 shrink-0 rounded-sm bg-[#3A5A73]" />
+                  <span className="text-[11px] text-gray-700">Whitegoods</span>
+                  <span className="text-[11px] text-gray-500">{whitegoodsCount}</span>
+                </div>
+                <span className="ml-auto text-[11px] text-gray-400">Max {ancMax}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
