@@ -19,9 +19,9 @@ Do not delete or rename it. Keep it up to date as decisions change.
 
 | Layer | Technology | Notes |
 |---|---|---|
-| Framework | Next.js 15 (App Router) | Server components, server actions, middleware |
+| Framework | Next.js 16 (App Router) | Server components, server actions, proxy |
 | Language | TypeScript 5 — strict mode ON | `strict: true` in tsconfig — no exceptions |
-| Styling | Tailwind CSS 4 | Utility classes only — no inline styles |
+| Styling | Tailwind CSS 4 | Utility classes preferred; inline styles for layout where Tailwind isn't rendering |
 | UI | shadcn/ui (Radix primitives) | `components/ui/` — never edit these files |
 | Forms | react-hook-form + zod | All forms use zod schemas for validation |
 | Server state | TanStack Query v5 | All async data fetching |
@@ -30,6 +30,8 @@ Do not delete or rename it. Keep it up to date as decisions change.
 | Payments | Stripe | Single D&M account |
 | Package manager | pnpm | Never use npm or yarn |
 | Testing | Vitest + Testing Library + Playwright | Unit + E2E |
+| Fonts | Poppins + DM Sans via next/font/google | `--font-poppins` (headings), `--font-dm-sans` (body/sans) |
+| Maps | Leaflet via `dynamic(() => ..., { ssr: false })` | OpenStreetMap tiles; coerce Postgres `numeric` → `Number()` |
 | Hosting | Coolify on BinaryLane | Node container — no edge runtime |
 
 ---
@@ -165,7 +167,20 @@ The pricing flow is always:
 4. `create-booking` **re-runs** `calculatePrice` internally — it never trusts the client's displayed price
 5. If the recalculated price differs from what was shown, the booking is rejected
 
-The pricing algorithm lives in `lib/pricing/calculate.ts` and is imported by the Edge Function. It is never imported by client components.
+### Dual-limit free unit calculation
+
+A unit becomes paid (extra) when EITHER limit is exhausted:
+
+```
+category_remaining = allocation_rules.max_collections - FY usage across ALL services in that category
+service_remaining  = service_rules.max_collections - FY usage for THIS specific service
+free_units         = MIN(requested_qty, category_remaining, service_remaining)
+paid_units         = requested_qty - free_units
+```
+
+**Only free_units consume category budget** — paid units do not reduce the remaining count. When iterating multiple services in the same category, track cumulative free unit consumption with a `categoryFormUsed` map.
+
+The authoritative implementation is in `supabase/functions/calculate-price/index.ts`. The client-side preview in `services-form.tsx` mirrors the same logic for display purposes only.
 
 ---
 
@@ -314,11 +329,11 @@ Each group has its own `layout.tsx` with appropriate auth + role guards.
 
 ---
 
-## 10. Middleware
+## 10. Proxy (was Middleware)
 
-`middleware.ts` runs on every request. It does three things in order:
+`src/proxy.ts` (renamed from `middleware.ts` for Next.js 16) runs on every request. Exported function is `proxy`, not `middleware`. It does three things in order:
 
-1. **Resolve client from hostname** — looks up `client` table by `slug` or `custom_domain`
+1. **Resolve client from hostname** — looks up `client` table by `slug` or `custom_domain`. In development (`NODE_ENV=development` + localhost), bypasses slug matching and fetches the first active client ordered by `created_at`.
 2. **Validate session** — refreshes Supabase auth token if needed
 3. **Route guards** — redirects unauthenticated or wrong-role users
 
@@ -331,7 +346,7 @@ Each group has its own `layout.tsx` with appropriate auth + role guards.
 // /survey/*  → public (token-based, no auth)
 ```
 
-The resolved `client_id` and `contractor_id` are set in request headers (`x-client-id`, `x-contractor-id`) for use in server components and API routes. Never re-query for these in downstream code — read from headers.
+The resolved `client_id`, `client_slug`, and `contractor_id` are set as **request** headers (`x-client-id`, `x-client-slug`, `x-contractor-id`) via `NextResponse.next({ request: { headers } })` — NOT response headers. Read via `headers()` in server components and actions. Never re-query for these in downstream code.
 
 ---
 
@@ -381,10 +396,14 @@ serve(async (req) => {
 ### Shared code
 Common utilities (pricing engine, type helpers) live in `supabase/functions/_shared/`. Import with relative paths.
 
+### Edge Functions called from public routes
+Edge Functions called from `/book/*` or other public routes (e.g. `google-places-proxy`, `calculate-price`) must accept anonymous callers (anon key only, no user session). The Supabase JS client automatically sends the anon key as the Authorization header when no user is logged in. Do not require `auth.getUser()` to succeed — validate the anon key is present, not a valid user session.
+
 ### Never use service role in Edge Functions unless
 - Writing to a table that legitimately requires bypassing RLS (e.g. `audit_log` inserts from triggers)
 - The nightly DM-Ops sync (`nightly-sync-to-dm-ops`)
 - Stripe webhook handler
+- Batch admin operations (e.g. `geocode-properties`)
 - Document it with a comment explaining why
 
 ---
@@ -413,6 +432,9 @@ Always ask: "Does RLS on this table handle scoping correctly for all roles that 
 1. Enable RLS immediately: `ALTER TABLE new_table ENABLE ROW LEVEL SECURITY;`
 2. Write policies before writing any application code that queries it
 3. Default to deny — no policy = no access
+
+### Public SELECT policies
+These tables have public SELECT policies (no auth required) because they are queried on public routes before any session exists: `client`, `collection_area`, `eligible_properties`, `collection_date`, `category`, `service`, `service_rules`, `allocation_rules`, `financial_year`. The policies are scoped (e.g. `is_active = true`, `is_open = true`). Write operations still require auth via separate policies.
 
 ### Never do this
 ```typescript
@@ -563,17 +585,19 @@ supabase/.temp/
 ```bash
 # Development
 pnpm dev                          # Start Next.js dev server
-pnpm supabase start               # Start local Supabase stack
-pnpm supabase db reset            # Reset local DB + run all migrations
 
-# Types
+# Types (project ID: tfddjmplcizfirxqhotv)
 pnpm supabase gen types typescript \
-  --project-id $PROJECT_ID \
-  > lib/supabase/types.ts
+  --project-id tfddjmplcizfirxqhotv \
+  > src/lib/supabase/types.ts
+# IMPORTANT: Check the output for CLI warnings appended to the file — remove them
 
 # Migrations
 pnpm supabase migration new <name>   # Create new migration file
 pnpm supabase db push                # Push migrations to remote
+
+# Edge Functions
+pnpm supabase functions deploy <name> --no-verify-jwt
 
 # Testing
 pnpm test
@@ -609,6 +633,28 @@ These are absolute. If a task requires crossing one, stop and flag it.
 5. **Never directly set `booking.status = 'Scheduled'`** — the cron owns this transition
 6. **Never write to DM-Ops tables from Verco application code** — only `nightly-sync-to-dm-ops` Edge Function touches DM-Ops
 7. **Never bypass RLS with application-level filtering as a substitute** — RLS is the contract, not a fallback
+
+---
+
+## 21. Patterns & Gotchas
+
+### Suspense boundaries for useSearchParams
+Any client component using `useSearchParams()` must be wrapped in `<Suspense>`. Split into `page.tsx` (server, renders `<Suspense><ClientForm /></Suspense>`) + `client-form.tsx` (client, uses hooks). This applies to all booking wizard steps, auth verify, and any page reading URL params.
+
+### Postgres numeric → JavaScript number
+Supabase returns `numeric` columns (latitude, longitude) as strings. Always coerce with `Number()` before passing to components that expect numbers (e.g. Leaflet maps): `lat={Number(property.latitude)}`.
+
+### Tailwind CSS 4 font configuration
+Fonts are configured in `@theme inline` block in `globals.css`, not `tailwind.config.ts` (which doesn't exist). Custom font families: `--font-sans` (DM Sans, body), `--font-heading` (Poppins, headings), applied via `font-[family-name:var(--font-heading)]`.
+
+### Booking wizard layout
+`app/(public)/book/layout.tsx` wraps all `/book/*` pages with max-width + padding via inline styles (Tailwind classes were not rendering reliably). Individual step forms use `flex flex-col` only — no `min-h-screen` or `bg-*` (layout handles those).
+
+### Mobile number validation
+AU mobiles only. `normaliseAuMobile()` in `lib/booking/schemas.ts` handles `04XX`, `+614XX`, `614XX` → E.164 `+614XXXXXXXX`. The zod schema `.transform()` pipeline strips whitespace, validates, and normalises in one pass.
+
+### Edge Function tsconfig exclusion
+`supabase/functions/` is excluded from `tsconfig.json` — Deno Edge Functions use URL imports and `Deno.*` APIs that conflict with the Node/Next.js TypeScript config.
 
 ---
 
