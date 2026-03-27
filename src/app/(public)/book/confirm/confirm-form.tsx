@@ -239,13 +239,32 @@ export function ConfirmForm() {
       }
 
       const result = data as {
+        booking_id: string
         ref: string
         requires_payment: boolean
-        checkout_url?: string
       }
 
-      if (result.requires_payment && result.checkout_url) {
-        window.location.href = result.checkout_url
+      if (result.requires_payment) {
+        // Call create-checkout to get the Stripe Checkout Session URL
+        const origin = window.location.origin
+        const { data: checkoutData, error: checkoutError } =
+          await supabase.functions.invoke('create-checkout', {
+            body: {
+              booking_id: result.booking_id,
+              success_url: `${origin}/booking/${result.ref}?success=true`,
+              cancel_url: `${origin}/booking/${result.ref}?cancelled=true`,
+            },
+          })
+
+        if (checkoutError || !checkoutData?.checkout_url) {
+          setSubmitError(
+            checkoutError?.message ?? 'Failed to create payment session'
+          )
+          setIsSubmitting(false)
+          return
+        }
+
+        window.location.href = checkoutData.checkout_url
       } else {
         router.push(`/booking/${result.ref}?success=true`)
       }
