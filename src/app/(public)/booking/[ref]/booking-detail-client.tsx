@@ -93,7 +93,7 @@ export function BookingDetailClient({ booking }: BookingDetailClientProps) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
+    <div className="flex flex-col">
       {/* Detail header */}
       <div className="shrink-0 border-b border-gray-100 bg-white px-5 py-4">
         <Link

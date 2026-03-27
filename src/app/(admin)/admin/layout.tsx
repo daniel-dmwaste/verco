@@ -18,10 +18,10 @@ export default async function AdminLayout({
     redirect('/auth')
   }
 
-  // Fetch profile for avatar
+  // Fetch profile with contact join for authoritative name
   const { data: profile } = await supabase
     .from('profiles')
-    .select('display_name, email')
+    .select('email, contacts(full_name)')
     .eq('id', user.id)
     .single()
 
@@ -67,8 +67,10 @@ export default async function AdminLayout({
     tickets: ticketsResult.count ?? 0,
   }
 
-  const initials = profile?.display_name
-    ? profile.display_name
+  const contactRow = profile?.contacts as { full_name: string } | null
+  const fullName = contactRow?.full_name
+  const initials = fullName
+    ? fullName
         .split(' ')
         .map((n) => n[0])
         .join('')

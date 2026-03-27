@@ -1,6 +1,7 @@
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { PublicNav } from '@/components/public/public-nav'
+import { MobileFab } from '@/components/public/mobile-fab'
 
 interface ClientBranding {
   name: string
@@ -37,6 +38,7 @@ export default async function PublicLayout({
 
   return (
     <div
+      className="min-h-screen bg-gray-50"
       style={
         { '--color-primary': primaryColour } as React.CSSProperties
       }
@@ -47,6 +49,7 @@ export default async function PublicLayout({
         showPoweredBy={branding?.show_powered_by ?? true}
       />
       {children}
+      <MobileFab />
     </div>
   )
 }

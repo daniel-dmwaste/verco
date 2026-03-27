@@ -169,7 +169,7 @@ export function SurveyForm({
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
+    <div className="flex flex-col">
       {/* Header */}
       <div className="shrink-0 bg-[#293F52] px-5 pb-5 pt-4">
         <div className="mb-2.5 flex items-center gap-2">

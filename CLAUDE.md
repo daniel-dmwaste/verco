@@ -711,4 +711,81 @@ Manual testing plan VER-98 must pass before deployment (VER-92). PII suppression
 
 ---
 
+## 23. Session Decisions — 27 March 2026 (afternoon)
+
+### RLS circular recursion — SECURITY DEFINER pattern
+
+RLS policies that cross-reference tables (e.g. `booking` → `contacts` → `booking`) cause `infinite recursion detected in policy for relation`. Fix: wrap cross-table lookups in `SECURITY DEFINER` functions.
+
+```sql
+-- ✓ Safe — SECURITY DEFINER bypasses RLS on contacts
+CREATE OR REPLACE FUNCTION current_user_contact_id_by_email()
+RETURNS uuid AS $$
+  SELECT c.id FROM contacts c
+  JOIN profiles p ON p.email = c.email
+  WHERE p.id = auth.uid() LIMIT 1;
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+-- ✗ Causes recursion when used in booking RLS
+-- contact_id IN (SELECT c.id FROM contacts c JOIN profiles p ...)
+```
+
+The `booking_resident_select` policy uses both `current_user_contact_id()` (profile link) and `current_user_contact_id_by_email()` (email fallback) to handle bookings created before profile→contact linking.
+
+### Edge Function calls — use direct fetch, not supabase.functions.invoke
+
+`supabase.functions.invoke()` from `@supabase/ssr` browser client is unreliable. Use direct `fetch()` with explicit URL and headers:
+
+```typescript
+const res = await fetch(
+  `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-booking`,
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+    },
+    body: JSON.stringify(requestBody),
+  }
+)
+```
+
+### Edge Function error handling — always return the real error
+
+Catch blocks in Edge Functions must return `err.message`, not generic strings. The RPC error path must include `rpcError.message`. Otherwise debugging is impossible.
+
+### Profile→Contact linking after booking
+
+After a successful booking via OTP guest flow, `confirm-form.tsx` links `profiles.contact_id` to the contact record created by the Edge Function. This is non-blocking — errors don't prevent the booking flow.
+
+### Guest OTP verification before booking
+
+Guest users (no session) must verify their email via OTP before a booking is submitted. The inline OTP step appears within the confirm page after form validation. On successful verification, the booking is submitted automatically. Logged-in users skip verification entirely.
+
+### Authoritative name source — contacts.full_name
+
+`contacts.full_name` is the authoritative name for all UI display. Never read `profiles.display_name` as the primary source. All queries that need a user's name should join `profiles → contacts(full_name)` via the `contact_id` FK.
+
+### Turbopack root for special-character paths
+
+`next.config.ts` sets `turbopack: { root: process.cwd() }` to fix workspace root detection when the project path contains `&` (OneDrive).
+
+### Desktop layout conventions
+
+- Public pages use `<main className="mx-auto w-full max-w-5xl px-6 py-8">` wrapper at the **server page level**, not inside client components
+- Landing page (`/`) is full-width — manages its own sections internally
+- `bg-gray-50 min-h-screen` lives on `app/(public)/layout.tsx` — client components should not set their own background
+- Mobile bottom nav uses `md:hidden` — never visible on desktop
+- Desktop font sizes are +2 steps from mobile via `md:` responsive variants (e.g. `text-sm md:text-base`)
+
+### Migrations applied
+
+| Migration | Contents |
+|---|---|
+| `booking_capacity_rpc` | `generate_booking_ref()`, `recalculate_collection_date_units()` trigger, `create_booking_with_capacity_check()` RPC |
+| `booking_resident_select_email_fallback` | Updated resident SELECT policy with email fallback |
+| `fix_booking_rls_recursion` | `current_user_contact_id_by_email()` SECURITY DEFINER function, replaced inline subquery in booking policy |
+
+---
+
 *Keep this file current. If a decision changes in the PRD or TECH_SPEC, update CLAUDE.md in the same PR.*

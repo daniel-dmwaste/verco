@@ -30,7 +30,7 @@ async function getBranding(): Promise<ClientBranding> {
 const FEATURES = [
   {
     title: 'Included in Your Rates',
-    body: 'Your annual allocation is already included in council rates. Book your free services first — extra services are available if you need more.',
+    body: 'Your annual allocation is already included in council rates. Book your included services first — extra services are available if you need more.',
     colorClass: 'bg-[#E8FDF0]',
     icon: (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00B864" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -57,7 +57,7 @@ const FEATURES = [
 const STEPS = [
   { title: 'Search your address', body: 'Enter your property address to check eligibility and view your annual allocation.' },
   { title: 'Select services & date', body: 'Choose your waste types and pick an available collection date.' },
-  { title: 'Confirm & pay if needed', body: 'Free services go straight through. Extra services are charged via Stripe.' },
+  { title: 'Confirm & pay if needed', body: 'Included services go straight through. Extra services are charged via Stripe.' },
   { title: 'Place items out by 7am', body: 'We\u2019ll remind you. Items must be on the verge by 7am on collection day.' },
   { title: 'We collect & process', body: 'Your waste is collected and responsibly processed. You\u2019ll get a completion notification.' },
 ]
@@ -84,12 +84,12 @@ export default async function LandingPage() {
 
         <div className="relative z-10 max-w-[640px]">
           {/* Tenant tag */}
-          <div className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-[#00E47C]/30 bg-[#00E47C]/15 px-3.5 py-1.5 text-xs font-semibold text-[#00E47C]">
+          <div className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-[#00E47C]/30 bg-[#00E47C]/15 px-3.5 py-1.5 text-xs md:text-sm font-semibold text-[#00E47C]">
             <div className="size-1.5 rounded-full bg-[#00E47C]" />
             {branding.name} &middot; Bulk Verge Collection
           </div>
 
-          <h1 className="mb-5 font-[family-name:var(--font-heading)] text-4xl font-bold leading-[1.1] text-white lg:text-[52px]">
+          <h1 className="mb-5 font-[family-name:var(--font-heading)] text-4xl md:text-5xl font-bold leading-[1.1] text-white lg:text-[52px]">
             Book Your
             <br />
             <span className="text-[#00E47C]">Verge Collection</span>
@@ -97,7 +97,7 @@ export default async function LandingPage() {
             in Minutes
           </h1>
 
-          <p className="mb-10 max-w-[520px] text-base leading-relaxed text-[#C7D3DD] lg:text-lg">
+          <p className="mb-10 max-w-[520px] text-base md:text-lg leading-relaxed text-[#C7D3DD] lg:text-lg">
             Simple online booking for bulk verge collection. Check your property
             eligibility, choose your services, and pick a date.
           </p>
@@ -105,7 +105,7 @@ export default async function LandingPage() {
           {/* Search box */}
           <HeroSearch />
 
-          <p className="mt-2.5 text-xs text-[#8FA5B8]">
+          <p className="mt-2.5 text-xs md:text-sm text-[#8FA5B8]">
             e.g. 23 Leda Blvd, Wellard WA 6170
           </p>
         </div>
@@ -113,13 +113,13 @@ export default async function LandingPage() {
 
       {/* Features */}
       <section className="bg-white px-8 py-[72px] lg:px-20">
-        <div className="mb-3 text-xs font-semibold uppercase tracking-[1px] text-[#00B864]">
+        <div className="mb-3 text-xs md:text-sm font-semibold uppercase tracking-[1px] text-[#00B864]">
           Why book online
         </div>
-        <h2 className="mb-3 font-[family-name:var(--font-heading)] text-3xl font-bold text-[#293F52] lg:text-4xl">
+        <h2 className="mb-3 font-[family-name:var(--font-heading)] text-3xl md:text-4xl font-bold text-[#293F52] lg:text-4xl">
           Fast, Simple, Paperless
         </h2>
-        <p className="mb-14 max-w-[520px] text-base text-gray-500">
+        <p className="mb-14 max-w-[520px] text-base md:text-lg text-gray-500">
           Book your collection from any device in under 3 minutes. No phone
           calls, no paperwork.
         </p>
@@ -131,10 +131,10 @@ export default async function LandingPage() {
               >
                 {feature.icon}
               </div>
-              <h3 className="font-[family-name:var(--font-heading)] text-base font-semibold text-[#293F52]">
+              <h3 className="font-[family-name:var(--font-heading)] text-base md:text-lg font-semibold text-[#293F52]">
                 {feature.title}
               </h3>
-              <p className="text-sm leading-relaxed text-gray-500">
+              <p className="text-sm md:text-base leading-relaxed text-gray-500">
                 {feature.body}
               </p>
             </div>
@@ -144,7 +144,7 @@ export default async function LandingPage() {
 
       {/* How it works */}
       <section id="how-it-works" className="bg-gray-50 px-8 py-[72px] lg:px-20">
-        <h2 className="mb-12 font-[family-name:var(--font-heading)] text-3xl font-bold text-[#293F52] lg:text-4xl">
+        <h2 className="mb-12 font-[family-name:var(--font-heading)] text-3xl md:text-4xl font-bold text-[#293F52] lg:text-4xl">
           How it works
         </h2>
         <div className="relative grid grid-cols-2 gap-y-10 md:grid-cols-5 md:gap-0">
@@ -155,13 +155,13 @@ export default async function LandingPage() {
               key={step.title}
               className="flex flex-col items-center gap-3.5 px-4"
             >
-              <div className="relative z-10 flex size-10 items-center justify-center rounded-full bg-[#00E47C] font-[family-name:var(--font-heading)] text-base font-bold text-[#293F52] shadow-[0_0_0_6px_#F5F5F5]">
+              <div className="relative z-10 flex size-10 items-center justify-center rounded-full bg-[#00E47C] font-[family-name:var(--font-heading)] text-base md:text-lg font-bold text-[#293F52] shadow-[0_0_0_6px_#F5F5F5]">
                 {i + 1}
               </div>
-              <h3 className="text-center text-[13px] font-semibold text-[#293F52]">
+              <h3 className="text-center text-[13px] md:text-[15px] font-semibold text-[#293F52]">
                 {step.title}
               </h3>
-              <p className="text-center text-xs leading-relaxed text-gray-500">
+              <p className="text-center text-xs md:text-sm leading-relaxed text-gray-500">
                 {step.body}
               </p>
             </div>
@@ -171,10 +171,10 @@ export default async function LandingPage() {
 
       {/* What We Collect */}
       <section id="services" className="bg-white px-8 py-[72px] lg:px-20">
-        <h2 className="mb-3 font-[family-name:var(--font-heading)] text-3xl font-bold text-[#293F52] lg:text-4xl">
+        <h2 className="mb-3 font-[family-name:var(--font-heading)] text-3xl md:text-4xl font-bold text-[#293F52] lg:text-4xl">
           What We Collect
         </h2>
-        <p className="mb-12 text-base text-gray-500">
+        <p className="mb-12 text-base md:text-lg text-gray-500">
           All services are available in {branding.name}. Allocation limits apply
           per financial year.
         </p>
@@ -184,12 +184,12 @@ export default async function LandingPage() {
               key={svc.name}
               className="flex flex-col gap-2 rounded-xl border-[1.5px] border-gray-100 bg-gray-50 px-5 py-5"
             >
-              <h3 className="font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52]">
+              <h3 className="font-[family-name:var(--font-heading)] text-[15px] md:text-[17px] font-semibold text-[#293F52]">
                 {svc.name}
               </h3>
-              <p className="text-[13px] text-gray-500">{svc.desc}</p>
+              <p className="text-[13px] md:text-[15px] text-gray-500">{svc.desc}</p>
               <span
-                className={`inline-flex w-fit rounded-full px-2.5 py-0.5 text-[11px] font-medium ${svc.tagClass}`}
+                className={`inline-flex w-fit rounded-full px-2.5 py-0.5 text-[11px] md:text-[13px] font-medium ${svc.tagClass}`}
               >
                 {svc.tag}
               </span>
@@ -213,10 +213,10 @@ export default async function LandingPage() {
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
             <div>
-              <h3 className="font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52]">
+              <h3 className="font-[family-name:var(--font-heading)] text-[15px] md:text-[17px] font-semibold text-[#293F52]">
                 Not sure what&apos;s eligible?
               </h3>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs md:text-sm text-gray-500">
                 Check our full guidelines or contact us
               </p>
             </div>
@@ -229,19 +229,19 @@ export default async function LandingPage() {
         <div className="absolute -right-24 -top-24 size-[400px] rounded-full bg-[radial-gradient(circle,rgba(0,228,124,0.10)_0%,transparent_70%)]" />
         <div className="relative z-10 flex flex-col items-start justify-between gap-8 lg:flex-row lg:items-center">
           <div>
-            <h2 className="mb-3 font-[family-name:var(--font-heading)] text-3xl font-bold leading-tight text-white lg:text-4xl">
+            <h2 className="mb-3 font-[family-name:var(--font-heading)] text-3xl md:text-4xl font-bold leading-tight text-white lg:text-4xl">
               Ready to book your
               <br />
               collection?
             </h2>
-            <p className="max-w-[480px] text-base leading-relaxed text-[#C7D3DD]">
+            <p className="max-w-[480px] text-base md:text-lg leading-relaxed text-[#C7D3DD]">
               Enter your address to check eligibility and book in under 3
               minutes. Your annual allocation is waiting.
             </p>
           </div>
           <Link
             href="/book"
-            className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[#00E47C] px-9 py-4 font-[family-name:var(--font-heading)] text-base font-bold text-[#293F52]"
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[#00E47C] px-9 py-4 font-[family-name:var(--font-heading)] text-base md:text-lg font-bold text-[#293F52]"
           >
             Book a Collection
             <svg
@@ -264,10 +264,10 @@ export default async function LandingPage() {
       {/* Footer */}
       <footer className="flex flex-col items-center justify-between gap-4 bg-[#1A2D3B] px-8 py-8 sm:flex-row lg:px-20">
         <div className="flex items-center gap-3">
-          <div className="flex size-6 items-center justify-center rounded-md bg-[#00E47C] font-[family-name:var(--font-heading)] text-[13px] font-bold text-[#293F52]">
+          <div className="flex size-6 items-center justify-center rounded-md bg-[#00E47C] font-[family-name:var(--font-heading)] text-[13px] md:text-[15px] font-bold text-[#293F52]">
             V
           </div>
-          <span className="text-[13px] text-[#8FA5B8]">
+          <span className="text-[13px] md:text-[15px] text-[#8FA5B8]">
             &copy; {new Date().getFullYear()} {branding.name} &middot;{' '}
             <a href="#" className="text-[#8FA5B8] underline">
               Privacy Policy
@@ -275,9 +275,9 @@ export default async function LandingPage() {
           </span>
         </div>
         {branding.show_powered_by && (
-          <div className="flex items-center gap-1.5 text-xs text-[#8FA5B8]">
+          <div className="flex items-center gap-1.5 text-xs md:text-sm text-[#8FA5B8]">
             Booking platform powered by
-            <span className="rounded border border-white/[0.12] bg-white/[0.08] px-2 py-0.5 font-[family-name:var(--font-heading)] text-[11px] font-semibold text-white">
+            <span className="rounded border border-white/[0.12] bg-white/[0.08] px-2 py-0.5 font-[family-name:var(--font-heading)] text-[11px] md:text-[13px] font-semibold text-white">
               VERCO
             </span>
           </div>

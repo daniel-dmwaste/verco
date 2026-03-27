@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { differenceInDays, format, subDays, setHours, setMinutes } from 'date-fns'
 import { BookingStatusBadge } from '@/components/booking/booking-status-badge'
@@ -25,7 +26,9 @@ interface Booking {
   location: string | null
   notes: string | null
   created_at: string
+  geo_address: string | null
   collection_area: { name: string }
+  eligible_properties: { formatted_address: string | null } | null
   booking_item: BookingItem[]
 }
 
@@ -38,14 +41,8 @@ interface Ticket {
   created_at: string
 }
 
-interface Profile {
-  id: string
-  display_name: string | null
-  email: string
-}
-
 interface DashboardClientProps {
-  profile: Profile | null
+  displayName: string
   fyLabel: string
   bookings: Booking[]
   tickets: Ticket[]
@@ -65,6 +62,8 @@ const PAST_STATUSES: BookingStatus[] = [
   'Missed Collection',
 ]
 
+type Tab = 'upcoming' | 'past' | 'enquiries'
+
 function getGreeting(): string {
   const hour = new Date().getHours()
   if (hour < 12) return 'Good morning'
@@ -72,11 +71,15 @@ function getGreeting(): string {
   return 'Good evening'
 }
 
-function getFirstName(profile: Profile | null): string {
-  if (profile?.display_name) {
-    return profile.display_name.split(' ')[0] ?? ''
-  }
-  return ''
+function getFirstName(name: string): string {
+  return name.split(' ')[0] ?? ''
+}
+
+function getAddress(booking: Booking): string {
+  const prop = booking.eligible_properties as { formatted_address: string | null } | null
+  return prop?.formatted_address
+    ?? booking.geo_address
+    ?? (booking.collection_area as { name: string }).name
 }
 
 function getCollectionDate(booking: Booking): string | null {
@@ -93,7 +96,7 @@ function getDaysUntil(dateStr: string): number {
 function getCutoffDate(collectionDateStr: string): Date {
   const collectionDate = new Date(collectionDateStr + 'T00:00:00')
   const dayBefore = subDays(collectionDate, 1)
-  return setMinutes(setHours(dayBefore, 15), 30) // 3:30pm day before
+  return setMinutes(setHours(dayBefore, 15), 30)
 }
 
 function getBorderClass(status: BookingStatus): string {
@@ -121,431 +124,341 @@ const TICKET_DOT_COLORS: Partial<Record<TicketStatus, string>> = {
   resolved: 'bg-[#00B864]',
 }
 
+function BookingCard({ booking }: { booking: Booking }) {
+  const collectionDateStr = getCollectionDate(booking)
+  const daysUntil = collectionDateStr ? getDaysUntil(collectionDateStr) : null
+  const showPlaceOut = daysUntil !== null && daysUntil >= 0 && daysUntil <= 3
+
+  return (
+    <div className="mb-3">
+      {showPlaceOut && collectionDateStr && (
+        <div className="mb-2.5 rounded-[10px] border border-[#00B864] bg-gradient-to-br from-[#E8FDF0] to-[#d4f5e6] px-3.5 py-3">
+          <div className="mb-0.5 flex items-center gap-1.5 text-[13px] md:text-[15px] font-semibold text-[#293F52]">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00B864" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            Place out your waste now
+          </div>
+          <div className="text-xs md:text-sm text-gray-700">
+            Your collection is in{' '}
+            <strong>
+              {daysUntil === 0 ? 'today' : daysUntil === 1 ? 'tomorrow' : `${daysUntil} days`}
+            </strong>
+            . Items must be on the verge by 7am{' '}
+            {format(new Date(collectionDateStr + 'T00:00:00'), 'EEEE d MMMM')}.
+          </div>
+        </div>
+      )}
+
+      <Link
+        href={`/booking/${booking.ref}`}
+        className={`block rounded-xl border-l-4 bg-white p-4 shadow-sm ${getBorderClass(booking.status)}`}
+      >
+        {/* Top: ref + status */}
+        <div className="mb-1.5 flex items-start justify-between">
+          <div className="font-[family-name:var(--font-heading)] text-xs md:text-sm font-semibold text-[#8FA5B8]">
+            {booking.ref}
+          </div>
+          <BookingStatusBadge status={booking.status} />
+        </div>
+
+        {/* Date */}
+        {collectionDateStr && (
+          <div className="text-sm md:text-base font-semibold text-[#293F52]">
+            {format(new Date(collectionDateStr + 'T00:00:00'), 'EEE d MMMM yyyy')}
+          </div>
+        )}
+
+        {/* Address */}
+        <div className="mt-0.5 text-xs md:text-sm text-gray-500">
+          {getAddress(booking)}
+        </div>
+
+        {/* Countdown */}
+        {collectionDateStr && daysUntil !== null && daysUntil >= 0 && daysUntil <= 7 && (
+          <div className="mt-2 flex items-center gap-2 rounded-lg bg-[#E8EEF2] px-3 py-2 text-xs md:text-sm font-medium text-[#293F52]">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            <span>
+              {daysUntil === 0 ? 'Today' : daysUntil === 1 ? '1 day away' : `${daysUntil} days away`}
+              {' · '}
+              <strong>
+                cannot cancel after {format(getCutoffDate(collectionDateStr), "h:mmaaa EEEE")}
+              </strong>
+            </span>
+          </div>
+        )}
+
+        {/* Service chips */}
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {booking.booking_item.map((item) => (
+            <span
+              key={item.id}
+              className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] md:text-[13px] font-medium ${
+                item.is_extra ? 'bg-[#FFF3EA] text-[#8B4000]' : 'bg-[#E8EEF2] text-[#293F52]'
+              }`}
+            >
+              {(item.service as { name: string }).name} &times; {item.no_services}
+              {item.is_extra && ` (extra · $${((item.unit_price_cents * item.no_services) / 100).toFixed(2)})`}
+            </span>
+          ))}
+        </div>
+
+        {/* Bottom: location + view details */}
+        <div className="mt-2 flex items-center justify-between border-t border-gray-100 pt-2">
+          <span className="text-xs md:text-sm text-gray-500">{booking.location}</span>
+          <span className="text-xs md:text-sm font-semibold text-[#00B864]">View details &rarr;</span>
+        </div>
+      </Link>
+    </div>
+  )
+}
+
 export function DashboardClient({
-  profile,
+  displayName,
   fyLabel,
   bookings,
   tickets,
 }: DashboardClientProps) {
-  const firstName = getFirstName(profile)
+  const [activeTab, setActiveTab] = useState<Tab>('upcoming')
+  const firstName = getFirstName(displayName)
   const greeting = getGreeting()
 
-  const upcomingBookings = bookings.filter((b) =>
-    UPCOMING_STATUSES.includes(b.status)
-  )
-  const pastBookings = bookings
-    .filter((b) => PAST_STATUSES.includes(b.status))
-    .slice(0, 5)
+  const upcomingBookings = bookings.filter((b) => UPCOMING_STATUSES.includes(b.status))
+  const pastBookings = bookings.filter((b) => PAST_STATUSES.includes(b.status)).slice(0, 10)
+
+  const tabs: { key: Tab; label: string }[] = [
+    { key: 'upcoming', label: 'Upcoming' },
+    { key: 'past', label: 'Past' },
+    { key: 'enquiries', label: 'Enquiries' },
+  ]
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
-      {/* Navy header */}
-      <div className="shrink-0 bg-[#293F52] px-5 pb-5">
-        <div className="flex h-14 items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="flex size-7 items-center justify-center rounded-[7px] bg-[#00E47C] font-[family-name:var(--font-heading)] text-base font-bold text-[#293F52]">
-              V
-            </div>
-            <span className="font-[family-name:var(--font-heading)] text-base font-bold text-white">
-              VERCO
-            </span>
-          </div>
+    <div className="flex flex-col">
+      {/* Header area */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <h1 className="font-[family-name:var(--font-heading)] text-xl md:text-3xl font-bold text-[#293F52]">
+            My Dashboard
+          </h1>
+          <p className="mt-1 text-sm md:text-base text-gray-500">
+            {greeting}, {firstName || 'there'}
+          </p>
+        </div>
+      </div>
+
+      {/* Stat cards */}
+      <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="rounded-xl bg-white p-4 shadow-sm">
           <div className="flex items-center gap-2.5">
-            <div className="flex size-8 items-center justify-center rounded-full bg-white/[0.12]">
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="white"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
+            <div className="flex size-9 md:size-11 items-center justify-center rounded-lg bg-[#EBF5FF]">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3182CE" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
               </svg>
             </div>
+            <div>
+              <div className="font-[family-name:var(--font-heading)] text-xl md:text-3xl font-bold text-[#293F52]">
+                {upcomingBookings.length}
+              </div>
+              <div className="text-xs md:text-sm text-gray-500">Upcoming</div>
+            </div>
           </div>
         </div>
-        <div className="text-[13px] text-[#8FA5B8]">
-          {greeting}, {firstName}
+        <div className="rounded-xl bg-white p-4 shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-9 md:size-11 items-center justify-center rounded-lg bg-[#E8FDF0]">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00B864" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </div>
+            <div>
+              <div className="font-[family-name:var(--font-heading)] text-xl md:text-3xl font-bold text-[#293F52]">
+                {pastBookings.filter((b) => b.status === 'Completed').length}
+              </div>
+              <div className="text-xs md:text-sm text-gray-500">Completed</div>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-xl bg-white p-4 shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-9 md:size-11 items-center justify-center rounded-lg bg-[#F3EEFF]">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#805AD5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                <rect x="8" y="2" width="8" height="4" rx="1" />
+              </svg>
+            </div>
+            <div>
+              <div className="font-[family-name:var(--font-heading)] text-xl md:text-3xl font-bold text-[#293F52]">
+                {bookings.length}
+              </div>
+              <div className="text-xs md:text-sm text-gray-500">Total {fyLabel}</div>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-xl bg-white p-4 shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-9 md:size-11 items-center justify-center rounded-lg bg-[#FFF3EA]">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF8C42" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+            </div>
+            <div>
+              <div className="font-[family-name:var(--font-heading)] text-xl md:text-3xl font-bold text-[#293F52]">
+                {tickets.length}
+              </div>
+              <div className="text-xs md:text-sm text-gray-500">Enquiries</div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Scrollable content */}
-      <div className="flex flex-1 flex-col pb-20">
-        {/* CTA Banner */}
-        <Link
-          href="/book"
-          className="mx-5 mt-4 flex items-center justify-between rounded-xl bg-[#00E47C] px-4 py-3.5 shadow-[0_4px_12px_rgba(0,228,124,0.3)]"
-        >
-          <span className="font-[family-name:var(--font-heading)] text-sm font-bold text-[#293F52]">
-            Book a Collection
-          </span>
-          <div className="flex size-8 items-center justify-center rounded-full bg-[#293F52]">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="white"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="5" y1="12" x2="19" y2="12" />
-              <polyline points="12 5 19 12 12 19" />
-            </svg>
-          </div>
-        </Link>
-
-        {/* Upcoming */}
-        <div className="px-5 pt-5">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-[family-name:var(--font-heading)] text-sm font-semibold text-[#293F52]">
-              Upcoming
-            </h2>
-          </div>
-
-          {upcomingBookings.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 rounded-xl bg-white p-6 text-center shadow-sm">
-              <div className="flex size-12 items-center justify-center rounded-full bg-gray-100">
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#B0B0B0"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                  <line x1="16" y1="2" x2="16" y2="6" />
-                  <line x1="8" y1="2" x2="8" y2="6" />
-                  <line x1="3" y1="10" x2="21" y2="10" />
-                </svg>
-              </div>
-              <span className="text-sm font-semibold text-[#293F52]">
-                No upcoming bookings
-              </span>
-              <span className="text-xs text-gray-500">
-                You haven&apos;t booked a collection yet for this financial
-                year.
-              </span>
-            </div>
-          ) : (
-            upcomingBookings.map((booking) => {
-              const collectionDateStr = getCollectionDate(booking)
-              const daysUntil = collectionDateStr
-                ? getDaysUntil(collectionDateStr)
-                : null
-              const showPlaceOut =
-                daysUntil !== null && daysUntil >= 0 && daysUntil <= 3
-
-              return (
-                <div key={booking.id} className="mb-2.5">
-                  {/* Place-out reminder */}
-                  {showPlaceOut && collectionDateStr && (
-                    <div className="mb-2.5 rounded-[10px] border border-[#00B864] bg-gradient-to-br from-[#E8FDF0] to-[#d4f5e6] px-3.5 py-3">
-                      <div className="mb-0.5 flex items-center gap-1.5 text-[13px] font-semibold text-[#293F52]">
-                        <svg
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="#00B864"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <circle cx="12" cy="12" r="10" />
-                          <polyline points="12 6 12 12 16 14" />
-                        </svg>
-                        Place out your waste now
-                      </div>
-                      <div className="text-xs text-gray-700">
-                        Your collection is in{' '}
-                        <strong>
-                          {daysUntil === 0
-                            ? 'today'
-                            : daysUntil === 1
-                              ? 'tomorrow'
-                              : `${daysUntil} days`}
-                        </strong>
-                        . Items must be on the verge by 7am{' '}
-                        {format(
-                          new Date(collectionDateStr + 'T00:00:00'),
-                          'EEEE d MMMM'
-                        )}
-                        .
-                      </div>
-                    </div>
-                  )}
-
-                  <Link
-                    href={`/booking/${booking.ref}`}
-                    className={`block cursor-pointer rounded-xl border-l-4 bg-white p-3.5 shadow-sm ${getBorderClass(booking.status)}`}
-                  >
-                    <div className="mb-2 flex items-start justify-between">
-                      <div>
-                        <div className="font-[family-name:var(--font-heading)] text-xs font-semibold text-[#8FA5B8]">
-                          {booking.ref}
-                        </div>
-                        {collectionDateStr && (
-                          <div className="text-sm font-semibold text-[#293F52]">
-                            {format(
-                              new Date(collectionDateStr + 'T00:00:00'),
-                              'EEE d MMMM yyyy'
-                            )}
-                          </div>
-                        )}
-                        <div className="text-xs text-gray-500">
-                          {(booking.collection_area as { name: string }).name}
-                        </div>
-                      </div>
-                      <BookingStatusBadge status={booking.status} />
-                    </div>
-
-                    {/* Countdown + cutoff warning */}
-                    {collectionDateStr &&
-                      daysUntil !== null &&
-                      daysUntil >= 0 &&
-                      daysUntil <= 7 && (
-                        <div className="mb-2 flex items-center gap-2 rounded-lg bg-[#E8EEF2] px-3 py-2 text-xs font-medium text-[#293F52]">
-                          <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <circle cx="12" cy="12" r="10" />
-                            <polyline points="12 6 12 12 16 14" />
-                          </svg>
-                          <span>
-                            {daysUntil === 0
-                              ? 'Today'
-                              : daysUntil === 1
-                                ? '1 day away'
-                                : `${daysUntil} days away`}{' '}
-                            &middot;{' '}
-                            <strong>
-                              cannot cancel after{' '}
-                              {format(
-                                getCutoffDate(collectionDateStr),
-                                "h:mmaaa EEEE"
-                              )}
-                            </strong>
-                          </span>
-                        </div>
-                      )}
-
-                    {/* Service chips */}
-                    <div className="mb-2 flex flex-wrap gap-1.5">
-                      {booking.booking_item.map((item) => (
-                        <span
-                          key={item.id}
-                          className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
-                            item.is_extra
-                              ? 'bg-[#FFF3EA] text-[#8B4000]'
-                              : 'bg-[#E8EEF2] text-[#293F52]'
-                          }`}
-                        >
-                          {(item.service as { name: string }).name} &times;{' '}
-                          {item.no_services}
-                          {item.is_extra &&
-                            ` (extra · $${(
-                              (item.unit_price_cents * item.no_services) /
-                              100
-                            ).toFixed(2)})`}
-                        </span>
-                      ))}
-                    </div>
-
-                    {/* Bottom */}
-                    <div className="flex items-center justify-between border-t border-gray-100 pt-2">
-                      <span className="text-xs text-gray-500">
-                        {booking.location}
-                      </span>
-                      <span className="text-xs font-semibold text-[#00B864]">
-                        View details &rarr;
-                      </span>
-                    </div>
-                  </Link>
-                </div>
-              )
-            })
-          )}
-        </div>
-
-        {/* Past bookings */}
-        {pastBookings.length > 0 && (
-          <div className="px-5 pt-5">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="font-[family-name:var(--font-heading)] text-sm font-semibold text-[#293F52]">
-                Past Bookings
-              </h2>
-            </div>
-
-            {pastBookings.map((booking) => {
-              const collectionDateStr = getCollectionDate(booking)
-              return (
-                <Link
-                  key={booking.id}
-                  href={`/booking/${booking.ref}`}
-                  className={`mb-2.5 block cursor-pointer rounded-xl border-l-4 bg-white p-3.5 shadow-sm ${getBorderClass(booking.status)}`}
-                >
-                  <div className="mb-2 flex items-start justify-between">
-                    <div>
-                      <div className="font-[family-name:var(--font-heading)] text-xs font-semibold text-[#8FA5B8]">
-                        {booking.ref}
-                      </div>
-                      {collectionDateStr && (
-                        <div className="text-sm font-semibold text-[#293F52]">
-                          {format(
-                            new Date(collectionDateStr + 'T00:00:00'),
-                            'EEE d MMM yyyy'
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    <BookingStatusBadge status={booking.status} />
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {booking.booking_item.map((item) => (
-                      <span
-                        key={item.id}
-                        className="inline-flex rounded-full bg-[#E8EEF2] px-2.5 py-0.5 text-[11px] font-medium text-[#293F52]"
-                      >
-                        {(item.service as { name: string }).name} &times;{' '}
-                        {item.no_services}
-                      </span>
-                    ))}
-                  </div>
-                </Link>
-              )
-            })}
-          </div>
-        )}
-
-        {/* Service tickets */}
-        {tickets.length > 0 && (
-          <div className="px-5 pb-4 pt-5">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="font-[family-name:var(--font-heading)] text-sm font-semibold text-[#293F52]">
-                Service Tickets
-              </h2>
-            </div>
-
-            {tickets.map((ticket) => (
-              <div
-                key={ticket.id}
-                className="mb-2.5 flex cursor-pointer items-start gap-2.5 rounded-xl bg-white p-3.5 shadow-sm"
-              >
-                <div
-                  className={`mt-1.5 size-2 shrink-0 rounded-full ${
-                    TICKET_DOT_COLORS[ticket.status] ?? 'bg-gray-300'
-                  }`}
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="text-[13px] font-medium text-gray-900">
-                    {ticket.subject}
-                  </div>
-                  <div className="mt-0.5 text-[11px] text-gray-500">
-                    Opened{' '}
-                    {format(
-                      new Date(ticket.created_at),
-                      'd MMM yyyy'
-                    )}
-                  </div>
-                </div>
-                <BookingStatusBadge
-                  status={
-                    ticket.status === 'open'
-                      ? 'Submitted'
-                      : ticket.status === 'in_progress'
-                        ? 'Confirmed'
-                        : 'Pending Payment'
-                  }
-                  className={
-                    ticket.status === 'open'
-                      ? 'bg-[#EBF5FF] text-[#3182CE]'
-                      : ticket.status === 'waiting_on_customer'
-                        ? 'bg-[#FFF3EA] text-[#8B4000]'
-                        : ''
-                  }
-                />
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Bottom nav */}
-      <div className="fixed bottom-0 left-0 right-0 flex border-t border-gray-100 bg-white">
-        <div className="flex flex-1 flex-col items-center gap-1 pb-4 pt-2.5 text-[10px] font-medium text-[#293F52]">
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#293F52"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+      {/* Tab bar */}
+      <div className="mt-6 flex gap-1 overflow-x-auto border-b border-gray-200 pb-px">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setActiveTab(tab.key)}
+            className={`shrink-0 rounded-t-lg px-4 py-2.5 text-sm md:text-base font-medium transition-colors ${
+              activeTab === tab.key
+                ? 'border-b-2 border-[#293F52] text-[#293F52]'
+                : 'text-gray-400 hover:text-gray-600'
+            }`}
           >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      <div className="mt-4 pb-20 md:pb-4">
+        {activeTab === 'upcoming' && (
+          <>
+            {upcomingBookings.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 rounded-xl bg-white p-8 text-center shadow-sm">
+                <div className="flex size-12 items-center justify-center rounded-full bg-gray-100">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#B0B0B0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                </div>
+                <span className="text-sm md:text-base font-semibold text-[#293F52]">
+                  No upcoming bookings
+                </span>
+                <span className="text-xs md:text-sm text-gray-500">
+                  You haven&apos;t booked a collection yet for this financial year.
+                </span>
+                <Link
+                  href="/book"
+                  className="mt-2 rounded-lg bg-[#00E47C] px-5 py-2.5 font-[family-name:var(--font-heading)] text-sm md:text-base font-semibold text-[#293F52]"
+                >
+                  Book a Collection
+                </Link>
+              </div>
+            ) : (
+              upcomingBookings.map((booking) => (
+                <BookingCard key={booking.id} booking={booking} />
+              ))
+            )}
+          </>
+        )}
+
+        {activeTab === 'past' && (
+          <>
+            {pastBookings.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 rounded-xl bg-white p-8 text-center shadow-sm">
+                <span className="text-sm md:text-base font-semibold text-[#293F52]">No past bookings</span>
+                <span className="text-xs md:text-sm text-gray-500">Completed bookings will appear here.</span>
+              </div>
+            ) : (
+              pastBookings.map((booking) => (
+                <BookingCard key={booking.id} booking={booking} />
+              ))
+            )}
+          </>
+        )}
+
+        {activeTab === 'enquiries' && (
+          <>
+            {tickets.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 rounded-xl bg-white p-8 text-center shadow-sm">
+                <span className="text-sm md:text-base font-semibold text-[#293F52]">No open enquiries</span>
+                <span className="text-xs md:text-sm text-gray-500">Service tickets will appear here.</span>
+              </div>
+            ) : (
+              tickets.map((ticket) => (
+                <div
+                  key={ticket.id}
+                  className="mb-2.5 flex cursor-pointer items-start gap-2.5 rounded-xl bg-white p-3.5 shadow-sm"
+                >
+                  <div
+                    className={`mt-1.5 size-2 shrink-0 rounded-full ${
+                      TICKET_DOT_COLORS[ticket.status] ?? 'bg-gray-300'
+                    }`}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[13px] md:text-[15px] font-medium text-gray-900">
+                      {ticket.subject}
+                    </div>
+                    <div className="mt-0.5 text-[11px] md:text-[13px] text-gray-500">
+                      Opened {format(new Date(ticket.created_at), 'd MMM yyyy')}
+                    </div>
+                  </div>
+                  <BookingStatusBadge
+                    status={
+                      ticket.status === 'open'
+                        ? 'Submitted'
+                        : ticket.status === 'in_progress'
+                          ? 'Confirmed'
+                          : 'Pending Payment'
+                    }
+                    className={
+                      ticket.status === 'open'
+                        ? 'bg-[#EBF5FF] text-[#3182CE]'
+                        : ticket.status === 'waiting_on_customer'
+                          ? 'bg-[#FFF3EA] text-[#8B4000]'
+                          : ''
+                    }
+                  />
+                </div>
+              ))
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Mobile bottom nav */}
+      <div className="fixed bottom-0 left-0 right-0 flex border-t border-gray-100 bg-white md:hidden">
+        <div className="flex flex-1 flex-col items-center gap-1 pb-4 pt-2.5 text-[10px] font-medium text-[#293F52]">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#293F52" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
             <polyline points="9 22 9 12 15 12 15 22" />
           </svg>
           Home
         </div>
         <div className="flex flex-1 flex-col items-center gap-1 pb-4 pt-2.5 text-[10px] font-medium text-gray-500">
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#B0B0B0"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B0B0B0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
             <rect x="8" y="2" width="8" height="4" rx="1" />
           </svg>
           Bookings
         </div>
         <div className="flex flex-1 flex-col items-center gap-1 pb-4 pt-2.5 text-[10px] font-medium text-gray-500">
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#B0B0B0"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B0B0B0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
           Support
         </div>
         <div className="flex flex-1 flex-col items-center gap-1 pb-4 pt-2.5 text-[10px] font-medium text-gray-500">
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#B0B0B0"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B0B0B0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
             <circle cx="12" cy="7" r="4" />
           </svg>

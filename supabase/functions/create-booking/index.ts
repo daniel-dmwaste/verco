@@ -231,7 +231,7 @@ serve(async (req) => {
         return jsonResponse({ error: rpcError.message }, 409)
       }
 
-      return jsonResponse({ error: 'Failed to create booking' }, 500)
+      return jsonResponse({ error: `Failed to create booking: ${rpcError.message}` }, 500)
     }
 
     const bookingId = rpcResult.booking_id
@@ -247,6 +247,10 @@ serve(async (req) => {
     })
   } catch (err) {
     console.error('create-booking error:', err)
-    return jsonResponse({ error: 'Internal Server Error' }, 500)
+    const message = err instanceof Error ? err.message : String(err)
+    return new Response(
+      JSON.stringify({ error: message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
   }
 })

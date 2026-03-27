@@ -13,12 +13,18 @@ export default async function DashboardPage() {
     redirect('/auth')
   }
 
-  // Fetch profile
+  // Fetch profile with contact join for authoritative name
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, display_name, email')
+    .select('id, email, contact_id, contacts(full_name)')
     .eq('id', user.id)
     .single()
+
+  // Resolve display name: contacts.full_name → email prefix
+  const contactRow = profile?.contacts as { full_name: string } | null
+  const displayName = contactRow?.full_name
+    ?? user.email?.split('@')[0]
+    ?? ''
 
   // Fetch current FY
   const { data: fy } = await supabase
@@ -27,7 +33,7 @@ export default async function DashboardPage() {
     .eq('is_current', true)
     .single()
 
-  // Fetch bookings for this user (RLS scopes to own bookings)
+  // Fetch bookings — RLS policy handles scoping via contact_id OR email fallback
   const { data: bookings } = await supabase
     .from('booking')
     .select(
@@ -39,7 +45,9 @@ export default async function DashboardPage() {
       location,
       notes,
       created_at,
+      geo_address,
       collection_area!inner(name),
+      eligible_properties(formatted_address),
       booking_item(
         id,
         no_services,
@@ -63,11 +71,13 @@ export default async function DashboardPage() {
     .limit(5)
 
   return (
-    <DashboardClient
-      profile={profile}
-      fyLabel={fy?.label ?? ''}
-      bookings={bookings ?? []}
-      tickets={tickets ?? []}
-    />
+    <main className="mx-auto w-full max-w-5xl px-6 py-8">
+      <DashboardClient
+        displayName={displayName}
+        fyLabel={fy?.label ?? ''}
+        bookings={bookings ?? []}
+        tickets={tickets ?? []}
+      />
+    </main>
   )
 }

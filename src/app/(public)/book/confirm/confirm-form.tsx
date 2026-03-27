@@ -1,7 +1,7 @@
 'use client'
 
 import { useSearchParams, useRouter } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -15,6 +15,9 @@ import {
   formatAuMobileDisplay,
   normaliseAuMobile,
 } from '@/lib/booking/schemas'
+
+const OTP_LENGTH = 6
+const RESEND_COOLDOWN_SECONDS = 30
 
 export function ConfirmForm() {
   const router = useRouter()
@@ -33,6 +36,17 @@ export function ConfirmForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [mobileDisplay, setMobileDisplay] = useState('')
+
+  // OTP verification state
+  const [otpStep, setOtpStep] = useState(false)
+  const [otpEmail, setOtpEmail] = useState('')
+  const [otpDigits, setOtpDigits] = useState<string[]>(Array.from({ length: OTP_LENGTH }, () => ''))
+  const [otpState, setOtpState] = useState<'idle' | 'verifying' | 'error'>('idle')
+  const [otpError, setOtpError] = useState<string | null>(null)
+  const [resendCooldown, setResendCooldown] = useState(0)
+  const [isResending, setIsResending] = useState(false)
+  const otpInputRefs = useRef<(HTMLInputElement | null)[]>([])
+  const pendingContactRef = useRef<ContactFormData | null>(null)
 
   const {
     register,
@@ -201,7 +215,24 @@ export function ConfirmForm() {
     },
   })
 
-  async function onSubmit(contact: ContactFormData) {
+  // Resend cooldown timer
+  useEffect(() => {
+    if (resendCooldown <= 0) return
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => Math.max(0, prev - 1))
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [resendCooldown])
+
+  // Focus first OTP cell when OTP step shown
+  useEffect(() => {
+    if (otpStep) {
+      otpInputRefs.current[0]?.focus()
+    }
+  }, [otpStep])
+
+  // Submit the actual booking (called after session is confirmed)
+  const submitBooking = useCallback(async (contact: ContactFormData) => {
     setIsSubmitting(true)
     setSubmitError(null)
 
@@ -213,53 +244,109 @@ export function ConfirmForm() {
         })
       )
 
-      const { data, error } = await supabase.functions.invoke(
-        'create-booking',
-        {
-          body: {
-            property_id: propertyId,
-            collection_area_id: collectionAreaId,
-            collection_date_id: collectionDateId,
-            location,
-            notes: notes || undefined,
-            contact: {
-              full_name: contact.full_name,
-              email: contact.email,
-              mobile_e164: contact.mobile,
-            },
-            items,
-          },
-        }
-      )
+      const functionUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-booking`
+      const requestBody = {
+        property_id: propertyId,
+        collection_area_id: collectionAreaId,
+        collection_date_id: collectionDateId,
+        location,
+        notes: notes || undefined,
+        contact: {
+          full_name: contact.full_name,
+          email: contact.email,
+          mobile_e164: contact.mobile,
+        },
+        items,
+      }
+      console.log('create-booking request:', functionUrl)
+      console.log('create-booking body:', JSON.stringify(requestBody, null, 2))
 
-      if (error) {
-        setSubmitError(error.message)
+      const res = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify(requestBody),
+      })
+
+      if (!res.ok) {
+        const errorBody = await res.text()
+        console.error('create-booking error:', res.status, errorBody)
+        try {
+          const parsed = JSON.parse(errorBody)
+          setSubmitError(parsed.error ?? `Booking failed (${res.status})`)
+        } catch {
+          setSubmitError(`Booking failed (${res.status})`)
+        }
         setIsSubmitting(false)
         return
       }
 
-      const result = data as {
+      const result = (await res.json()) as {
         booking_id: string
         ref: string
         requires_payment: boolean
       }
 
-      if (result.requires_payment) {
-        // Call create-checkout to get the Stripe Checkout Session URL
-        const origin = window.location.origin
-        const { data: checkoutData, error: checkoutError } =
-          await supabase.functions.invoke('create-checkout', {
-            body: {
-              booking_id: result.booking_id,
-              success_url: `${origin}/booking/${result.ref}?success=true`,
-              cancel_url: `${origin}/booking/${result.ref}?cancelled=true`,
-            },
-          })
+      // Link profile → contact if not already linked
+      // This ensures the dashboard, RLS, and name display work on next page load
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data: prof } = await supabase
+            .from('profiles')
+            .select('contact_id')
+            .eq('id', user.id)
+            .single()
 
-        if (checkoutError || !checkoutData?.checkout_url) {
-          setSubmitError(
-            checkoutError?.message ?? 'Failed to create payment session'
-          )
+          if (prof && !prof.contact_id) {
+            const { data: contactRow } = await supabase
+              .from('contacts')
+              .select('id')
+              .eq('email', contact.email)
+              .maybeSingle()
+
+            if (contactRow) {
+              await supabase
+                .from('profiles')
+                .update({ contact_id: contactRow.id })
+                .eq('id', user.id)
+            }
+          }
+        }
+      } catch {
+        // Non-critical — don't block booking flow
+        console.error('Failed to link profile to contact')
+      }
+
+      if (result.requires_payment) {
+        const origin = window.location.origin
+        const checkoutUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-checkout`
+        const checkoutRes = await fetch(checkoutUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            booking_id: result.booking_id,
+            success_url: `${origin}/booking/${result.ref}?success=true`,
+            cancel_url: `${origin}/booking/${result.ref}?cancelled=true`,
+          }),
+        })
+
+        if (!checkoutRes.ok) {
+          const errorBody = await checkoutRes.text()
+          console.error('create-checkout error:', checkoutRes.status, errorBody)
+          setSubmitError('Failed to create payment session')
+          setIsSubmitting(false)
+          return
+        }
+
+        const checkoutData = (await checkoutRes.json()) as { checkout_url?: string }
+        if (!checkoutData.checkout_url) {
+          setSubmitError('Failed to create payment session')
           setIsSubmitting(false)
           return
         }
@@ -272,6 +359,151 @@ export function ConfirmForm() {
       setSubmitError('An unexpected error occurred. Please try again.')
       setIsSubmitting(false)
     }
+  }, [selectedItems, propertyId, collectionAreaId, collectionDateId, location, notes, router])
+
+  // OTP verification after code entry
+  const verifyOtp = useCallback(async (code: string) => {
+    setOtpState('verifying')
+    setOtpError(null)
+
+    const { error } = await supabase.auth.verifyOtp({
+      email: otpEmail,
+      token: code,
+      type: 'email',
+    })
+
+    if (error) {
+      setOtpState('error')
+      setOtpError('Invalid code. Please try again or request a new one.')
+      return
+    }
+
+    // Verification successful — proceed with booking
+    setOtpStep(false)
+    if (pendingContactRef.current) {
+      void submitBooking(pendingContactRef.current)
+    }
+  }, [otpEmail, supabase.auth, submitBooking])
+
+  function handleOtpDigitChange(index: number, value: string) {
+    const digit = value.replace(/\D/g, '').slice(-1)
+    const next = [...otpDigits]
+    next[index] = digit
+    setOtpDigits(next)
+
+    if (otpState === 'error') {
+      setOtpState('idle')
+      setOtpError(null)
+    }
+
+    if (digit && index < OTP_LENGTH - 1) {
+      otpInputRefs.current[index + 1]?.focus()
+    }
+
+    if (digit && index === OTP_LENGTH - 1) {
+      const code = next.join('')
+      if (code.length === OTP_LENGTH) {
+        void verifyOtp(code)
+      }
+    }
+  }
+
+  function handleOtpKeyDown(index: number, e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Backspace' && !otpDigits[index] && index > 0) {
+      otpInputRefs.current[index - 1]?.focus()
+      const next = [...otpDigits]
+      next[index - 1] = ''
+      setOtpDigits(next)
+    }
+  }
+
+  function handleOtpPaste(e: React.ClipboardEvent<HTMLInputElement>) {
+    e.preventDefault()
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, OTP_LENGTH)
+    if (!pasted) return
+
+    const next = Array.from({ length: OTP_LENGTH }, (_, i) => pasted[i] ?? '')
+    setOtpDigits(next)
+
+    if (otpState === 'error') {
+      setOtpState('idle')
+      setOtpError(null)
+    }
+
+    const lastFilledIndex = Math.min(pasted.length, OTP_LENGTH) - 1
+    otpInputRefs.current[lastFilledIndex]?.focus()
+
+    if (pasted.length === OTP_LENGTH) {
+      void verifyOtp(pasted)
+    }
+  }
+
+  async function handleOtpResend() {
+    if (resendCooldown > 0 || isResending) return
+    setIsResending(true)
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email: otpEmail,
+      options: { shouldCreateUser: true },
+    })
+
+    setIsResending(false)
+    if (!error) {
+      setResendCooldown(RESEND_COOLDOWN_SECONDS)
+      setOtpDigits(Array.from({ length: OTP_LENGTH }, () => ''))
+      setOtpState('idle')
+      setOtpError(null)
+      otpInputRefs.current[0]?.focus()
+    } else {
+      setOtpError('Failed to resend code. Please try again.')
+    }
+  }
+
+  function getOtpCellClassName(index: number): string {
+    const base =
+      'flex size-[52px] h-[60px] items-center justify-center rounded-[10px] border-[1.5px] text-center font-[family-name:var(--font-heading)] text-2xl font-bold outline-none transition-colors'
+
+    if (otpState === 'error') {
+      return `${base} border-red-500 bg-red-50 text-red-500`
+    }
+    if (otpDigits[index]) {
+      return `${base} border-[#293F52] bg-white text-[#293F52]`
+    }
+    return `${base} border-gray-100 bg-gray-50 text-[#293F52] focus:border-[#293F52] focus:border-2 focus:bg-white`
+  }
+
+  // Form submit handler — checks session, triggers OTP if guest
+  async function onSubmit(contact: ContactFormData) {
+    setSubmitError(null)
+
+    // Check if user already has a session
+    const { data: { session } } = await supabase.auth.getSession()
+
+    if (session) {
+      // Already authenticated — submit directly
+      void submitBooking(contact)
+      return
+    }
+
+    // Guest user — trigger OTP verification
+    pendingContactRef.current = contact
+    setOtpEmail(contact.email)
+    setIsSubmitting(true)
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email: contact.email,
+      options: { shouldCreateUser: true },
+    })
+
+    if (error) {
+      setSubmitError('Failed to send verification code. Please try again.')
+      setIsSubmitting(false)
+      return
+    }
+
+    setIsSubmitting(false)
+    setResendCooldown(RESEND_COOLDOWN_SECONDS)
+    setOtpStep(true)
   }
 
   function handleBack() {
@@ -319,6 +551,9 @@ export function ConfirmForm() {
           </h2>
           <div className="flex flex-col gap-2.5">
             <div>
+              <label className="mb-1 block text-xs font-medium text-gray-700">
+                Full Name<span className="ml-0.5 text-red-500">*</span>
+              </label>
               <input
                 type="text"
                 placeholder="Full name"
@@ -332,6 +567,9 @@ export function ConfirmForm() {
               )}
             </div>
             <div>
+              <label className="mb-1 block text-xs font-medium text-gray-700">
+                Email<span className="ml-0.5 text-red-500">*</span>
+              </label>
               <input
                 type="email"
                 placeholder="Email address"
@@ -345,6 +583,9 @@ export function ConfirmForm() {
               )}
             </div>
             <div>
+              <label className="mb-1 block text-xs font-medium text-gray-700">
+                Mobile<span className="ml-0.5 text-red-500">*</span>
+              </label>
               <input
                 type="tel"
                 placeholder="Mobile number (e.g. 0412 345 678)"
@@ -471,34 +712,127 @@ export function ConfirmForm() {
             {submitError}
           </div>
         )}
+
+        {/* Inline OTP verification */}
+        {otpStep && (
+          <div className="flex flex-col gap-4 rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+            <div>
+              <h2 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
+                Verify Email
+              </h2>
+              <p className="mt-1.5 text-[13px] leading-relaxed text-gray-500">
+                We sent a 6-digit code to
+                <br />
+                <strong className="text-[#293F52]">{otpEmail}</strong>
+              </p>
+            </div>
+
+            {/* OTP cells */}
+            <div className="flex flex-col gap-3">
+              <div className="flex justify-center gap-2">
+                {otpDigits.map((digit, i) => (
+                  <input
+                    key={i}
+                    ref={(el) => { otpInputRefs.current[i] = el }}
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={1}
+                    value={digit}
+                    disabled={otpState === 'verifying'}
+                    onChange={(e) => handleOtpDigitChange(i, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                    onPaste={i === 0 ? handleOtpPaste : undefined}
+                    className={getOtpCellClassName(i)}
+                  />
+                ))}
+              </div>
+
+              {otpState === 'error' && otpError && (
+                <p className="flex items-center justify-center gap-1 text-[11px] text-red-500">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                  {otpError}
+                </p>
+              )}
+
+              {otpState !== 'error' && (
+                <p className="text-center text-[13px] text-gray-500">
+                  Enter the 6-digit code from your email
+                </p>
+              )}
+            </div>
+
+            {/* Verify button */}
+            <button
+              type="button"
+              disabled={otpState === 'verifying' || otpDigits.join('').length < OTP_LENGTH}
+              onClick={() => {
+                const code = otpDigits.join('')
+                if (code.length === OTP_LENGTH) void verifyOtp(code)
+              }}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#293F52] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              {otpState === 'verifying' ? 'Verifying...' : otpState === 'error' ? 'Try Again' : 'Verify Code'}
+            </button>
+
+            {/* Resend */}
+            <div className="text-center text-[13px] text-gray-500">
+              {resendCooldown > 0 ? (
+                <>
+                  Code expires in{' '}
+                  <strong className="text-[#293F52]">
+                    {Math.floor(resendCooldown / 60)}:{(resendCooldown % 60).toString().padStart(2, '0')}
+                  </strong>
+                  {' · '}
+                  <span className="text-gray-300">Resend code</span>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleOtpResend}
+                  disabled={isResending}
+                  className="font-semibold text-[#00B864] hover:underline disabled:text-gray-300"
+                >
+                  {isResending ? 'Sending...' : 'Request a new code'}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Bottom nav */}
-      <div className="sticky bottom-0 flex gap-2.5 pb-5 pt-3">
-        <button
-          type="button"
-          onClick={handleBack}
-          className="flex h-[52px] flex-1 items-center justify-center rounded-xl border-[1.5px] border-gray-100 bg-white font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52] transition-opacity hover:opacity-90"
-        >
-          &larr; Back
-        </button>
-        <button
-          type="submit"
-          form="confirm-form"
-          disabled={isSubmitting}
-          className={`flex h-[52px] flex-1 items-center justify-center rounded-xl font-[family-name:var(--font-heading)] text-[15px] font-semibold transition-opacity hover:opacity-90 disabled:opacity-50 ${
-            totalCents > 0
-              ? 'bg-[#00E47C] text-[#293F52]'
-              : 'bg-[#293F52] text-white'
-          }`}
-        >
-          {isSubmitting
-            ? 'Submitting...'
-            : totalCents > 0
-              ? 'Proceed to Payment'
-              : 'Confirm Booking'}
-        </button>
-      </div>
+      {!otpStep && (
+        <div className="sticky bottom-0 flex gap-2.5 pb-5 pt-3">
+          <button
+            type="button"
+            onClick={handleBack}
+            className="flex h-[52px] flex-1 items-center justify-center rounded-xl border-[1.5px] border-gray-100 bg-white font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52] transition-opacity hover:opacity-90"
+          >
+            &larr; Back
+          </button>
+          <button
+            type="submit"
+            form="confirm-form"
+            disabled={isSubmitting}
+            className={`flex h-[52px] flex-1 items-center justify-center rounded-xl font-[family-name:var(--font-heading)] text-[15px] font-semibold transition-opacity hover:opacity-90 disabled:opacity-50 ${
+              totalCents > 0
+                ? 'bg-[#00E47C] text-[#293F52]'
+                : 'bg-[#293F52] text-white'
+            }`}
+          >
+            {isSubmitting
+              ? 'Sending code...'
+              : totalCents > 0
+                ? 'Proceed to Payment'
+                : 'Confirm Booking'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

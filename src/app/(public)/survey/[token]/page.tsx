@@ -27,7 +27,11 @@ export default async function SurveyPage({ params }: SurveyPageProps) {
   // Already submitted — Screen 4
   if (survey.submitted_at) {
     const responses = survey.responses as unknown as SurveyResponses | null
-    return <AlreadySubmitted bookingRef={survey.booking_id} responses={responses} />
+    return (
+      <main className="mx-auto w-full max-w-5xl">
+        <AlreadySubmitted bookingRef={survey.booking_id} responses={responses} />
+      </main>
+    )
   }
 
   // Fetch booking details (ref, collection date, services)
@@ -61,11 +65,13 @@ export default async function SurveyPage({ params }: SurveyPageProps) {
   }))
 
   return (
-    <SurveyForm
-      token={token}
-      bookingRef={bookingRef}
-      collectionDate={collectionDate}
-      serviceChips={serviceChips}
-    />
+    <main className="mx-auto w-full max-w-5xl">
+      <SurveyForm
+        token={token}
+        bookingRef={bookingRef}
+        collectionDate={collectionDate}
+        serviceChips={serviceChips}
+      />
+    </main>
   )
 }
