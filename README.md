@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Verco v2
 
-## Getting Started
+White-labelled, multi-tenant SaaS platform for managing residential bulk verge collection bookings on behalf of WA local governments.
 
-First, run the development server:
+## Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16 (App Router) |
+| Language | TypeScript 5 (strict mode) |
+| Styling | Tailwind CSS 4 |
+| UI | shadcn/ui (Radix primitives) |
+| Forms | react-hook-form + zod |
+| Server state | TanStack Query v5 |
+| Backend | Supabase (AU, ap-southeast-2) |
+| Auth | Supabase Auth (email OTP) |
+| Payments | Stripe |
+| Package manager | pnpm |
+| Testing | Vitest + Testing Library + Playwright |
+| Maps | Leaflet + OpenStreetMap |
+| Hosting | Coolify on BinaryLane |
+
+## Local Development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repo-url> && cd verco
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Copy `.env.local.example` to `.env.local` and fill in:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Start the dev server:
 
-## Learn More
+```bash
+pnpm dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Scripts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Command | Description |
+|---|---|
+| `pnpm dev` | Start Next.js dev server |
+| `pnpm build` | Production build |
+| `pnpm test` | Run Vitest unit tests |
+| `pnpm test:e2e` | Run Playwright E2E tests |
+| `pnpm test:coverage` | Coverage report |
+| `pnpm typecheck` | TypeScript type check |
+| `pnpm lint` | ESLint |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Documentation
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [Product Requirements (PRD)](docs/VERCO_V2_PRD.md)
+- [Technical Specification](docs/VERCO_V2_TECH_SPEC.md)
