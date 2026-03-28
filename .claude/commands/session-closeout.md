@@ -1,38 +1,28 @@
 ---
-name: session-closeout
+name: verco-session-closeout
 description: Use this skill to close out any Verco development session. Triggers when Dan says "that will do", "close out the session", "wrap up", "end the session", "we're done", "call it a day", "update claude.md", or any end-of-session phrase. Also trigger when Dan asks for a closing prompt, session review, or CLAUDE.md update at the end of a working session. Always use this skill — never generate a closeout prompt without it.
 ---
 
 # Verco Session Close-Out
 
-Generates a single ready-to-paste Claude Code prompt that cleanly closes out a Verco dev session.
+Closes out a Verco dev session by committing work and updating CLAUDE.md.
 
-## What CC will do with the prompt
+## Instructions
 
-1. Commit any uncommitted changes from the session
-2. Review the git log to understand what was built
-3. Update CLAUDE.md with new decisions, patterns, or conventions
-4. Commit CLAUDE.md
+When this skill triggers, DO NOT output a prompt for the user to paste. Execute these steps directly:
 
-## How to generate the prompt
-
-Read the current conversation. Identify the main topics worked on. Use them only to fill in [BRIEF SUMMARY] in the commit message — 3–5 words, comma separated (e.g. service tickets, nav, collection dates).
-
-Output the prompt below with [BRIEF SUMMARY] filled in. Nothing else — no preamble, no explanation. Dan pastes it straight into Claude Code.
-
----
-
-## Prompt template
-
-First, commit any uncommitted work from this session:
+### Step 1 — Commit uncommitted work
+Read the conversation to identify session topics (3–5 words). Then run:
 git add -A
-git commit -m "feat: [BRIEF SUMMARY]"
+git commit -m "feat: [session topics]"
 git push
 
-Then review the git log for this session and scan modified files to understand what was built or changed.
+### Step 2 — Review what was built
+Run: git log --oneline --since="8 hours ago"
+Scan the modified files to understand what changed this session.
 
-Update CLAUDE.md with any new decisions, patterns, or conventions that aren't already documented. Look for:
-
+### Step 3 — Update CLAUDE.md
+Add any new decisions, patterns, or conventions that aren't already documented. Look for:
 - Any pattern used more than once that should become a convention
 - Any fix that reveals a recurring mistake to avoid in future
 - Any new Edge Functions and their auth patterns
@@ -47,7 +37,7 @@ Do NOT add:
 
 One line per decision where possible. Add to the most relevant existing section, or create a new section only if nothing fits.
 
-Then commit:
+### Step 4 — Commit CLAUDE.md
 git add CLAUDE.md
-git commit -m "chore: update CLAUDE.md with session decisions — [BRIEF SUMMARY]"
+git commit -m "chore: update CLAUDE.md with session decisions — [session topics]"
 git push

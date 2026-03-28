@@ -775,8 +775,10 @@ Guest users (no session) must verify their email via OTP before a booking is sub
 - Public pages use `<main className="mx-auto w-full max-w-5xl px-6 py-8">` wrapper at the **server page level**, not inside client components
 - Landing page (`/`) is full-width — manages its own sections internally
 - `bg-gray-50 min-h-screen` lives on `app/(public)/layout.tsx` — client components should not set their own background
-- Mobile bottom nav uses `md:hidden` — never visible on desktop
-- Desktop font sizes are +2 steps from mobile via `md:` responsive variants (e.g. `text-sm md:text-base`)
+- Mobile bottom nav and FAB use `tablet:hidden` — the `tablet` breakpoint (1024px) is defined in `globals.css` as `--breakpoint-tablet: 1024px`
+- Desktop nav links use `hidden tablet:flex` — visible only at 1024px and above
+- Layout padding for mobile bottom nav: `app/(public)/layout.tsx` wraps `{children}` in `<div className="pb-16 tablet:pb-0">` — individual pages do not need their own bottom padding
+- Desktop font sizes are +2 steps from mobile via `md:` responsive variants (e.g. `text-sm md:text-base`) — these stay at `md:`, only nav/layout switching uses `tablet:`
 
 ### Migrations applied
 
@@ -785,6 +787,60 @@ Guest users (no session) must verify their email via OTP before a booking is sub
 | `booking_capacity_rpc` | `generate_booking_ref()`, `recalculate_collection_date_units()` trigger, `create_booking_with_capacity_check()` RPC |
 | `booking_resident_select_email_fallback` | Updated resident SELECT policy with email fallback |
 | `fix_booking_rls_recursion` | `current_user_contact_id_by_email()` SECURITY DEFINER function, replaced inline subquery in booking policy |
+
+---
+
+## 24. Session Decisions — 28 March 2026
+
+### Edge Functions built
+
+| Function | Auth | Deploy flag | Notes |
+|---|---|---|---|
+| `create-ticket` | Anon key | `--no-verify-jwt` | Contact upsert by email, `TKT-{6 random}` display_id with collision retry, service role for writes |
+| `create-ticket-response` | Bearer JWT (resident) | `--no-verify-jwt` | Validates ticket ownership via contact_id, rejects replies to closed/resolved tickets, auto-reopens `waiting_on_customer` → `open` |
+
+### Service ticket display_id format
+
+`TKT-{6 random A-Z0-9}` — e.g. `TKT-SV45RV`. Generated in the `create-ticket` Edge Function with collision retry loop (max 5 attempts). Stored in `service_ticket.display_id` (unique).
+
+### contacts.mobile_e164 is nullable
+
+`contacts.mobile_e164` was changed from `NOT NULL` to nullable. Service tickets can be submitted without a mobile number. Booking creation still validates mobile via zod schema before insert. Migration: `20260328083511_contacts_mobile_nullable.sql`.
+
+### audit_log column mapping
+
+The `audit_log` table uses: `table_name` (text), `record_id` (uuid), `action` (text), `old_data` (jsonb), `new_data` (jsonb), `changed_by` (uuid), `client_id` (uuid). Do NOT use `entity_type`, `entity_id`, or `details` — these columns do not exist.
+
+### Admin page pattern
+
+Admin list pages follow this pattern: `page.tsx` wraps a client component in `<Suspense>`. The client component uses `useQuery` from TanStack Query with the browser Supabase client for all data fetching, filtering, and pagination. RLS handles tenant scoping — no manual `client_id` filtering needed.
+
+### profiles table has no app_role column
+
+User roles live in `user_roles` table (with `user_id` FK to `profiles`, `role` column). To find staff profiles, join through `user_roles`: `supabase.from('user_roles').select('user_id, profiles!inner(id, display_name)').in('role', [...])`.
+
+### Tailwind v4 custom breakpoints
+
+Custom breakpoints are added via `--breakpoint-*` CSS custom properties in the `@theme inline` block in `globals.css` (not in `tailwind.config.ts`, which doesn't exist). Use `tablet:` prefix for the 1024px breakpoint for nav/layout switching. Keep `md:` for text sizing and spacing.
+
+### Mobile navigation architecture
+
+- **Public nav** (`components/public/public-nav.tsx`) — Sticky (`sticky top-0 z-50`), desktop-only links (`hidden tablet:flex`), no hamburger menu. Mobile shows only logo + service name.
+- **Mobile bottom nav** (`components/public/mobile-bottom-nav.tsx`) — 3 tabs: Home (`/`), Bookings (`/dashboard`), Support (`/contact`). Uses `usePathname()` for active state. Lives in `app/(public)/layout.tsx`, not in individual pages.
+- **Mobile FAB** (`components/public/mobile-fab.tsx`) — "+" button linking to `/book`, hidden on booking pages, hidden at `tablet:` breakpoint.
+
+### FAQ accordion pattern
+
+Client-configurable FAQs via `client.faq_items` (JSONB array of `{question, answer}`). Falls back to `lib/client/branding-defaults.ts` if null/empty/invalid. Validated at runtime with type narrowing before use.
+
+### Migrations applied
+
+| Migration | Contents |
+|---|---|
+| `service_ticket_rls_policies` | INSERT + UPDATE policies for service_ticket (resident + staff) |
+| `contacts_mobile_nullable` | `ALTER TABLE contacts ALTER COLUMN mobile_e164 DROP NOT NULL` |
+| `ticket_response_resident_insert` | INSERT policies for ticket_response (resident + staff) |
+| `profiles_staff_select` | Staff can SELECT profiles with active staff-tier roles |
 
 ---
 
