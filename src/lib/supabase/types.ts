@@ -841,7 +841,7 @@ export type Database = {
           full_name: string
           id: string
           last_synced_by: string | null
-          mobile_e164: string
+          mobile_e164: string | null
           updated_at: string
         }
         Insert: {
@@ -852,7 +852,7 @@ export type Database = {
           full_name: string
           id?: string
           last_synced_by?: string | null
-          mobile_e164: string
+          mobile_e164?: string | null
           updated_at?: string
         }
         Update: {
@@ -863,7 +863,7 @@ export type Database = {
           full_name?: string
           id?: string
           last_synced_by?: string | null
-          mobile_e164?: string
+          mobile_e164?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1804,13 +1804,32 @@ export type Database = {
     }
     Functions: {
       accessible_client_ids: { Args: never; Returns: string[] }
+      create_booking_with_capacity_check: {
+        Args: {
+          p_area_code: string
+          p_client_id: string
+          p_collection_area_id: string
+          p_collection_date_id: string
+          p_contact_id: string
+          p_contractor_id: string
+          p_fy_id: string
+          p_items: Json
+          p_location: string
+          p_notes: string
+          p_property_id: string
+          p_status: string
+        }
+        Returns: Json
+      }
       current_user_client_id: { Args: never; Returns: string }
       current_user_contact_id: { Args: never; Returns: string }
+      current_user_contact_id_by_email: { Args: never; Returns: string }
       current_user_contractor_id: { Args: never; Returns: string }
       current_user_role: {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      generate_booking_ref: { Args: { p_area_code: string }; Returns: string }
       has_role: {
         Args: { check_role: Database["public"]["Enums"]["app_role"] }
         Returns: boolean

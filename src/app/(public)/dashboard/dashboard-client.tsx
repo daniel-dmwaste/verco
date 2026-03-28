@@ -124,6 +124,23 @@ const TICKET_DOT_COLORS: Partial<Record<TicketStatus, string>> = {
   resolved: 'bg-[#00B864]',
 }
 
+const TICKET_STATUS_LABELS: Partial<Record<TicketStatus, string>> = {
+  open: 'Open',
+  in_progress: 'In Progress',
+  waiting_on_customer: 'Awaiting Reply',
+  resolved: 'Resolved',
+  closed: 'Closed',
+}
+
+const CATEGORIES: Record<string, string> = {
+  general: 'General',
+  booking: 'Booking Enquiry',
+  billing: 'Billing',
+  service: 'Service Issue',
+  complaint: 'Complaint',
+  other: 'Other',
+}
+
 function BookingCard({ booking }: { booking: Booking }) {
   const collectionDateStr = getCollectionDate(booking)
   const daysUntil = collectionDateStr ? getDaysUntil(collectionDateStr) : null
@@ -239,7 +256,7 @@ export function DashboardClient({
   return (
     <div className="flex flex-col">
       {/* Header area */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+      <div className="flex flex-col gap-4 tablet:flex-row tablet:items-start tablet:justify-between">
         <div>
           <h1 className="font-[family-name:var(--font-heading)] text-xl md:text-3xl font-bold text-[#293F52]">
             My Dashboard
@@ -251,7 +268,7 @@ export function DashboardClient({
       </div>
 
       {/* Stat cards */}
-      <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="mt-6 grid grid-cols-2 gap-3 tablet:grid-cols-4">
         <div className="rounded-xl bg-white p-4 shadow-sm">
           <div className="flex items-center gap-2.5">
             <div className="flex size-9 md:size-11 items-center justify-center rounded-lg bg-[#EBF5FF]">
@@ -337,7 +354,7 @@ export function DashboardClient({
       </div>
 
       {/* Tab content */}
-      <div className="mt-4 pb-20 md:pb-4">
+      <div className="mt-4">
         {activeTab === 'upcoming' && (
           <>
             {upcomingBookings.length === 0 ? (
@@ -390,81 +407,64 @@ export function DashboardClient({
           <>
             {tickets.length === 0 ? (
               <div className="flex flex-col items-center gap-2 rounded-xl bg-white p-8 text-center shadow-sm">
-                <span className="text-sm md:text-base font-semibold text-[#293F52]">No open enquiries</span>
-                <span className="text-xs md:text-sm text-gray-500">Service tickets will appear here.</span>
+                <div className="flex size-12 items-center justify-center rounded-full bg-gray-100">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#B0B0B0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                </div>
+                <span className="text-sm md:text-base font-semibold text-[#293F52]">No enquiries yet</span>
+                <span className="text-xs md:text-sm text-gray-500">Need help? Submit an enquiry and we&apos;ll get back to you.</span>
+                <Link
+                  href="/contact"
+                  className="mt-2 rounded-lg bg-[#293F52] px-5 py-2.5 font-[family-name:var(--font-heading)] text-sm md:text-base font-semibold text-white"
+                >
+                  Contact Us
+                </Link>
               </div>
             ) : (
               tickets.map((ticket) => (
-                <div
+                <Link
                   key={ticket.id}
-                  className="mb-2.5 flex cursor-pointer items-start gap-2.5 rounded-xl bg-white p-3.5 shadow-sm"
+                  href={`/contact/tickets/${ticket.display_id}`}
+                  className="mb-2.5 block rounded-xl bg-white p-4 shadow-sm transition-colors hover:bg-gray-50"
                 >
-                  <div
-                    className={`mt-1.5 size-2 shrink-0 rounded-full ${
-                      TICKET_DOT_COLORS[ticket.status] ?? 'bg-gray-300'
-                    }`}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[13px] md:text-[15px] font-medium text-gray-900">
-                      {ticket.subject}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 font-[family-name:var(--font-heading)] text-xs md:text-sm font-semibold text-[#8FA5B8]">
+                        {ticket.display_id}
+                      </div>
+                      <div className="text-[13px] md:text-[15px] font-semibold text-[#293F52]">
+                        {ticket.subject}
+                      </div>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                        <span className="inline-flex rounded-full bg-[#E8EEF2] px-2.5 py-0.5 text-[11px] md:text-[13px] font-medium text-[#293F52]">
+                          {CATEGORIES[ticket.category] ?? ticket.category}
+                        </span>
+                        <span className="text-[11px] md:text-[13px] text-gray-500">
+                          {format(new Date(ticket.created_at), 'd MMM yyyy')}
+                        </span>
+                      </div>
                     </div>
-                    <div className="mt-0.5 text-[11px] md:text-[13px] text-gray-500">
-                      Opened {format(new Date(ticket.created_at), 'd MMM yyyy')}
+                    <div className="flex shrink-0 flex-col items-end gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <div
+                          className={`size-2 rounded-full ${
+                            TICKET_DOT_COLORS[ticket.status] ?? 'bg-gray-300'
+                          }`}
+                        />
+                        <span className="text-xs font-medium text-gray-600">
+                          {TICKET_STATUS_LABELS[ticket.status] ?? ticket.status}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <BookingStatusBadge
-                    status={
-                      ticket.status === 'open'
-                        ? 'Submitted'
-                        : ticket.status === 'in_progress'
-                          ? 'Confirmed'
-                          : 'Pending Payment'
-                    }
-                    className={
-                      ticket.status === 'open'
-                        ? 'bg-[#EBF5FF] text-[#3182CE]'
-                        : ticket.status === 'waiting_on_customer'
-                          ? 'bg-[#FFF3EA] text-[#8B4000]'
-                          : ''
-                    }
-                  />
-                </div>
+                </Link>
               ))
             )}
           </>
         )}
       </div>
 
-      {/* Mobile bottom nav */}
-      <div className="fixed bottom-0 left-0 right-0 flex border-t border-gray-100 bg-white md:hidden">
-        <div className="flex flex-1 flex-col items-center gap-1 pb-4 pt-2.5 text-[10px] font-medium text-[#293F52]">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#293F52" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-            <polyline points="9 22 9 12 15 12 15 22" />
-          </svg>
-          Home
-        </div>
-        <div className="flex flex-1 flex-col items-center gap-1 pb-4 pt-2.5 text-[10px] font-medium text-gray-500">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B0B0B0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-            <rect x="8" y="2" width="8" height="4" rx="1" />
-          </svg>
-          Bookings
-        </div>
-        <div className="flex flex-1 flex-col items-center gap-1 pb-4 pt-2.5 text-[10px] font-medium text-gray-500">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B0B0B0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-          Support
-        </div>
-        <div className="flex flex-1 flex-col items-center gap-1 pb-4 pt-2.5 text-[10px] font-medium text-gray-500">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B0B0B0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-            <circle cx="12" cy="7" r="4" />
-          </svg>
-          Account
-        </div>
-      </div>
     </div>
   )
 }

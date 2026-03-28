@@ -50,9 +50,16 @@ export default async function BookingDetailPage({
     redirect('/dashboard')
   }
 
+  // Fetch service tickets linked to this booking (RLS scopes to resident's own)
+  const { data: tickets } = await supabase
+    .from('service_ticket')
+    .select('id, display_id, subject, status, category, created_at')
+    .eq('booking_id', booking.id)
+    .order('created_at', { ascending: false })
+
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-8">
-      <BookingDetailClient booking={booking} />
+      <BookingDetailClient booking={booking} tickets={tickets ?? []} />
     </main>
   )
 }

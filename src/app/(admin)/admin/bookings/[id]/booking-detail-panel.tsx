@@ -40,7 +40,7 @@ interface Booking {
   updated_at: string
   collection_area: { name: string; code: string }
   eligible_properties: { formatted_address: string | null; address: string } | null
-  contact: { full_name: string; mobile_e164: string; email: string } | null
+  contact: { full_name: string; mobile_e164: string | null; email: string } | null
   booking_item: BookingItem[]
 }
 
@@ -59,7 +59,7 @@ export function BookingDetailPanel({
 
   const area = booking.collection_area as { name: string; code: string }
   const property = booking.eligible_properties as { formatted_address: string | null; address: string } | null
-  const contact = booking.contact as { full_name: string; mobile_e164: string; email: string } | null
+  const contact = booking.contact as { full_name: string; mobile_e164: string | null; email: string } | null
   const address = property?.formatted_address ?? property?.address ?? '—'
 
   const collectionDateStr =

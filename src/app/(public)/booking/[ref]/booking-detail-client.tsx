@@ -15,6 +15,8 @@ import { cancelBooking } from './actions'
 import type { Database } from '@/lib/supabase/types'
 
 type BookingStatus = Database['public']['Enums']['booking_status']
+type TicketStatus = Database['public']['Enums']['ticket_status']
+type TicketCategory = Database['public']['Enums']['ticket_category']
 
 interface BookingItem {
   id: string
@@ -23,6 +25,15 @@ interface BookingItem {
   unit_price_cents: number
   service: { name: string }
   collection_date: { date: string }
+}
+
+interface Ticket {
+  id: string
+  display_id: string
+  subject: string
+  status: TicketStatus
+  category: TicketCategory
+  created_at: string
 }
 
 interface Booking {
@@ -39,6 +50,24 @@ interface Booking {
 
 interface BookingDetailClientProps {
   booking: Booking
+  tickets: Ticket[]
+}
+
+const TICKET_STATUS_COLORS: Record<TicketStatus, { dot: string; bg: string; text: string; label: string }> = {
+  open: { dot: 'bg-amber-400', bg: 'bg-amber-50', text: 'text-amber-700', label: 'Open' },
+  in_progress: { dot: 'bg-blue-500', bg: 'bg-blue-50', text: 'text-blue-700', label: 'In Progress' },
+  waiting_on_customer: { dot: 'bg-purple-500', bg: 'bg-purple-50', text: 'text-purple-700', label: 'Awaiting Reply' },
+  resolved: { dot: 'bg-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'Resolved' },
+  closed: { dot: 'bg-gray-400', bg: 'bg-gray-100', text: 'text-gray-600', label: 'Closed' },
+}
+
+const CATEGORY_LABELS: Record<TicketCategory, string> = {
+  general: 'General',
+  booking: 'Booking Enquiry',
+  billing: 'Billing',
+  service: 'Service Issue',
+  complaint: 'Complaint',
+  other: 'Other',
 }
 
 function getCollectionDate(booking: Booking): string | null {
@@ -54,7 +83,7 @@ function getCutoffDate(collectionDateStr: string): Date {
 
 const CANCELLABLE_STATUSES: BookingStatus[] = ['Submitted', 'Confirmed']
 
-export function BookingDetailClient({ booking }: BookingDetailClientProps) {
+export function BookingDetailClient({ booking, tickets }: BookingDetailClientProps) {
   const router = useRouter()
   const [isCancelling, setIsCancelling] = useState(false)
   const [cancelError, setCancelError] = useState<string | null>(null)
@@ -268,6 +297,77 @@ export function BookingDetailClient({ booking }: BookingDetailClientProps) {
             {cancelError}
           </div>
         )}
+
+        {/* Enquiries */}
+        {tickets.length > 0 && (
+          <div className="rounded-xl bg-white p-4 shadow-sm">
+            <div className="mb-2.5 flex items-center gap-2">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                Enquiries
+              </span>
+              <span className="flex size-5 items-center justify-center rounded-full bg-[#E8EEF2] text-[10px] font-bold text-[#293F52]">
+                {tickets.length}
+              </span>
+            </div>
+            <div className="flex flex-col gap-2">
+              {tickets.map((ticket) => {
+                const statusStyle = TICKET_STATUS_COLORS[ticket.status]
+                return (
+                  <Link
+                    key={ticket.id}
+                    href={`/contact/tickets/${ticket.display_id}`}
+                    className="block rounded-lg border border-gray-100 px-3 py-2.5 transition-colors hover:border-[#293F52]/20 hover:bg-gray-50"
+                  >
+                    <div className="mb-1 flex items-center justify-between">
+                      <span className="font-mono text-[11px] text-gray-400">
+                        {ticket.display_id}
+                      </span>
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${statusStyle.bg} ${statusStyle.text}`}
+                      >
+                        <span className={`size-1.5 rounded-full ${statusStyle.dot}`} />
+                        {statusStyle.label}
+                      </span>
+                    </div>
+                    <div className="text-[13px] font-semibold text-[#293F52]">
+                      {ticket.subject}
+                    </div>
+                    <div className="mt-1 flex items-center gap-2">
+                      <span className="rounded-full border border-gray-200 px-2 py-0.5 text-[11px] text-gray-500">
+                        {CATEGORY_LABELS[ticket.category]}
+                      </span>
+                      <span className="text-[11px] text-gray-400">
+                        {format(new Date(ticket.created_at), 'd MMM yyyy')}
+                      </span>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Get Help / Raise Another Enquiry */}
+        <Link
+          href={`/contact?booking_ref=${encodeURIComponent(booking.ref)}&booking_id=${encodeURIComponent(booking.id)}`}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border-[1.5px] border-[#293F52] bg-white px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52]"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+          {tickets.length > 0
+            ? 'Raise Another Enquiry \u2192'
+            : 'Get Help with this Booking \u2192'}
+        </Link>
 
         {/* Actions */}
         {canCancel && (

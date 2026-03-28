@@ -1,0 +1,457 @@
+'use client'
+
+import { useState, useRef } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { createClient } from '@/lib/supabase/client'
+
+const PAGE_SIZE = 50
+
+interface ParsedRow {
+  address: string
+  collection_area_code: string
+  is_mud: boolean
+}
+
+export function PropertiesClient() {
+  const supabase = createClient()
+  const queryClient = useQueryClient()
+
+  const [page, setPage] = useState(0)
+  const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [areaFilter, setAreaFilter] = useState('')
+  const [mudFilter, setMudFilter] = useState<'all' | 'mud' | 'residential'>('all')
+  const [showImport, setShowImport] = useState(false)
+  const [isGeocoding, setIsGeocoding] = useState(false)
+  const [geocodeResult, setGeocodeResult] = useState<string | null>(null)
+
+  // CSV import state
+  const [csvRows, setCsvRows] = useState<ParsedRow[]>([])
+  const [csvError, setCsvError] = useState<string | null>(null)
+  const [isImporting, setIsImporting] = useState(false)
+  const [importResult, setImportResult] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Debounce search
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  function handleSearchChange(value: string) {
+    setSearch(value)
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    searchTimerRef.current = setTimeout(() => {
+      setDebouncedSearch(value)
+      setPage(0)
+    }, 300)
+  }
+
+  // Fetch areas
+  const { data: areas } = useQuery({
+    queryKey: ['collection-areas'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('collection_area')
+        .select('id, code, name')
+        .eq('is_active', true)
+        .order('code')
+      return data ?? []
+    },
+  })
+
+  // Fetch properties
+  const { data: propertiesData, isLoading } = useQuery({
+    queryKey: ['admin-properties', debouncedSearch, areaFilter, mudFilter, page],
+    queryFn: async () => {
+      let query = supabase
+        .from('eligible_properties')
+        .select(
+          'id, address, formatted_address, collection_area_id, is_mud, has_geocode, latitude, longitude, collection_area!inner(name, code)',
+          { count: 'exact' }
+        )
+        .order('formatted_address', { ascending: true, nullsFirst: false })
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
+
+      if (debouncedSearch) {
+        query = query.or(`address.ilike.%${debouncedSearch}%,formatted_address.ilike.%${debouncedSearch}%`)
+      }
+      if (areaFilter) {
+        query = query.eq('collection_area_id', areaFilter)
+      }
+      if (mudFilter === 'mud') {
+        query = query.eq('is_mud', true)
+      } else if (mudFilter === 'residential') {
+        query = query.eq('is_mud', false)
+      }
+
+      const { data, count } = await query
+      return { properties: data ?? [], total: count ?? 0 }
+    },
+  })
+
+  // Count ungeocoded
+  const { data: ungeocodedCount } = useQuery({
+    queryKey: ['ungeocoded-count'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('eligible_properties')
+        .select('id', { count: 'exact', head: true })
+        .eq('has_geocode', false)
+      return count ?? 0
+    },
+  })
+
+  const properties = propertiesData?.properties ?? []
+  const total = propertiesData?.total ?? 0
+
+  async function handleToggleMud(id: string, currentValue: boolean) {
+    await supabase
+      .from('eligible_properties')
+      .update({ is_mud: !currentValue })
+      .eq('id', id)
+    void queryClient.invalidateQueries({ queryKey: ['admin-properties'] })
+  }
+
+  async function handleGeocodeAll() {
+    setIsGeocoding(true)
+    setGeocodeResult(null)
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/geocode-properties`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session?.access_token ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({}),
+        }
+      )
+
+      if (!res.ok) {
+        setGeocodeResult(`Geocoding failed (${res.status})`)
+      } else {
+        const result = await res.json() as { processed?: number; failed?: number }
+        setGeocodeResult(`Geocoded ${result.processed ?? 0} properties${result.failed ? `, ${result.failed} failed` : ''}`)
+        void queryClient.invalidateQueries({ queryKey: ['admin-properties'] })
+        void queryClient.invalidateQueries({ queryKey: ['ungeocoded-count'] })
+      }
+    } catch {
+      setGeocodeResult('Geocoding failed')
+    } finally {
+      setIsGeocoding(false)
+    }
+  }
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setCsvError(null)
+    setImportResult(null)
+
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string
+      const lines = text.split('\n').map((l) => l.trim()).filter(Boolean)
+      if (lines.length < 2) {
+        setCsvError('CSV must have a header row and at least one data row')
+        return
+      }
+
+      const header = lines[0]!.toLowerCase().split(',').map((h) => h.trim())
+      const addrIdx = header.indexOf('address')
+      const areaIdx = header.indexOf('collection_area_code')
+      const mudIdx = header.indexOf('is_mud')
+
+      if (addrIdx === -1 || areaIdx === -1) {
+        setCsvError('CSV must have "address" and "collection_area_code" columns')
+        return
+      }
+
+      const rows: ParsedRow[] = []
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i]!.split(',').map((c) => c.trim())
+        const address = cols[addrIdx] ?? ''
+        const code = cols[areaIdx] ?? ''
+        const mud = mudIdx >= 0 ? (cols[mudIdx] ?? '').toLowerCase() === 'true' : false
+
+        if (address && code) {
+          rows.push({ address, collection_area_code: code, is_mud: mud })
+        }
+      }
+
+      if (rows.length === 0) {
+        setCsvError('No valid rows found in CSV')
+        return
+      }
+
+      setCsvRows(rows)
+    }
+    reader.readAsText(file)
+  }
+
+  async function handleImportConfirm() {
+    if (csvRows.length === 0 || !areas) return
+    setIsImporting(true)
+    setImportResult(null)
+
+    const areaMap = new Map(areas.map((a) => [a.code, a.id]))
+    let inserted = 0
+    let failed = 0
+
+    // Batch insert in chunks of 100
+    for (let i = 0; i < csvRows.length; i += 100) {
+      const chunk = csvRows.slice(i, i + 100)
+      const rows = chunk
+        .map((r) => {
+          const areaId = areaMap.get(r.collection_area_code)
+          if (!areaId) {
+            failed++
+            return null
+          }
+          return {
+            address: r.address,
+            collection_area_id: areaId,
+            is_mud: r.is_mud,
+          }
+        })
+        .filter((r): r is NonNullable<typeof r> => r !== null)
+
+      if (rows.length > 0) {
+        const { error } = await supabase.from('eligible_properties').insert(rows)
+        if (error) {
+          failed += rows.length
+        } else {
+          inserted += rows.length
+        }
+      }
+    }
+
+    setIsImporting(false)
+    setImportResult(`Imported ${inserted} properties${failed > 0 ? `, ${failed} failed` : ''}`)
+    setCsvRows([])
+    if (fileInputRef.current) fileInputRef.current.value = ''
+    void queryClient.invalidateQueries({ queryKey: ['admin-properties'] })
+    void queryClient.invalidateQueries({ queryKey: ['ungeocoded-count'] })
+
+    // Auto-trigger geocoding for new properties
+    if (inserted > 0) {
+      void handleGeocodeAll()
+    }
+  }
+
+  return (
+    <div className="p-6">
+      {/* Header */}
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
+            Eligible Properties
+          </h1>
+          <p className="mt-0.5 text-sm text-gray-500">
+            Manage property addresses and geocoding
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleGeocodeAll}
+            disabled={isGeocoding || (ungeocodedCount ?? 0) === 0}
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-[13px] font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+          >
+            {isGeocoding ? 'Geocoding...' : `Geocode All (${ungeocodedCount ?? 0} pending)`}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowImport((p) => !p)}
+            className="rounded-lg bg-[#00E47C] px-4 py-2 text-[13px] font-semibold text-[#293F52]"
+          >
+            Import Properties
+          </button>
+        </div>
+      </div>
+
+      {geocodeResult && (
+        <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700">
+          {geocodeResult}
+        </div>
+      )}
+
+      {/* CSV Import */}
+      {showImport && (
+        <div className="mb-4 rounded-xl border border-gray-200 bg-white p-5">
+          <h3 className="mb-3 text-sm font-semibold text-[#293F52]">Import Properties from CSV</h3>
+          <p className="mb-3 text-xs text-gray-500">
+            CSV must have columns: <code className="rounded bg-gray-100 px-1">address</code>, <code className="rounded bg-gray-100 px-1">collection_area_code</code>, <code className="rounded bg-gray-100 px-1">is_mud</code> (optional, true/false)
+          </p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            onChange={handleFileSelect}
+            className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-lg file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-gray-700"
+          />
+          {csvError && <p className="mt-2 text-sm text-red-600">{csvError}</p>}
+          {importResult && <p className="mt-2 text-sm text-emerald-600">{importResult}</p>}
+
+          {csvRows.length > 0 && (
+            <div className="mt-3">
+              <div className="mb-2 text-xs font-semibold text-gray-500">
+                Preview ({csvRows.length} rows total — showing first 5):
+              </div>
+              <div className="overflow-x-auto rounded-lg border border-gray-100">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-gray-50 text-gray-500">
+                      <th className="px-3 py-1.5 text-left">Address</th>
+                      <th className="px-3 py-1.5 text-left">Area Code</th>
+                      <th className="px-3 py-1.5 text-center">MUD</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {csvRows.slice(0, 5).map((r, i) => (
+                      <tr key={i} className="border-t border-gray-50">
+                        <td className="px-3 py-1.5">{r.address}</td>
+                        <td className="px-3 py-1.5">{r.collection_area_code}</td>
+                        <td className="px-3 py-1.5 text-center">{r.is_mud ? 'Yes' : 'No'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleImportConfirm}
+                  disabled={isImporting}
+                  className="rounded-lg bg-[#293F52] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  {isImporting ? 'Importing...' : `Import ${csvRows.length} Properties`}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setCsvRows([]); if (fileInputRef.current) fileInputRef.current.value = '' }}
+                  className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Filters */}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <div className="flex-1">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            placeholder="Search by address..."
+            className="w-full max-w-sm rounded-lg border border-gray-200 px-3.5 py-2 text-sm outline-none placeholder:text-gray-400 focus:border-[#293F52]"
+          />
+        </div>
+        <select
+          value={areaFilter}
+          onChange={(e) => { setAreaFilter(e.target.value); setPage(0) }}
+          className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+        >
+          <option value="">All areas</option>
+          {(areas ?? []).map((a) => (
+            <option key={a.id} value={a.id}>{a.code} — {a.name}</option>
+          ))}
+        </select>
+        <select
+          value={mudFilter}
+          onChange={(e) => { setMudFilter(e.target.value as typeof mudFilter); setPage(0) }}
+          className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+        >
+          <option value="all">All types</option>
+          <option value="mud">MUD only</option>
+          <option value="residential">Residential only</option>
+        </select>
+      </div>
+
+      {/* Table */}
+      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-gray-100 bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <th className="px-4 py-3">Address</th>
+              <th className="px-4 py-3">Area</th>
+              <th className="px-4 py-3 text-center">Type</th>
+              <th className="px-4 py-3 text-center">Geocoded</th>
+              <th className="px-4 py-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading ? (
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+            ) : properties.length === 0 ? (
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">No properties found</td></tr>
+            ) : (
+              properties.map((p) => {
+                const area = p.collection_area as { name: string; code: string }
+                return (
+                  <tr key={p.id} className="border-b border-gray-50">
+                    <td className="px-4 py-2.5">
+                      <div className="font-medium text-[#293F52]">{p.formatted_address ?? p.address}</div>
+                      {p.formatted_address && p.formatted_address !== p.address && (
+                        <div className="text-[11px] text-gray-400">{p.address}</div>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-gray-600">{area.code}</td>
+                    <td className="px-4 py-2.5 text-center">
+                      {p.is_mud ? (
+                        <span className="rounded-full bg-[#F3EEFF] px-2 py-0.5 text-[10px] font-semibold text-[#805AD5]">MUD</span>
+                      ) : (
+                        <span className="text-[11px] text-gray-400">Residential</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-center">
+                      {p.has_geocode ? (
+                        <span className="text-emerald-500" title="Geocoded">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        </span>
+                      ) : (
+                        <span className="text-amber-400" title="Pending geocode">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleMud(p.id, p.is_mud)}
+                        className="mr-2 text-xs font-medium text-[#293F52] hover:underline"
+                      >
+                        {p.is_mud ? 'Set Residential' : 'Set MUD'}
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      {total > 0 && (
+        <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
+          <span>
+            Showing {page * PAGE_SIZE + 1}&ndash;{Math.min((page + 1) * PAGE_SIZE, total)} of {total}
+          </span>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0} className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium disabled:opacity-30">
+              Previous
+            </button>
+            <button type="button" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * PAGE_SIZE >= total} className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium disabled:opacity-30">
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

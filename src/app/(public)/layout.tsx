@@ -2,6 +2,7 @@ import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { PublicNav } from '@/components/public/public-nav'
 import { MobileFab } from '@/components/public/mobile-fab'
+import { MobileBottomNav } from '@/components/public/mobile-bottom-nav'
 
 interface ClientBranding {
   name: string
@@ -48,8 +49,11 @@ export default async function PublicLayout({
         logoUrl={branding?.logo_light_url ?? null}
         showPoweredBy={branding?.show_powered_by ?? true}
       />
-      {children}
+      <div className="pb-16 tablet:pb-0">
+        {children}
+      </div>
       <MobileFab />
+      <MobileBottomNav />
     </div>
   )
 }
