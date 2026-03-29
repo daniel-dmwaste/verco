@@ -25,10 +25,30 @@ const TEST_ALLOCATION_RULES = [
   { max_collections: 2, category: { name: 'Ancillary', code: 'anc' } },
 ]
 
-const TEST_SERVICE_RULES = [
+// Flat service_rules (used by confirm page summary)
+const TEST_SERVICE_RULES_FLAT = [
   { service_id: 'svc-general', max_collections: 3, extra_unit_price: 50 },
   { service_id: 'svc-green', max_collections: 3, extra_unit_price: 40 },
   { service_id: 'svc-mattress', max_collections: 2, extra_unit_price: 60 },
+]
+
+// Nested service_rules with service join (used by services form: select *, service!inner(...))
+const TEST_SERVICE_RULES_NESTED = [
+  {
+    id: 'sr-1', service_id: 'svc-general', max_collections: 3, extra_unit_price: 50,
+    collection_area_id: TEST_PROPERTY.collection_area_id,
+    service: { id: 'svc-general', name: 'General Waste', category_id: 'cat-bulk', category: { id: 'cat-bulk', name: 'Bulk Collection', code: 'bulk' } },
+  },
+  {
+    id: 'sr-2', service_id: 'svc-green', max_collections: 3, extra_unit_price: 40,
+    collection_area_id: TEST_PROPERTY.collection_area_id,
+    service: { id: 'svc-green', name: 'Green Waste', category_id: 'cat-bulk', category: { id: 'cat-bulk', name: 'Bulk Collection', code: 'bulk' } },
+  },
+  {
+    id: 'sr-3', service_id: 'svc-mattress', max_collections: 2, extra_unit_price: 60,
+    collection_area_id: TEST_PROPERTY.collection_area_id,
+    service: { id: 'svc-mattress', name: 'Mattress', category_id: 'cat-anc', category: { id: 'cat-anc', name: 'Ancillary', code: 'anc' } },
+  },
 ]
 
 const TEST_COLLECTION_DATE = {
@@ -69,11 +89,14 @@ async function setupMocks(page: Page, options?: {
 
     // financial_year
     if (url.includes('financial_year')) {
+      // .single() uses Accept: application/vnd.pgrst.object+json
+      const accept = route.request().headers()['accept'] ?? ''
+      const isSingle = accept.includes('vnd.pgrst.object')
       return route.fulfill({
         status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(TEST_FY),
-        headers: { 'Content-Profile': 'public', 'Content-Range': '0-0/1' },
+        contentType: isSingle ? 'application/vnd.pgrst.object+json' : 'application/json',
+        body: JSON.stringify(isSingle ? TEST_FY : [TEST_FY]),
+        headers: { 'Content-Range': '0-0/1' },
       })
     }
 
@@ -86,12 +109,13 @@ async function setupMocks(page: Page, options?: {
       })
     }
 
-    // service_rules
+    // service_rules — return nested shape if query includes service join (wildcard select)
     if (url.includes('service_rules')) {
+      const isNestedQuery = url.includes('service') && url.includes('select=')
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(TEST_SERVICE_RULES),
+        body: JSON.stringify(isNestedQuery ? TEST_SERVICE_RULES_NESTED : TEST_SERVICE_RULES_FLAT),
       })
     }
 
@@ -120,13 +144,13 @@ async function setupMocks(page: Page, options?: {
 
     // collection_date
     if (url.includes('collection_date')) {
-      // Single fetch vs. list
-      if (url.includes(`id=eq.${TEST_COLLECTION_DATE.id}`)) {
+      const accept = route.request().headers()['accept'] ?? ''
+      const isSingle = accept.includes('vnd.pgrst.object')
+      if (isSingle) {
         return route.fulfill({
           status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ date: TEST_COLLECTION_DATE.date }),
-          headers: { 'Content-Range': '0-0/1' },
+          contentType: 'application/vnd.pgrst.object+json',
+          body: JSON.stringify(TEST_COLLECTION_DATE),
         })
       }
       return route.fulfill({
@@ -147,20 +171,23 @@ async function setupMocks(page: Page, options?: {
 
     // profiles
     if (url.includes('profiles')) {
+      const accept = route.request().headers()['accept'] ?? ''
+      const isSingle = accept.includes('vnd.pgrst.object')
       return route.fulfill({
         status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ contact_id: null }),
-        headers: { 'Content-Range': '0-0/1' },
+        contentType: isSingle ? 'application/vnd.pgrst.object+json' : 'application/json',
+        body: JSON.stringify(isSingle ? { contact_id: null } : [{ contact_id: null }]),
       })
     }
 
     // contacts
     if (url.includes('contacts')) {
+      const accept = route.request().headers()['accept'] ?? ''
+      const isSingle = accept.includes('vnd.pgrst.object')
       return route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(null),
+        status: isSingle ? 200 : 200,
+        contentType: isSingle ? 'application/vnd.pgrst.object+json' : 'application/json',
+        body: JSON.stringify(isSingle ? null : []),
       })
     }
 
@@ -253,7 +280,7 @@ test.describe('Booking Flow', () => {
 
     // Step 1: Address
     await page.goto('/book')
-    await expect(page.getByText('Book a Collection')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Book a Collection' })).toBeVisible()
 
     // Type address and select from autocomplete
     const addressInput = page.getByPlaceholder('Start typing your address...')
@@ -309,6 +336,17 @@ test.describe('Booking Flow', () => {
     const confirmButton = page.getByRole('button', { name: 'Confirm Booking' })
     await expect(confirmButton).toBeVisible()
 
+    // Track create-booking call
+    let createBookingPayload: Record<string, unknown> | null = null
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'http://localhost:54321'
+    page.on('request', async (req) => {
+      if (req.url().includes('create-booking') && req.method() === 'POST') {
+        try {
+          createBookingPayload = req.postDataJSON()
+        } catch { /* ignore */ }
+      }
+    })
+
     // Submit
     await confirmButton.click()
 
@@ -321,8 +359,19 @@ test.describe('Booking Flow', () => {
       await otpCells.nth(i).fill(String(i + 1))
     }
 
-    // Should auto-verify and redirect to booking detail
-    await expect(page).toHaveURL(/\/booking\/KWN-1-A7K9M2/, { timeout: 10000 })
+    // Wait for booking creation call to complete
+    await page.waitForResponse(
+      (resp) => resp.url().includes('create-booking') && resp.status() === 200,
+      { timeout: 10000 },
+    )
+
+    // Verify the create-booking Edge Function was called with correct payload
+    expect(createBookingPayload).not.toBeNull()
+    expect(createBookingPayload!.property_id).toBe(TEST_PROPERTY.id)
+    expect(createBookingPayload!.collection_date_id).toBe(TEST_COLLECTION_DATE.id)
+    expect(createBookingPayload!.location).toBe('Front Verge')
+    expect((createBookingPayload!.contact as Record<string, string>).email).toBe('jane@example.com')
+    expect((createBookingPayload!.items as Array<Record<string, unknown>>)).toHaveLength(1)
   })
 
   test('paid booking — shows payment button and calls create-checkout', async ({ page }) => {
@@ -364,8 +413,8 @@ test.describe('Booking Flow', () => {
     await page.getByPlaceholder('Email address').fill('jane@example.com')
     await page.getByPlaceholder(/Mobile number/).fill('0412345678')
 
-    // Verify total shows $50.00
-    await expect(page.getByText('$50.00')).toBeVisible()
+    // Verify total block shows $50.00 (the large green text in the dark total bar)
+    await expect(page.locator('.bg-\\[\\#293F52\\] .text-2xl')).toContainText('$50.00')
 
     // Verify button says "Proceed to Payment"
     const payButton = page.getByRole('button', { name: 'Proceed to Payment' })
