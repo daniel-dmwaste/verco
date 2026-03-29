@@ -845,4 +845,58 @@ Client-configurable FAQs via `client.faq_items` (JSONB array of `{question, answ
 
 ---
 
+## 25. Session Decisions — 29 March 2026
+
+### Test suite built — 117 unit + 8 E2E
+
+| Test file | Tests | Target |
+|---|---|---|
+| `pricing.test.ts` | 25 | `src/lib/pricing/calculate.ts` — 100% coverage |
+| `state-machine.test.ts` | 44 | `src/lib/booking/state-machine.ts` — exhaustive cross-product |
+| `schemas.test.ts` | 22 | `normaliseAuMobile`, `ContactSchema`, `BookingItemSchema` |
+| `search-params.test.ts` | 11 | `encodeItems`/`decodeItems` round-trips |
+| `rls.test.ts` | 10 | Public table anonymous access (live Supabase) |
+| `utils.test.ts` | 3 | `cn()` class merging |
+| `branding-defaults.test.ts` | 2 | FAQ data structure |
+| `booking-flow.spec.ts` | 3 | E2E: free, paid, mixed cart booking |
+| `auth.spec.ts` | 5 | E2E: OTP form, verify page, route guards |
+
+### Node-compatible pricing engine extraction
+
+`src/lib/pricing/calculate.ts` is a Node-compatible copy of the pure calculation logic from `supabase/functions/_shared/pricing.ts`. Both files must be kept in sync. The Edge Function has a comment: `// Mirrored in src/lib/pricing/calculate.ts — keep in sync`. The extracted `computeLineItems()` function takes pre-fetched maps as arguments (no Supabase dependency), making it testable with Vitest and reusable for client-side price previews.
+
+### State machine TypeScript module
+
+`src/lib/booking/state-machine.ts` mirrors the SQL trigger `enforce_booking_state_transition()` (initial_schema.sql:704-731). Exports `canTransition(from, to)` and `getValidTargets(from)`. Use this for client-side UI checks (e.g. showing/hiding action buttons). The SQL trigger remains the enforcement layer.
+
+### `is_contractor_user()` includes `field` — RLS PII bug found and fixed
+
+**Critical finding:** `is_contractor_user()` returns `true` for `('contractor-admin', 'contractor-staff', 'field')`. Any RLS policy using `is_contractor_user()` to gate PII access will leak data to `field` role. This violated the zero-PII rule for field users on:
+- `contacts_contractor_select` — field could read contact name, email, mobile
+- `service_ticket_staff_select` / `service_ticket_staff_update` — field could read/update tickets
+
+**Fix (migration `20260329110000`):** Replaced `is_contractor_user()` with explicit `current_user_role() IN ('contractor-admin', 'contractor-staff')` in all three policies.
+
+**Rule going forward:** Never use `is_contractor_user()` in RLS policies that gate PII or admin-only data. Use explicit role checks excluding `field`.
+
+### E2E testing with network-level mocking
+
+Playwright E2E tests use `page.route()` to intercept Supabase REST and Edge Function calls at the browser level. Key patterns:
+- Supabase `.single()` calls send `Accept: application/vnd.pgrst.object+json` — mocks must return matching content type
+- Nested joins (e.g. `service_rules` with `service!inner(...)`) need the full nested object shape in mock responses
+- Server actions (`'use server'`) and proxy calls cannot be intercepted by `page.route()` — they run server-side
+- For auth-dependent post-redirect assertions, verify the API payload was correct rather than the final URL (proxy validates session server-side)
+
+### GoTrue "Database error querying schema" limitation
+
+GoTrue password sign-in and `admin.generateLink()` fail with `Database error querying schema` when RLS policies on `profiles` create recursive query paths (e.g. `profiles_staff_select` → `is_contractor_user()` → `current_user_role()` → `user_roles`). This is a known Supabase platform limitation. RLS role-scoped testing was verified via SQL using `SET LOCAL role TO 'authenticated'` + `SET LOCAL request.jwt.claims` through the `execute_sql` MCP tool.
+
+### Migrations applied
+
+| Migration | Contents |
+|---|---|
+| `fix_pii_field_role_exclusion` | Replaced `is_contractor_user()` with explicit `('contractor-admin', 'contractor-staff')` in contacts + service_ticket RLS policies |
+
+---
+
 *Keep this file current. If a decision changes in the PRD or TECH_SPEC, update CLAUDE.md in the same PR.*
