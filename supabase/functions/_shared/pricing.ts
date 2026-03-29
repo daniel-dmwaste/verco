@@ -1,3 +1,4 @@
+// Calculation logic mirrored in src/lib/pricing/calculate.ts — keep in sync
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.100.0'
 
 export interface PricingItem {

@@ -180,7 +180,7 @@ paid_units         = requested_qty - free_units
 
 **Only free_units consume category budget** — paid units do not reduce the remaining count. When iterating multiple services in the same category, track cumulative free unit consumption with a `categoryFormUsed` map.
 
-The authoritative implementation is in `supabase/functions/calculate-price/index.ts`. The client-side preview in `services-form.tsx` mirrors the same logic for display purposes only.
+The authoritative implementation is in `supabase/functions/_shared/pricing.ts`. A Node-compatible extraction lives in `src/lib/pricing/calculate.ts` (tested with Vitest, keep in sync). The client-side preview in `services-form.tsx` mirrors the same logic for display purposes only.
 
 ---
 
@@ -198,7 +198,8 @@ Confirmed       → Cancelled       (any staff role pre-cutoff)
 Scheduled       → Completed       (field role only)
 Scheduled       → Non-conformance (field role only)
 Scheduled       → Nothing Presented (field role only)
-Non-conformance → Rescheduled     (client-admin, contractor-*)
+Scheduled       → Cancelled       (any staff role pre-cutoff)
+Non-conformance → Rebooked        (client-admin, contractor-*)
 Nothing Presented → Rebooked      (client-admin, contractor-*)
 ```
 
