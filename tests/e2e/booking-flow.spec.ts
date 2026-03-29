@@ -433,4 +433,86 @@ test.describe('Booking Flow', () => {
     expect(createBookingCalled).toBe(true)
     expect(createCheckoutCalled).toBe(true)
   })
+
+  test('mixed cart — free and paid items with correct breakdown', async ({ page }) => {
+    // 1x General Waste (free, within allocation) + 1x Mattress (paid, ancillary exhausted)
+    // total_cents = 6000 (1 mattress @ $60)
+    await setupMocks(page, {
+      priorUsage: [
+        // Ancillary category fully used — mattress will be paid
+        { service_id: 'svc-mattress', no_services: 2 },
+      ],
+      createBookingResult: {
+        booking_id: 'booking-3',
+        ref: 'KWN-1-C9M1P4',
+        requires_payment: true,
+        total_cents: 6000,
+      },
+    })
+
+    // Navigate directly to confirm step with mixed items
+    const params = new URLSearchParams({
+      property_id: TEST_PROPERTY.id,
+      collection_area_id: TEST_PROPERTY.collection_area_id,
+      address: TEST_PROPERTY.formatted_address,
+      items: 'svc-general:1,svc-mattress:1',
+      total_cents: '6000',
+      collection_date_id: TEST_COLLECTION_DATE.id,
+      location: 'Front Verge',
+    })
+    await page.goto(`/book/confirm?${params.toString()}`)
+
+    await expect(page.getByText('Confirm Your Booking')).toBeVisible()
+
+    // Fill contact
+    await page.getByPlaceholder('Full name').fill('Jane Smith')
+    await page.getByPlaceholder('Email address').fill('jane@example.com')
+    await page.getByPlaceholder(/Mobile number/).fill('0412345678')
+
+    // Verify "Included in Allocation" section shows the free item
+    await expect(page.getByText('Included in Allocation')).toBeVisible()
+    await expect(page.getByText(/General Waste/)).toBeVisible()
+    await expect(page.getByText('Included', { exact: true })).toBeVisible()
+
+    // Verify "Extra Services" section shows the paid item
+    await expect(page.getByText('Extra Services')).toBeVisible()
+    await expect(page.getByText(/Mattress × 1/)).toBeVisible()
+
+    // Verify total block shows $60.00
+    await expect(page.locator('.bg-\\[\\#293F52\\] .text-2xl')).toContainText('$60.00')
+
+    // Verify payment button (not "Confirm Booking")
+    await expect(page.getByRole('button', { name: 'Proceed to Payment' })).toBeVisible()
+
+    // Track create-booking payload
+    let createBookingPayload: Record<string, unknown> | null = null
+    page.on('request', async (req) => {
+      if (req.url().includes('create-booking') && req.method() === 'POST') {
+        try { createBookingPayload = req.postDataJSON() } catch { /* ignore */ }
+      }
+    })
+
+    // Submit
+    await page.getByRole('button', { name: 'Proceed to Payment' }).click()
+
+    // OTP
+    await expect(page.getByText('Verify Email')).toBeVisible()
+    const otpCells = page.locator('input[inputmode="numeric"]')
+    for (let i = 0; i < 6; i++) {
+      await otpCells.nth(i).fill(String(i + 1))
+    }
+
+    // Wait for booking creation
+    await page.waitForResponse(
+      (resp) => resp.url().includes('create-booking') && resp.status() === 200,
+      { timeout: 10000 },
+    )
+
+    // Verify payload has both items
+    expect(createBookingPayload).not.toBeNull()
+    const items = createBookingPayload!.items as Array<Record<string, unknown>>
+    expect(items).toHaveLength(2)
+    expect(items.find((i) => i.service_id === 'svc-general')).toBeDefined()
+    expect(items.find((i) => i.service_id === 'svc-mattress')).toBeDefined()
+  })
 })
