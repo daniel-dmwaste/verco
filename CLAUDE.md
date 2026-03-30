@@ -899,4 +899,103 @@ GoTrue password sign-in and `admin.generateLink()` fail with `Database error que
 
 ---
 
+## 26. Session Decisions — 30 March 2026
+
+### Admin pages built (6 new list pages)
+
+| Page | Route | Table | Key features |
+|---|---|---|---|
+| Non-Conformance | `/admin/non-conformance` | `non_conformance_notice` | Status/reason filters, booking link, photo count |
+| Nothing Presented | `/admin/nothing-presented` | `nothing_presented` | Status/fault type filters, D&M vs Resident badge |
+| Refunds | `/admin/refunds` | `refund_request` | Approve/reject actions, Stripe ref, amount display |
+| Reports | `/admin/reports` | Multiple | Summary cards, bookings by status, refund totals, area filter |
+| Users | `/admin/users` | `user_roles` + `profiles` | Add/edit user dialog, role/active filters, revoke access |
+| Bug Reports | `/admin/bug-reports` | `bug_report` | Category/priority/status filters, assign/triage/resolve actions |
+
+### Edge Functions built
+
+| Function | Auth | Deploy flag | Notes |
+|---|---|---|---|
+| `create-user` | Bearer JWT (contractor-admin, client-admin) | `--no-verify-jwt` | Dual clients: caller JWT for permission check, service role for auth.admin + writes. Upserts contact, profile, and user_role. Sends confirmation email via SendGrid. |
+
+### Shared modules (`supabase/functions/_shared/`)
+
+- **`sendgrid.ts`** — SendGrid v3 Mail Send helper. `sendEmail({ to, from, subject, htmlBody })`. Requires `SENDGRID_API_KEY` secret. Returns `{ ok, error? }`. Non-blocking in callers — log warning if fails, don't block the main operation. Reusable for future `send-place-out-reminders`, `send-email`, etc.
+
+### Email infrastructure — SendGrid + Twilio
+
+- **Email:** SendGrid v3 Mail Send API (`https://api.sendgrid.com/v3/mail/send`), Bearer token auth. Secret: `SENDGRID_API_KEY`.
+- **SMS:** Twilio (configured in `supabase/config.toml`, not yet implemented in Edge Functions). Secret: `SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN`.
+- **Not ClickSend** — previously considered but replaced.
+
+### User management — create-user Edge Function pattern
+
+Admin user creation requires `auth.admin.createUser()` which needs the service role key. Since service role is forbidden in `app/` code, the flow is:
+1. Frontend dialog calls `create-user` Edge Function with caller's JWT
+2. Edge Function validates caller is `contractor-admin` or `client-admin` via `current_user_role()` RPC on a caller-scoped client
+3. Scope check: `client-admin` can only create client-tier roles for their own client
+4. Service role client handles: auth user creation, contact upsert, profile upsert, user_role upsert
+5. Confirmation email sent non-blocking via SendGrid
+
+If user already exists (duplicate email), the function finds the existing auth user via `profiles` table and updates their role. One-to-one `user_roles.user_id` constraint means each user has one role — the function updates rather than inserting a second.
+
+### Role display labels
+
+| DB value | Display label |
+|---|---|
+| `field` | Contractor Field |
+| `ranger` | Client Ranger |
+| All others | e.g. "Contractor Admin", "Client Staff" — prefix matches tier |
+
+### Privacy rule — resident/strata excluded from admin users page
+
+The admin users page filters out `resident` and `strata` roles from both the table query and the role filter/add-user dropdowns. These roles are self-service only — admin users should not see the full resident list. Enforced at query level: `.not('role', 'in', '("resident","strata")')`.
+
+### RLS policies — user management
+
+| Policy | Table | Type | Scope |
+|---|---|---|---|
+| `user_roles_staff_select` | `user_roles` | SELECT | Contractor admins see roles for their contractor + clients; client admins see their client's roles |
+| `user_roles_admin_update` | `user_roles` | UPDATE | Same scope as above, but only `contractor-admin` and `client-admin` (not staff) |
+| `contacts_staff_select_via_profiles` | `contacts` | SELECT | Admins can read contacts linked to profiles they can see (supplements booking-based policies) |
+| Updated `profiles_staff_select` | `profiles` | SELECT | Broadened to include ALL profiles with active roles in scope (not just staff-tier) |
+
+**Key finding:** The original `contacts` RLS policies only allowed reading contacts that had a **booking** linked to them. Users created via admin (with no bookings) were invisible. The `contacts_staff_select_via_profiles` policy fixes this by allowing contact reads via `profiles.contact_id → user_roles` join.
+
+### Supabase FK hint pattern for multi-FK tables
+
+When a table has multiple FKs to the same table (e.g. `bug_report` has both `reporter_id` and `assigned_to` pointing to `profiles`), Supabase requires explicit FK hints in the select:
+
+```typescript
+// ✗ Ambiguous — TypeScript error
+.select('reporter:reporter_id(display_name)')
+
+// ✓ Explicit FK hint
+.select('reporter:profiles!bug_report_reporter_id_fkey(display_name)')
+```
+
+The FK name follows the pattern `{table}_{column}_fkey`. Same applies to `non_conformance_notice` and `nothing_presented` which have both `reported_by` and `resolved_by` FKs to `profiles`.
+
+### Base UI Dialog pattern
+
+`@base-ui/react` Dialog is used for the user form dialog. Components: `Dialog.Root` (controlled `open`/`onOpenChange`), `Dialog.Portal`, `Dialog.Backdrop`, `Dialog.Popup`, `Dialog.Title`, `Dialog.Close`. No trigger element needed when dialog is controlled externally — just use `open` state.
+
+### Action menu overflow fix
+
+Table action menus (three-dot dropdowns) must open **upward** (`bottom-full`) and the table wrapper must not have `overflow-hidden` or `overflow-x-auto`, otherwise the menu is clipped. Use `rounded-xl bg-white shadow-sm` without overflow classes on the table container.
+
+### `accessible_client_ids()` returns a single value per call
+
+The `accessible_client_ids()` function uses `SELECT ... FROM client WHERE contractor_id = ...` which can return multiple rows, but when used in RLS with `IN (SELECT accessible_client_ids())` it works correctly as a set. For contractor-tier users it returns all client IDs under their contractor; for client-tier users it returns their single client ID.
+
+### Migrations applied
+
+| Migration | Contents |
+|---|---|
+| `user_roles_admin_select_and_profiles_staff_select` | `user_roles_staff_select` SELECT policy + broadened `profiles_staff_select` for admin user management |
+| `contacts_staff_select_via_profiles` | SELECT policy on contacts via profiles→user_roles join (supplements booking-based policies) |
+| `user_roles_admin_update` | UPDATE policy for contractor-admin and client-admin on user_roles |
+
+---
+
 *Keep this file current. If a decision changes in the PRD or TECH_SPEC, update CLAUDE.md in the same PR.*
