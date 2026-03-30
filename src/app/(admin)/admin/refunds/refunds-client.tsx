@@ -1,0 +1,221 @@
+'use client'
+
+import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { format } from 'date-fns'
+import { createClient } from '@/lib/supabase/client'
+import Link from 'next/link'
+
+const STATUS_OPTIONS = ['pending', 'approved', 'processed', 'rejected'] as const
+
+const STATUS_STYLE: Record<string, { bg: string; text: string; label: string }> = {
+  pending: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'Pending' },
+  approved: { bg: 'bg-blue-50', text: 'text-blue-700', label: 'Approved' },
+  processed: { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'Processed' },
+  rejected: { bg: 'bg-red-50', text: 'text-red-700', label: 'Rejected' },
+}
+
+const PAGE_SIZE = 20
+
+export function RefundsClient() {
+  const supabase = createClient()
+  const queryClient = useQueryClient()
+
+  const [page, setPage] = useState(0)
+  const [statusFilter, setStatusFilter] = useState('')
+  const [search, setSearch] = useState('')
+  const [actionMenuId, setActionMenuId] = useState<string | null>(null)
+
+  const { data: refundData, isLoading } = useQuery({
+    queryKey: ['admin-refunds', statusFilter, search, page],
+    queryFn: async () => {
+      let query = supabase
+        .from('refund_request')
+        .select(
+          `id, amount_cents, reason, status, stripe_refund_id, created_at, reviewed_at,
+           booking:booking_id(id, ref),
+           contact:contact_id(full_name),
+           reviewer:reviewed_by(display_name)`,
+          { count: 'exact' }
+        )
+        .order('created_at', { ascending: false })
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
+
+      if (statusFilter) query = query.eq('status', statusFilter)
+      if (search) {
+        query = query.or(`reason.ilike.%${search}%`)
+      }
+
+      const { data, count } = await query
+      return { refunds: data ?? [], total: count ?? 0 }
+    },
+  })
+
+  const refunds = refundData?.refunds ?? []
+  const total = refundData?.total ?? 0
+  const totalPages = Math.ceil(total / PAGE_SIZE)
+
+  async function handleAction(refundId: string, action: 'approve' | 'reject') {
+    setActionMenuId(null)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    await supabase
+      .from('refund_request')
+      .update({
+        status: action === 'approve' ? 'approved' : 'rejected',
+        reviewed_by: user.id,
+        reviewed_at: new Date().toISOString(),
+      })
+      .eq('id', refundId)
+
+    void queryClient.invalidateQueries({ queryKey: ['admin-refunds'] })
+  }
+
+  return (
+    <>
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-gray-100 bg-white px-7 pb-5 pt-6">
+        <div>
+          <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
+            Refund Requests
+          </h1>
+          <p className="mt-0.5 text-[13px] text-gray-500">
+            {total} requests
+          </p>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="flex items-center gap-2.5 px-7 py-4">
+        <div className="flex w-60 items-center gap-2 rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px]">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B0B0B0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(0) }}
+            placeholder="Search reason..."
+            className="w-full border-none bg-transparent text-[13px] text-gray-900 outline-none placeholder:text-gray-300"
+          />
+        </div>
+
+        <select
+          value={statusFilter}
+          onChange={(e) => { setStatusFilter(e.target.value); setPage(0) }}
+          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-[13px] text-gray-700"
+        >
+          <option value="">All Statuses</option>
+          {STATUS_OPTIONS.map((s) => (
+            <option key={s} value={s}>{STATUS_STYLE[s]?.label ?? s}</option>
+          ))}
+        </select>
+
+        <div className="flex-1" />
+        <span className="text-xs text-gray-500">
+          Showing {total > 0 ? page * PAGE_SIZE + 1 : 0}&ndash;{Math.min((page + 1) * PAGE_SIZE, total)} of {total}
+        </span>
+      </div>
+
+      {/* Table */}
+      <div className="flex-1 px-7 pb-6">
+        <div className="overflow-hidden rounded-xl bg-white shadow-sm">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr>
+                <th className="border-b border-gray-100 bg-gray-50 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">Booking</th>
+                <th className="border-b border-gray-100 bg-gray-50 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">Resident</th>
+                <th className="border-b border-gray-100 bg-gray-50 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">Amount</th>
+                <th className="border-b border-gray-100 bg-gray-50 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">Reason</th>
+                <th className="border-b border-gray-100 bg-gray-50 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">Status</th>
+                <th className="border-b border-gray-100 bg-gray-50 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">Stripe Ref</th>
+                <th className="border-b border-gray-100 bg-gray-50 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">Requested</th>
+                <th className="border-b border-gray-100 bg-gray-50 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">Reviewed By</th>
+                <th className="border-b border-gray-100 bg-gray-50 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading && (
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-400">Loading...</td></tr>
+              )}
+              {!isLoading && refunds.length === 0 && (
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-400">No refund requests found</td></tr>
+              )}
+              {refunds.map((refund) => {
+                const booking = refund.booking as unknown as { id: string; ref: string } | null
+                const contact = refund.contact as { full_name: string } | null
+                const reviewer = refund.reviewer as { display_name: string | null } | null
+                const ss = STATUS_STYLE[refund.status] ?? { bg: 'bg-gray-100', text: 'text-gray-600', label: refund.status }
+                return (
+                  <tr key={refund.id} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
+                    <td className="px-4 py-3">
+                      {booking ? (
+                        <Link
+                          href={`/admin/bookings/${booking.id}`}
+                          className="font-[family-name:var(--font-heading)] text-[13px] font-semibold text-[#293F52] hover:underline"
+                        >
+                          {booking.ref}
+                        </Link>
+                      ) : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-[13px] text-gray-600">
+                      {contact?.full_name ?? '—'}
+                    </td>
+                    <td className="px-4 py-3 font-[family-name:var(--font-heading)] text-[13px] font-semibold text-[#293F52]">
+                      ${(refund.amount_cents / 100).toFixed(2)}
+                    </td>
+                    <td className="max-w-[200px] truncate px-4 py-3 text-xs">
+                      {refund.reason || '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${ss.bg} ${ss.text}`}>
+                        {ss.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 font-mono text-[11px] text-gray-400">
+                      {refund.stripe_refund_id ?? '—'}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-500">
+                      {format(new Date(refund.created_at), 'd MMM yyyy')}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-500">
+                      {reviewer?.display_name ?? '—'}
+                    </td>
+                    <td className="relative px-4 py-3">
+                      {refund.status === 'pending' && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setActionMenuId(actionMenuId === refund.id ? null : refund.id)}
+                            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>
+                            </svg>
+                          </button>
+                          {actionMenuId === refund.id && (
+                            <div className="absolute right-4 top-10 z-10 w-36 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+                              <button type="button" onClick={() => handleAction(refund.id, 'approve')} className="block w-full px-4 py-2 text-left text-[13px] text-gray-700 hover:bg-gray-50">Approve</button>
+                              <button type="button" onClick={() => handleAction(refund.id, 'reject')} className="block w-full px-4 py-2 text-left text-[13px] text-red-600 hover:bg-gray-50">Reject</button>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {totalPages > 1 && (
+          <div className="mt-4 flex items-center justify-center gap-2">
+            <button type="button" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0} className="rounded-md border border-gray-100 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 disabled:opacity-40">Previous</button>
+            <span className="text-xs text-gray-500">Page {page + 1} of {totalPages}</span>
+            <button type="button" onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1} className="rounded-md border border-gray-100 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 disabled:opacity-40">Next</button>
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
