@@ -86,20 +86,18 @@ export default async function BookingDetailPage({
   if (booking.status === 'Nothing Presented' || booking.status === 'Rebooked') {
     const { data: npRaw } = await supabase
       .from('nothing_presented')
-      .select('id, status, photos, reported_at, dm_fault, rescheduled_booking:booking!nothing_presented_rescheduled_booking_id_fkey(ref)')
+      .select('id, status, photos, reported_at, contractor_fault, rescheduled_booking:booking!nothing_presented_rescheduled_booking_id_fkey(ref)')
       .eq('booking_id', booking.id)
       .maybeSingle()
 
     if (npRaw) {
-      // dm_fault renamed to contractor_fault in migration 20260401120000
-      const np = npRaw as unknown as Record<string, unknown>
       npData = {
-        id: np.id as string,
-        status: np.status as string,
-        photos: np.photos as string[],
-        reported_at: np.reported_at as string,
-        contractor_fault: (np.contractor_fault ?? np.dm_fault ?? false) as boolean,
-        rescheduled_booking: np.rescheduled_booking as { ref: string } | null,
+        id: npRaw.id,
+        status: npRaw.status,
+        photos: npRaw.photos,
+        reported_at: npRaw.reported_at,
+        contractor_fault: npRaw.contractor_fault,
+        rescheduled_booking: npRaw.rescheduled_booking as { ref: string } | null,
       }
     }
   }

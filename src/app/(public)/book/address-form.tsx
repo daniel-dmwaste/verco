@@ -87,7 +87,7 @@ export function AddressForm() {
       const { data: rules } = await supabase
         .from('allocation_rules')
         .select('max_collections, category!inner(name, code)')
-        .eq('collection_area_id', selectedProperty.collection_area_id)
+        .eq('collection_area_id', selectedProperty.collection_area_id!)
 
       const { data: usageItems } = await supabase
         .from('booking_item')
@@ -137,7 +137,7 @@ export function AddressForm() {
   }
 
   function handleContinue() {
-    if (!selectedProperty) return
+    if (!selectedProperty || !selectedProperty.collection_area_id) return
     const params = new URLSearchParams({
       property_id: selectedProperty.id,
       collection_area_id: selectedProperty.collection_area_id,

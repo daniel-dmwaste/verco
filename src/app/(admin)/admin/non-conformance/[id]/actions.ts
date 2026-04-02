@@ -28,20 +28,14 @@ export async function updateNcnStatus(
 
   const { supabase, userId } = auth
 
-  // contractor_fault added in migration 20260401110000 — cast until types regen
-  const update: Record<string, unknown> = {
-    status,
-    resolution_notes: resolutionNotes || null,
-    contractor_fault: contractorFault,
-  }
-  if (status === 'Resolved') {
-    update.resolved_at = new Date().toISOString()
-    update.resolved_by = userId
-  }
-
   const { error } = await supabase
     .from('non_conformance_notice')
-    .update(update as never)
+    .update({
+      status,
+      resolution_notes: resolutionNotes || null,
+      contractor_fault: contractorFault,
+      ...(status === 'Resolved' ? { resolved_at: new Date().toISOString(), resolved_by: userId } : {}),
+    })
     .eq('id', ncnId)
 
   if (error) return { ok: false, error: error.message }
@@ -163,19 +157,17 @@ export async function rebookNcn(
     }
   }
 
-  // Update the NCN (contractor_fault not in types yet — cast)
-  const ncnUpdate: Record<string, unknown> = {
-    status: 'Rescheduled',
-    resolution_notes: resolutionNotes || null,
-    contractor_fault: contractorFault,
-    resolved_at: new Date().toISOString(),
-    resolved_by: userId,
-    rescheduled_booking_id: newBooking.id,
-    rescheduled_date: collDate.date,
-  }
   const { error: ncnUpdateError } = await supabase
     .from('non_conformance_notice')
-    .update(ncnUpdate as never)
+    .update({
+      status: 'Rescheduled' as Database['public']['Enums']['ncn_status'],
+      resolution_notes: resolutionNotes || null,
+      contractor_fault: contractorFault,
+      resolved_at: new Date().toISOString(),
+      resolved_by: userId,
+      rescheduled_booking_id: newBooking.id,
+      rescheduled_date: collDate.date,
+    })
     .eq('id', ncnId)
 
   if (ncnUpdateError) {
@@ -213,17 +205,15 @@ export async function resolveWithRefund(
     return { ok: false, error: `NCN is already ${ncn.status}.` }
   }
 
-  // Resolve the NCN (contractor_fault not in types yet — cast)
-  const resolveUpdate: Record<string, unknown> = {
-    status: 'Resolved',
-    resolution_notes: resolutionNotes || null,
-    contractor_fault: true,
-    resolved_at: new Date().toISOString(),
-    resolved_by: userId,
-  }
   const { error: updateError } = await supabase
     .from('non_conformance_notice')
-    .update(resolveUpdate as never)
+    .update({
+      status: 'Resolved' as Database['public']['Enums']['ncn_status'],
+      resolution_notes: resolutionNotes || null,
+      contractor_fault: true,
+      resolved_at: new Date().toISOString(),
+      resolved_by: userId,
+    })
     .eq('id', ncnId)
 
   if (updateError) return { ok: false, error: updateError.message }

@@ -898,7 +898,7 @@ export type Database = {
       eligible_properties: {
         Row: {
           address: string
-          collection_area_id: string
+          collection_area_id: string | null
           created_at: string
           formatted_address: string | null
           google_place_id: string | null
@@ -911,7 +911,7 @@ export type Database = {
         }
         Insert: {
           address: string
-          collection_area_id: string
+          collection_area_id?: string | null
           created_at?: string
           formatted_address?: string | null
           google_place_id?: string | null
@@ -924,7 +924,7 @@ export type Database = {
         }
         Update: {
           address?: string
-          collection_area_id?: string
+          collection_area_id?: string | null
           created_at?: string
           formatted_address?: string | null
           google_place_id?: string | null
@@ -1075,8 +1075,8 @@ export type Database = {
         Row: {
           booking_id: string
           client_id: string
+          contractor_fault: boolean
           created_at: string
-          dm_fault: boolean
           id: string
           notes: string | null
           photos: string[]
@@ -1093,8 +1093,8 @@ export type Database = {
         Insert: {
           booking_id: string
           client_id: string
+          contractor_fault?: boolean
           created_at?: string
-          dm_fault?: boolean
           id?: string
           notes?: string | null
           photos?: string[]
@@ -1111,8 +1111,8 @@ export type Database = {
         Update: {
           booking_id?: string
           client_id?: string
+          contractor_fault?: boolean
           created_at?: string
-          dm_fault?: boolean
           id?: string
           notes?: string | null
           photos?: string[]
@@ -1898,8 +1898,22 @@ export type Database = {
         | "Hazardous Waste"
         | "Items Oversize"
         | "Other"
-      ncn_status: "Open" | "Under Review" | "Resolved" | "Rescheduled"
-      np_status: "Open" | "Under Review" | "Resolved" | "Rebooked"
+      ncn_status:
+        | "Open"
+        | "Under Review"
+        | "Resolved"
+        | "Rescheduled"
+        | "Issued"
+        | "Disputed"
+        | "Closed"
+      np_status:
+        | "Open"
+        | "Under Review"
+        | "Resolved"
+        | "Rebooked"
+        | "Issued"
+        | "Disputed"
+        | "Closed"
       ticket_category:
         | "general"
         | "booking"
@@ -2107,8 +2121,24 @@ export const Constants = {
         "Items Oversize",
         "Other",
       ],
-      ncn_status: ["Open", "Under Review", "Resolved", "Rescheduled"],
-      np_status: ["Open", "Under Review", "Resolved", "Rebooked"],
+      ncn_status: [
+        "Open",
+        "Under Review",
+        "Resolved",
+        "Rescheduled",
+        "Issued",
+        "Disputed",
+        "Closed",
+      ],
+      np_status: [
+        "Open",
+        "Under Review",
+        "Resolved",
+        "Rebooked",
+        "Issued",
+        "Disputed",
+        "Closed",
+      ],
       ticket_category: [
         "general",
         "booking",
@@ -2129,3 +2159,4 @@ export const Constants = {
     },
   },
 } as const
+
