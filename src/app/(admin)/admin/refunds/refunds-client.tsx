@@ -6,13 +6,12 @@ import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
-const STATUS_OPTIONS = ['pending', 'approved', 'processed', 'rejected'] as const
+const STATUS_OPTIONS = ['Pending', 'Approved', 'Rejected'] as const
 
 const STATUS_STYLE: Record<string, { bg: string; text: string; label: string }> = {
-  pending: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'Pending' },
-  approved: { bg: 'bg-blue-50', text: 'text-blue-700', label: 'Approved' },
-  processed: { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'Processed' },
-  rejected: { bg: 'bg-red-50', text: 'text-red-700', label: 'Rejected' },
+  Pending: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'Pending' },
+  Approved: { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'Approved' },
+  Rejected: { bg: 'bg-red-50', text: 'text-red-700', label: 'Rejected' },
 }
 
 const PAGE_SIZE = 20
@@ -25,6 +24,8 @@ export function RefundsClient() {
   const [statusFilter, setStatusFilter] = useState('')
   const [search, setSearch] = useState('')
   const [actionMenuId, setActionMenuId] = useState<string | null>(null)
+  const [processingId, setProcessingId] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const { data: refundData, isLoading } = useQuery({
     queryKey: ['admin-refunds', statusFilter, search, page],
@@ -57,19 +58,61 @@ export function RefundsClient() {
 
   async function handleAction(refundId: string, action: 'approve' | 'reject') {
     setActionMenuId(null)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    setActionError(null)
+    setProcessingId(refundId)
 
-    await supabase
-      .from('refund_request')
-      .update({
-        status: action === 'approve' ? 'approved' : 'rejected',
-        reviewed_by: user.id,
-        reviewed_at: new Date().toISOString(),
-      })
-      .eq('id', refundId)
+    try {
+      if (action === 'approve') {
+        // Call process-refund Edge Function — it initiates the Stripe refund
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.access_token) {
+          setActionError('Session expired. Please refresh and try again.')
+          return
+        }
 
-    void queryClient.invalidateQueries({ queryKey: ['admin-refunds'] })
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/process-refund`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ refund_request_id: refundId }),
+          }
+        )
+
+        if (!res.ok) {
+          const errBody = await res.text().catch(() => 'Unknown error')
+          setActionError(`Refund failed: ${errBody}`)
+          return
+        }
+      } else {
+        // Reject — just update the DB status
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        const { error } = await supabase
+          .from('refund_request')
+          .update({
+            status: 'Rejected',
+            reviewed_by: user.id,
+            reviewed_at: new Date().toISOString(),
+          })
+          .eq('id', refundId)
+
+        if (error) {
+          setActionError(`Failed to reject: ${error.message}`)
+          return
+        }
+      }
+
+      void queryClient.invalidateQueries({ queryKey: ['admin-refunds'] })
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'An unexpected error occurred')
+    } finally {
+      setProcessingId(null)
+    }
   }
 
   return (
@@ -115,6 +158,14 @@ export function RefundsClient() {
           Showing {total > 0 ? page * PAGE_SIZE + 1 : 0}&ndash;{Math.min((page + 1) * PAGE_SIZE, total)} of {total}
         </span>
       </div>
+
+      {/* Error banner */}
+      {actionError && (
+        <div className="mx-7 mb-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
+          {actionError}
+          <button type="button" onClick={() => setActionError(null)} className="ml-2 font-semibold underline">Dismiss</button>
+        </div>
+      )}
 
       {/* Table */}
       <div className="flex-1 px-7 pb-6">
@@ -181,22 +232,28 @@ export function RefundsClient() {
                       {reviewer?.display_name ?? '—'}
                     </td>
                     <td className="relative px-4 py-3">
-                      {refund.status === 'pending' && (
+                      {refund.status === 'Pending' && (
                         <>
-                          <button
-                            type="button"
-                            onClick={() => setActionMenuId(actionMenuId === refund.id ? null : refund.id)}
-                            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-                          >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>
-                            </svg>
-                          </button>
-                          {actionMenuId === refund.id && (
-                            <div className="absolute right-4 top-10 z-10 w-36 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
-                              <button type="button" onClick={() => handleAction(refund.id, 'approve')} className="block w-full px-4 py-2 text-left text-[13px] text-gray-700 hover:bg-gray-50">Approve</button>
-                              <button type="button" onClick={() => handleAction(refund.id, 'reject')} className="block w-full px-4 py-2 text-left text-[13px] text-red-600 hover:bg-gray-50">Reject</button>
-                            </div>
+                          {processingId === refund.id ? (
+                            <span className="text-xs text-gray-400">Processing...</span>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => setActionMenuId(actionMenuId === refund.id ? null : refund.id)}
+                                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                              >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>
+                                </svg>
+                              </button>
+                              {actionMenuId === refund.id && (
+                                <div className="absolute right-4 bottom-full z-10 w-36 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+                                  <button type="button" onClick={() => handleAction(refund.id, 'approve')} className="block w-full px-4 py-2 text-left text-[13px] text-gray-700 hover:bg-gray-50">Approve &amp; Refund</button>
+                                  <button type="button" onClick={() => handleAction(refund.id, 'reject')} className="block w-full px-4 py-2 text-left text-[13px] text-red-600 hover:bg-gray-50">Reject</button>
+                                </div>
+                              )}
+                            </>
                           )}
                         </>
                       )}
