@@ -261,7 +261,12 @@ export function ServicesForm() {
   }
 
   function handleBack() {
-    router.push('/book')
+    const params = new URLSearchParams({
+      address,
+      ...(initialItems ? { items: initialItems } : {}),
+      ...(onBehalf ? { on_behalf: 'true' } : {}),
+    })
+    router.push(`/book?${params.toString()}`)
   }
 
   function renderServiceSection(

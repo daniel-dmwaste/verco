@@ -17,8 +17,10 @@ export function DetailsForm() {
   const collectionDateId = searchParams.get('collection_date_id') ?? ''
   const onBehalf = searchParams.get('on_behalf') === 'true'
 
-  const [location, setLocation] = useState<LocationOption>('Front Verge')
-  const [notes, setNotes] = useState('')
+  const [location, setLocation] = useState<LocationOption>(
+    (searchParams.get('location') as LocationOption) ?? 'Front Verge'
+  )
+  const [notes, setNotes] = useState(searchParams.get('notes') ?? '')
 
   function handleContinue() {
     const params = new URLSearchParams({
@@ -42,6 +44,7 @@ export function DetailsForm() {
       address,
       items: itemsParam,
       total_cents: totalCents,
+      collection_date_id: collectionDateId,
       ...(onBehalf ? { on_behalf: 'true' } : {}),
     })
     router.push(`/book/date?${params.toString()}`)

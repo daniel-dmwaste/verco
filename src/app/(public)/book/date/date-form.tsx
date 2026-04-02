@@ -21,7 +21,9 @@ export function DateForm() {
 
   const selectedItems = decodeItems(itemsParam)
 
-  const [selectedDateId, setSelectedDateId] = useState<string | null>(null)
+  const [selectedDateId, setSelectedDateId] = useState<string | null>(
+    searchParams.get('collection_date_id') ?? null
+  )
 
   const supabase = createClient()
 
@@ -97,6 +99,8 @@ export function DateForm() {
       property_id: propertyId,
       collection_area_id: collectionAreaId,
       address,
+      items: itemsParam,
+      total_cents: totalCents,
       ...(onBehalf ? { on_behalf: 'true' } : {}),
     })
     router.push(`/book/services?${params.toString()}`)

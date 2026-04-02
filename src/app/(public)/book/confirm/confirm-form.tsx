@@ -529,6 +529,8 @@ export function ConfirmForm() {
       items: itemsParam,
       total_cents: totalCents.toString(),
       collection_date_id: collectionDateId,
+      location,
+      ...(notes ? { notes } : {}),
       ...(onBehalf ? { on_behalf: 'true' } : {}),
     })
     router.push(`/book/details?${params.toString()}`)
