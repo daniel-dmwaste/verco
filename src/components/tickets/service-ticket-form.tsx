@@ -435,7 +435,7 @@ export function ServiceTicketForm({
           </div>
 
           {otpState === 'error' && otpError && (
-            <p className="flex items-center justify-center gap-1 text-[11px] text-red-500">
+            <p role="alert" className="flex items-center justify-center gap-1 text-[11px] text-red-500">
               <svg
                 width="13"
                 height="13"
@@ -609,7 +609,7 @@ export function ServiceTicketForm({
         </div>
 
         {submitError && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-body-sm text-red-700">
+          <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-body-sm text-red-700">
             {submitError}
           </div>
         )}

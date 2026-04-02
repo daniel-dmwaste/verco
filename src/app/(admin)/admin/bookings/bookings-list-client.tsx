@@ -203,6 +203,7 @@ export function BookingsListClient() {
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(0) }}
             placeholder="Search ref, address, name..."
+            aria-label="Search bookings"
             className="w-full border-none bg-transparent text-body-sm text-gray-900 outline-none placeholder:text-gray-300"
           />
         </div>
@@ -210,6 +211,7 @@ export function BookingsListClient() {
         <select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(0) }}
+          aria-label="Filter by status"
           className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-body-sm text-gray-700"
         >
           <option value="">All Statuses</option>
@@ -221,6 +223,7 @@ export function BookingsListClient() {
         <select
           value={areaFilter}
           onChange={(e) => { setAreaFilter(e.target.value); setPage(0) }}
+          aria-label="Filter by area"
           className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-body-sm text-gray-700"
         >
           <option value="">All Areas</option>
@@ -232,6 +235,7 @@ export function BookingsListClient() {
         <select
           value={typeFilter}
           onChange={(e) => { setTypeFilter(e.target.value); setPage(0) }}
+          aria-label="Filter by type"
           className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-body-sm text-gray-700"
         >
           <option value="">All Types</option>

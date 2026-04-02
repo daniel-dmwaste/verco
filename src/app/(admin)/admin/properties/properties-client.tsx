@@ -349,12 +349,14 @@ export function PropertiesClient() {
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search by address..."
+            aria-label="Search properties"
             className="w-full max-w-sm rounded-lg border border-gray-200 px-3.5 py-2 text-sm outline-none placeholder:text-gray-400 focus:border-[#293F52]"
           />
         </div>
         <select
           value={areaFilter}
           onChange={(e) => { setAreaFilter(e.target.value); setPage(0) }}
+          aria-label="Filter by area"
           className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
         >
           <option value="">All areas</option>
@@ -365,6 +367,7 @@ export function PropertiesClient() {
         <select
           value={mudFilter}
           onChange={(e) => { setMudFilter(e.target.value as typeof mudFilter); setPage(0) }}
+          aria-label="Filter by type"
           className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
         >
           <option value="all">All types</option>

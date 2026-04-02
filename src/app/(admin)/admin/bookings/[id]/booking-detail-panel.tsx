@@ -303,8 +303,9 @@ export function BookingDetailPanel({
         <Link
           href="/admin/bookings"
           className="text-lg text-gray-300 hover:text-gray-500"
+          aria-label="Close booking detail"
         >
-          &#10005;
+          <span aria-hidden="true">&#10005;</span>
         </Link>
       </div>
 
@@ -315,7 +316,7 @@ export function BookingDetailPanel({
             Collection Details
           </span>
           {canEdit && !editingDetails && (
-            <button type="button" onClick={() => setEditingDetails(true)} className="text-gray-400 hover:text-[#293F52]">
+            <button type="button" onClick={() => setEditingDetails(true)} className="text-gray-400 hover:text-[#293F52]" aria-label="Edit collection details">
               <PencilIcon />
             </button>
           )}
@@ -425,7 +426,7 @@ export function BookingDetailPanel({
               Contact
             </span>
             {canEdit && !editingContact && contact && (
-              <button type="button" onClick={() => setEditingContact(true)} className="text-gray-400 hover:text-[#293F52]">
+              <button type="button" onClick={() => setEditingContact(true)} className="text-gray-400 hover:text-[#293F52]" aria-label="Edit contact">
                 <PencilIcon />
               </button>
             )}
@@ -514,7 +515,7 @@ export function BookingDetailPanel({
             Services
           </span>
           {editServicesUrl && (
-            <Link href={editServicesUrl} className="text-gray-400 hover:text-[#293F52]">
+            <Link href={editServicesUrl} className="text-gray-400 hover:text-[#293F52]" aria-label="Edit services">
               <PencilIcon />
             </Link>
           )}
@@ -581,7 +582,7 @@ export function BookingDetailPanel({
 
       {/* Error */}
       {error && (
-        <div className="mx-5 mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-body-sm text-red-700">
+        <div role="alert" className="mx-5 mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-body-sm text-red-700">
           {error}
         </div>
       )}

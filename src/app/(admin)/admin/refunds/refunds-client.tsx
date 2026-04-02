@@ -134,6 +134,7 @@ export function RefundsClient() {
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(0) }}
             placeholder="Search reason..."
+            aria-label="Search refund requests"
             className="w-full border-none bg-transparent text-body-sm text-gray-900 outline-none placeholder:text-gray-300"
           />
         </div>
@@ -141,6 +142,7 @@ export function RefundsClient() {
         <select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(0) }}
+          aria-label="Filter by status"
           className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-body-sm text-gray-700"
         >
           <option value="">All Statuses</option>
@@ -157,7 +159,7 @@ export function RefundsClient() {
 
       {/* Error banner */}
       {actionError && (
-        <div className="mx-7 mb-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-body-sm text-red-700">
+        <div role="alert" className="mx-7 mb-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-body-sm text-red-700">
           {actionError}
           <button type="button" onClick={() => setActionError(null)} className="ml-2 font-semibold underline">Dismiss</button>
         </div>
@@ -238,6 +240,7 @@ export function RefundsClient() {
                                 type="button"
                                 onClick={() => setActionMenuId(actionMenuId === refund.id ? null : refund.id)}
                                 className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                                aria-label="Open actions menu"
                               >
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                   <circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>

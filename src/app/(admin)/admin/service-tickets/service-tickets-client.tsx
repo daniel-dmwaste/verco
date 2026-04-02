@@ -155,15 +155,16 @@ export function ServiceTicketsClient() {
           value={search}
           onChange={(e) => handleSearchChange(e.target.value)}
           placeholder="Search by subject..."
+          aria-label="Search service tickets"
           className="w-full max-w-xs rounded-lg border border-gray-200 px-3.5 py-2 text-sm outline-none placeholder:text-gray-400 focus:border-[#293F52]"
         />
-        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(0) }} className="rounded-lg border border-gray-200 px-3 py-2 text-sm">
+        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(0) }} aria-label="Filter by status" className="rounded-lg border border-gray-200 px-3 py-2 text-sm">
           {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
-        <select value={priorityFilter} onChange={(e) => { setPriorityFilter(e.target.value); setPage(0) }} className="rounded-lg border border-gray-200 px-3 py-2 text-sm">
+        <select value={priorityFilter} onChange={(e) => { setPriorityFilter(e.target.value); setPage(0) }} aria-label="Filter by priority" className="rounded-lg border border-gray-200 px-3 py-2 text-sm">
           {PRIORITY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
-        <select value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setPage(0) }} className="rounded-lg border border-gray-200 px-3 py-2 text-sm">
+        <select value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setPage(0) }} aria-label="Filter by category" className="rounded-lg border border-gray-200 px-3 py-2 text-sm">
           {CATEGORY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </div>
@@ -237,6 +238,7 @@ export function ServiceTicketsClient() {
                         type="button"
                         onClick={() => setActionMenuId(actionMenuId === t.id ? null : t.id)}
                         className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                        aria-label="Open actions menu"
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>

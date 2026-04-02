@@ -166,6 +166,7 @@ export function UsersClient() {
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search email, name..."
+            aria-label="Search users"
             className="w-full border-none bg-transparent text-body-sm text-gray-900 outline-none placeholder:text-gray-300"
           />
         </div>
@@ -173,6 +174,7 @@ export function UsersClient() {
         <select
           value={roleFilter}
           onChange={(e) => { setRoleFilter(e.target.value); setPage(0) }}
+          aria-label="Filter by role"
           className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-body-sm text-gray-700"
         >
           <option value="">All Roles</option>
@@ -184,6 +186,7 @@ export function UsersClient() {
         <select
           value={activeFilter}
           onChange={(e) => { setActiveFilter(e.target.value); setPage(0) }}
+          aria-label="Filter by status"
           className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-body-sm text-gray-700"
         >
           <option value="">All Status</option>

@@ -184,8 +184,8 @@ export function AddressForm() {
 
           {/* Property found banner */}
           {selectedProperty && (
-            <div className="mt-3 flex items-center gap-2.5 rounded-[10px] border border-[var(--brand-accent-dark)] bg-[var(--brand-accent-light)] px-4 py-3 text-body-sm font-medium text-[#006A38]">
-              <span className="shrink-0 text-base">&#10003;</span>
+            <div role="alert" className="mt-3 flex items-center gap-2.5 rounded-[10px] border border-[var(--brand-accent-dark)] bg-[var(--brand-accent-light)] px-4 py-3 text-body-sm font-medium text-[#006A38]">
+              <span className="shrink-0 text-base" aria-hidden="true">&#10003;</span>
               <div>
                 <div className="font-semibold">Property found!</div>
                 <div className="mt-px text-xs font-normal">
@@ -197,8 +197,8 @@ export function AddressForm() {
 
           {/* Not found */}
           {notFound && (
-            <div className="mt-3 flex items-center gap-2.5 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-body-sm font-medium text-red-700">
-              <span className="shrink-0 text-base">&#10007;</span>
+            <div role="alert" className="mt-3 flex items-center gap-2.5 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-body-sm font-medium text-red-700">
+              <span className="shrink-0 text-base" aria-hidden="true">&#10007;</span>
               <div>
                 <div className="font-semibold">Address not eligible</div>
                 <div className="mt-px text-xs font-normal">
@@ -223,7 +223,7 @@ export function AddressForm() {
             {/* Left: Property location + map */}
             <div className="overflow-hidden rounded-xl bg-white shadow-sm">
               <div className="flex items-center gap-2.5 px-4 py-3.5">
-                <span className="text-base text-[var(--brand-accent-dark)]">&#x1F4CD;</span>
+                <span className="text-base text-[var(--brand-accent-dark)]" aria-hidden="true">&#x1F4CD;</span>
                 <div>
                   <div className="text-body-sm font-semibold text-[var(--brand)]">
                     Property Location
@@ -270,7 +270,7 @@ export function AddressForm() {
             {/* Right: Allocation tiles + Book button */}
             <div className="rounded-xl bg-white p-6 shadow-sm">
               <div className="mb-3.5 flex items-center gap-2">
-                <span className="text-base">&#x1F4E6;</span>
+                <span className="text-base" aria-hidden="true">&#x1F4E6;</span>
                 <span className="font-[family-name:var(--font-heading)] text-sm font-semibold text-[var(--brand)]">
                   Service Allocations &mdash; {allocationData.fy.label}
                 </span>
@@ -318,7 +318,7 @@ export function AddressForm() {
         {selectedProperty && allocationData && !allocationLoading && (
           <div className="rounded-xl bg-white p-6 shadow-sm">
             <div className="mb-3 flex items-center gap-2">
-              <span className="text-base">&#x1F550;</span>
+              <span className="text-base" aria-hidden="true">&#x1F550;</span>
               <span className="font-[family-name:var(--font-heading)] text-sm font-semibold text-[var(--brand)]">
                 Booking History &mdash; {allocationData.fy.label}
               </span>
@@ -326,7 +326,7 @@ export function AddressForm() {
 
             {allocationData.bookings.length === 0 ? (
               <div className="flex items-center gap-2.5">
-                <span className="text-base text-[var(--brand-accent-dark)]">&#10003;</span>
+                <span className="text-base text-[var(--brand-accent-dark)]" aria-hidden="true">&#10003;</span>
                 <span className="text-body-sm text-gray-500">
                   No bookings yet for this financial year.
                 </span>

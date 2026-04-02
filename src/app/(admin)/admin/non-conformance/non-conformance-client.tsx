@@ -109,6 +109,7 @@ export function NonConformanceClient() {
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(0) }}
             placeholder="Search notes, reason..."
+            aria-label="Search non-conformance notices"
             className="w-full border-none bg-transparent text-body-sm text-gray-900 outline-none placeholder:text-gray-300"
           />
         </div>
@@ -116,6 +117,7 @@ export function NonConformanceClient() {
         <select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(0) }}
+          aria-label="Filter by status"
           className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-body-sm text-gray-700"
         >
           <option value="">All Statuses</option>
@@ -127,6 +129,7 @@ export function NonConformanceClient() {
         <select
           value={reasonFilter}
           onChange={(e) => { setReasonFilter(e.target.value); setPage(0) }}
+          aria-label="Filter by reason"
           className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-body-sm text-gray-700"
         >
           <option value="">All Reasons</option>

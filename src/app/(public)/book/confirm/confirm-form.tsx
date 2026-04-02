@@ -748,7 +748,7 @@ export function ConfirmForm() {
         )}
 
         {submitError && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-body-sm text-red-700">
+          <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-body-sm text-red-700">
             {submitError}
           </div>
         )}
@@ -789,7 +789,7 @@ export function ConfirmForm() {
               </div>
 
               {otpState === 'error' && otpError && (
-                <p className="flex items-center justify-center gap-1 text-[11px] text-red-500">
+                <p role="alert" className="flex items-center justify-center gap-1 text-[11px] text-red-500">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="10" />
                     <line x1="12" y1="8" x2="12" y2="12" />
