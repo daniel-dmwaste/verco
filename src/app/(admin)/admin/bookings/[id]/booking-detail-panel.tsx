@@ -98,6 +98,9 @@ export function BookingDetailPanel({
         ...(collectionDateIdFromItems ? { collection_date_id: collectionDateIdFromItems } : {}),
         ...(booking.location ? { location: booking.location } : {}),
         ...(booking.notes ? { notes: booking.notes } : {}),
+        ...(contact?.full_name ? { contact_name: contact.full_name } : {}),
+        ...(contact?.email ? { contact_email: contact.email } : {}),
+        ...(contact?.mobile_e164 ? { contact_mobile: contact.mobile_e164 } : {}),
       }).toString()}`
     : '#'
 

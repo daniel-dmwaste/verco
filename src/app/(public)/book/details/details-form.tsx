@@ -22,6 +22,16 @@ export function DetailsForm() {
   )
   const [notes, setNotes] = useState(searchParams.get('notes') ?? '')
 
+  // Carry contact params through for on-behalf edit flow
+  const contactName = searchParams.get('contact_name')
+  const contactEmail = searchParams.get('contact_email')
+  const contactMobile = searchParams.get('contact_mobile')
+  const contactParams = {
+    ...(contactName ? { contact_name: contactName } : {}),
+    ...(contactEmail ? { contact_email: contactEmail } : {}),
+    ...(contactMobile ? { contact_mobile: contactMobile } : {}),
+  }
+
   function handleContinue() {
     const params = new URLSearchParams({
       property_id: propertyId,
@@ -33,6 +43,7 @@ export function DetailsForm() {
       location,
       ...(notes ? { notes } : {}),
       ...(onBehalf ? { on_behalf: 'true' } : {}),
+      ...contactParams,
     })
     router.push(`/book/confirm?${params.toString()}`)
   }
@@ -46,6 +57,7 @@ export function DetailsForm() {
       total_cents: totalCents,
       collection_date_id: collectionDateId,
       ...(onBehalf ? { on_behalf: 'true' } : {}),
+      ...contactParams,
     })
     router.push(`/book/date?${params.toString()}`)
   }

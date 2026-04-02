@@ -247,6 +247,16 @@ export function ServicesForm() {
     })
   }
 
+  // Carry contact params through for on-behalf edit flow
+  const contactName = searchParams.get('contact_name')
+  const contactEmail = searchParams.get('contact_email')
+  const contactMobile = searchParams.get('contact_mobile')
+  const contactParams = {
+    ...(contactName ? { contact_name: contactName } : {}),
+    ...(contactEmail ? { contact_email: contactEmail } : {}),
+    ...(contactMobile ? { contact_mobile: contactMobile } : {}),
+  }
+
   function handleContinue() {
     if (totalItems === 0) return
     const params = new URLSearchParams({
@@ -256,6 +266,7 @@ export function ServicesForm() {
       items: encodeItems(pricingItems),
       total_cents: totalChargeCents.toString(),
       ...(onBehalf ? { on_behalf: 'true' } : {}),
+      ...contactParams,
     })
     router.push(`/book/date?${params.toString()}`)
   }
@@ -265,6 +276,7 @@ export function ServicesForm() {
       address,
       ...(initialItems ? { items: initialItems } : {}),
       ...(onBehalf ? { on_behalf: 'true' } : {}),
+      ...contactParams,
     })
     router.push(`/book?${params.toString()}`)
   }

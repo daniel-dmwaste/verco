@@ -58,9 +58,21 @@ export function ConfirmForm() {
     resolver: zodResolver(ContactSchema),
   })
 
-  // Pre-fill contact fields if user is logged in (skip for on-behalf bookings)
+  // Pre-fill contact fields from URL params (on-behalf edit) or from profile (resident)
   useEffect(() => {
-    if (onBehalf) return
+    if (onBehalf) {
+      // On-behalf: prefill from URL params if available (edit flow passes these)
+      const contactName = searchParams.get('contact_name')
+      const contactEmail = searchParams.get('contact_email')
+      const contactMobile = searchParams.get('contact_mobile')
+      if (contactName) setValue('full_name', contactName)
+      if (contactEmail) setValue('email', contactEmail)
+      if (contactMobile) {
+        setValue('mobile', contactMobile)
+        setMobileDisplay(formatAuMobileDisplay(contactMobile))
+      }
+      return
+    }
 
     async function prefill() {
       const {
@@ -522,6 +534,9 @@ export function ConfirmForm() {
   }
 
   function handleBack() {
+    const contactName = searchParams.get('contact_name')
+    const contactEmail = searchParams.get('contact_email')
+    const contactMobile = searchParams.get('contact_mobile')
     const params = new URLSearchParams({
       property_id: propertyId,
       collection_area_id: collectionAreaId,
@@ -532,6 +547,9 @@ export function ConfirmForm() {
       location,
       ...(notes ? { notes } : {}),
       ...(onBehalf ? { on_behalf: 'true' } : {}),
+      ...(contactName ? { contact_name: contactName } : {}),
+      ...(contactEmail ? { contact_email: contactEmail } : {}),
+      ...(contactMobile ? { contact_mobile: contactMobile } : {}),
     })
     router.push(`/book/details?${params.toString()}`)
   }
