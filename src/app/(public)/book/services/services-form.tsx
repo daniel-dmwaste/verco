@@ -247,13 +247,14 @@ export function ServicesForm() {
     })
   }
 
-  // Carry forward params from later steps (edit flow)
+  // Carry forward params from later steps (edit flow) + return_url
   const collectionDateId = searchParams.get('collection_date_id')
   const locationParam = searchParams.get('location')
   const notesParam = searchParams.get('notes')
   const contactName = searchParams.get('contact_name')
   const contactEmail = searchParams.get('contact_email')
   const contactMobile = searchParams.get('contact_mobile')
+  const returnUrl = searchParams.get('return_url')
   const carryParams = {
     ...(collectionDateId ? { collection_date_id: collectionDateId } : {}),
     ...(locationParam ? { location: locationParam } : {}),
@@ -261,6 +262,7 @@ export function ServicesForm() {
     ...(contactName ? { contact_name: contactName } : {}),
     ...(contactEmail ? { contact_email: contactEmail } : {}),
     ...(contactMobile ? { contact_mobile: contactMobile } : {}),
+    ...(returnUrl ? { return_url: returnUrl } : {}),
   }
 
   function handleContinue() {

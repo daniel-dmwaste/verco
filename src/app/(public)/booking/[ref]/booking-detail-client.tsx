@@ -733,6 +733,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np, pay
                       ...(booking.booking_item[0]?.collection_date_id ? { collection_date_id: booking.booking_item[0].collection_date_id } : {}),
                       ...(booking.location ? { location: booking.location } : {}),
                       ...(booking.notes ? { notes: booking.notes } : {}),
+                      return_url: `/booking/${booking.ref}`,
                     }).toString()}`
                   : `/book?address=${encodeURIComponent(booking.property?.formatted_address ?? booking.property?.address ?? '')}`
                 }

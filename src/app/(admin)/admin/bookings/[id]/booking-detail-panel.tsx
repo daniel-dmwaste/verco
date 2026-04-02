@@ -132,6 +132,7 @@ export function BookingDetailPanel({
         ...(contact?.full_name ? { contact_name: contact.full_name } : {}),
         ...(contact?.email ? { contact_email: contact.email } : {}),
         ...(contact?.mobile_e164 ? { contact_mobile: contact.mobile_e164 } : {}),
+        return_url: `/admin/bookings/${booking.id}`,
       }).toString()}`
     : null
 

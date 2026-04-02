@@ -537,6 +537,7 @@ export function ConfirmForm() {
     const contactName = searchParams.get('contact_name')
     const contactEmail = searchParams.get('contact_email')
     const contactMobile = searchParams.get('contact_mobile')
+    const returnUrl = searchParams.get('return_url')
     const params = new URLSearchParams({
       property_id: propertyId,
       collection_area_id: collectionAreaId,
@@ -550,6 +551,7 @@ export function ConfirmForm() {
       ...(contactName ? { contact_name: contactName } : {}),
       ...(contactEmail ? { contact_email: contactEmail } : {}),
       ...(contactMobile ? { contact_mobile: contactMobile } : {}),
+      ...(returnUrl ? { return_url: returnUrl } : {}),
     })
     router.push(`/book/details?${params.toString()}`)
   }

@@ -80,14 +80,16 @@ export function DateForm() {
     return true
   })
 
-  // Carry contact params through for on-behalf edit flow
+  // Carry params through for edit flow
   const contactName = searchParams.get('contact_name')
   const contactEmail = searchParams.get('contact_email')
   const contactMobile = searchParams.get('contact_mobile')
-  const contactParams = {
+  const returnUrl = searchParams.get('return_url')
+  const carryParams = {
     ...(contactName ? { contact_name: contactName } : {}),
     ...(contactEmail ? { contact_email: contactEmail } : {}),
     ...(contactMobile ? { contact_mobile: contactMobile } : {}),
+    ...(returnUrl ? { return_url: returnUrl } : {}),
   }
 
   function handleContinue() {
@@ -100,7 +102,7 @@ export function DateForm() {
       total_cents: totalCents,
       collection_date_id: selectedDateId,
       ...(onBehalf ? { on_behalf: 'true' } : {}),
-      ...contactParams,
+      ...carryParams,
     })
     router.push(`/book/details?${params.toString()}`)
   }
@@ -113,7 +115,7 @@ export function DateForm() {
       items: itemsParam,
       total_cents: totalCents,
       ...(onBehalf ? { on_behalf: 'true' } : {}),
-      ...contactParams,
+      ...carryParams,
     })
     router.push(`/book/services?${params.toString()}`)
   }
