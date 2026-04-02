@@ -49,6 +49,7 @@ interface DashboardClientProps {
 }
 
 const UPCOMING_STATUSES: BookingStatus[] = [
+  'Pending Payment',
   'Submitted',
   'Confirmed',
   'Scheduled',

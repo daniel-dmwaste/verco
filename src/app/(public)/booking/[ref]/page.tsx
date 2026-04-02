@@ -4,12 +4,16 @@ import { BookingDetailClient } from './booking-detail-client'
 
 interface BookingDetailPageProps {
   params: Promise<{ ref: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
 export default async function BookingDetailPage({
   params,
+  searchParams,
 }: BookingDetailPageProps) {
   const { ref } = await params
+  const resolvedSearchParams = await searchParams
+  const paymentSuccess = resolvedSearchParams.success === 'true'
   const supabase = await createClient()
 
   const {
@@ -114,7 +118,7 @@ export default async function BookingDetailPage({
 
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-8">
-      <BookingDetailClient booking={booking} tickets={tickets ?? []} receiptUrl={receiptUrl} ncn={ncnData} np={npData} />
+      <BookingDetailClient booking={booking} tickets={tickets ?? []} receiptUrl={receiptUrl} ncn={ncnData} np={npData} paymentSuccess={paymentSuccess} />
     </main>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Dialog } from '@base-ui/react/dialog'
@@ -12,6 +12,7 @@ import {
   setMinutes,
 } from 'date-fns'
 import { BookingStatusBadge } from '@/components/booking/booking-status-badge'
+import { createClient } from '@/lib/supabase/client'
 import { cancelBooking, disputeNcn, disputeNp } from './actions'
 import type { Database } from '@/lib/supabase/types'
 
@@ -75,6 +76,7 @@ interface BookingDetailClientProps {
   receiptUrl: string | null
   ncn: NcnInfo | null
   np: NpInfo | null
+  paymentSuccess?: boolean
 }
 
 const TICKET_STATUS_COLORS: Record<TicketStatus, { dot: string; bg: string; text: string; label: string }> = {
@@ -119,12 +121,90 @@ const TERMINAL_STATUSES: BookingStatus[] = [
   'Completed', 'Cancelled', 'Non-conformance', 'Nothing Presented', 'Rebooked', 'Missed Collection',
 ]
 
-export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: BookingDetailClientProps) {
+export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np, paymentSuccess }: BookingDetailClientProps) {
   const router = useRouter()
   const [isCancelling, setIsCancelling] = useState(false)
   const [cancelError, setCancelError] = useState<string | null>(null)
   const [showCancelDialog, setShowCancelDialog] = useState(false)
   const [isDisputing, setIsDisputing] = useState(false)
+  const [isPaying, setIsPaying] = useState(false)
+  const [payError, setPayError] = useState<string | null>(null)
+  const [isPolling, setIsPolling] = useState(paymentSuccess && booking.status === 'Pending Payment')
+
+  // Poll for status change after Stripe redirect
+  useEffect(() => {
+    if (!isPolling) return
+    let attempts = 0
+    const maxAttempts = 8
+    const supabase = createClient()
+    const interval = setInterval(async () => {
+      attempts++
+      const { data } = await supabase
+        .from('booking')
+        .select('status')
+        .eq('id', booking.id)
+        .single()
+      if (data && data.status !== 'Pending Payment') {
+        clearInterval(interval)
+        setIsPolling(false)
+        router.refresh()
+      } else if (attempts >= maxAttempts) {
+        clearInterval(interval)
+        setIsPolling(false)
+      }
+    }, 2500)
+    return () => clearInterval(interval)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  async function handlePayNow() {
+    setIsPaying(true)
+    setPayError(null)
+    try {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+      const origin = window.location.origin
+      const bookingPath = `/booking/${booking.ref}`
+
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-checkout`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            booking_id: booking.id,
+            success_url: `${origin}${bookingPath}?success=true`,
+            cancel_url: `${origin}${bookingPath}?cancelled=true`,
+          }),
+        }
+      )
+
+      if (!res.ok) {
+        const errorBody = await res.text()
+        console.error('create-checkout error:', res.status, errorBody)
+        setPayError('Failed to create payment session. Please try again.')
+        setIsPaying(false)
+        return
+      }
+
+      const data = (await res.json()) as { checkout_url?: string }
+      if (!data.checkout_url) {
+        setPayError('Failed to create payment session. Please try again.')
+        setIsPaying(false)
+        return
+      }
+
+      window.location.href = data.checkout_url
+    } catch {
+      setPayError('An unexpected error occurred. Please try again.')
+      setIsPaying(false)
+    }
+  }
 
   const collectionDateStr = getCollectionDate(booking)
   const collectionDateObj = collectionDateStr
@@ -189,6 +269,38 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
 
       {/* Content */}
       <div className="flex flex-1 flex-col gap-3 px-5 pb-24 pt-4 md:pb-8">
+        {/* Payment pending banner */}
+        {booking.status === 'Pending Payment' && !isPolling && (
+          <div className="rounded-[10px] border border-[#8B4000]/30 bg-[#FFF3EA] px-3.5 py-3">
+            <div className="mb-0.5 flex items-center gap-1.5 text-[13px] font-semibold text-[#8B4000]">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8B4000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              Payment required
+            </div>
+            <div className="text-xs leading-snug text-[#8B4000]/80">
+              This booking is awaiting payment. Complete payment to confirm your collection.
+            </div>
+          </div>
+        )}
+
+        {/* Payment processing banner */}
+        {isPolling && (
+          <div className="rounded-[10px] border border-[#00B864] bg-[#E8FDF0] px-3.5 py-3">
+            <div className="mb-0.5 flex items-center gap-1.5 text-[13px] font-semibold text-[#006A38]">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#006A38" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin">
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+              </svg>
+              Payment received — confirming your booking...
+            </div>
+            <div className="text-xs leading-snug text-[#006A38]/80">
+              This may take a few moments. The page will refresh automatically.
+            </div>
+          </div>
+        )}
+
         {/* Place-out reminder — full width */}
         {showPlaceOut && collectionDateStr && (
           <div className="rounded-[10px] border border-[#00B864] bg-gradient-to-br from-[#E8FDF0] to-[#d4f5e6] px-3.5 py-3">
@@ -364,9 +476,9 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
           </div>
         )}
 
-        {cancelError && (
+        {(cancelError || payError) && (
           <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
-            {cancelError}
+            {cancelError || payError}
           </div>
         )}
 
@@ -576,6 +688,21 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
 
         {/* Action buttons — single row on desktop */}
         <div className="flex flex-col gap-2 md:flex-row md:gap-3">
+          {booking.status === 'Pending Payment' && (
+            <button
+              type="button"
+              onClick={handlePayNow}
+              disabled={isPaying}
+              className="flex items-center justify-center gap-2 rounded-xl border-[1.5px] border-[#00B864] bg-[#E8FDF0] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#006A38] disabled:opacity-50 md:px-5 md:py-3 md:text-[14px]"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+                <line x1="1" y1="10" x2="23" y2="10" />
+              </svg>
+              {isPaying ? 'Redirecting to payment...' : 'Pay Now'}
+            </button>
+          )}
+
           <Link
             href={`/contact?booking_ref=${encodeURIComponent(booking.ref)}&booking_id=${encodeURIComponent(booking.id)}`}
             className="flex items-center justify-center gap-2 rounded-xl border-[1.5px] border-[#293F52] bg-white px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52] md:px-5 md:py-3 md:text-[14px]"

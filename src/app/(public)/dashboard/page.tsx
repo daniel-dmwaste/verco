@@ -59,7 +59,6 @@ export default async function DashboardPage() {
     `
     )
     .eq('fy_id', fy?.id ?? '')
-    .not('status', 'eq', 'Pending Payment')
     .order('created_at', { ascending: false })
 
   // Fetch all service tickets (RLS scopes to own tickets)

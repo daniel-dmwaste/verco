@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useState, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
@@ -13,6 +13,7 @@ type BookingStatus = Database['public']['Enums']['booking_status']
 type BookingType = Database['public']['Enums']['booking_type']
 
 const STATUS_OPTIONS: BookingStatus[] = [
+  'Pending Payment',
   'Submitted',
   'Confirmed',
   'Scheduled',
@@ -39,9 +40,9 @@ const TYPE_DOT_COLOR: Record<string, string> = {
 const PAGE_SIZE = 20
 
 export function BookingsListClient() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
+  const [payingBookingId, setPayingBookingId] = useState<string | null>(null)
 
   const [search, setSearch] = useState(searchParams.get('search') ?? '')
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') ?? '')
@@ -75,7 +76,6 @@ export function BookingsListClient() {
            booking_item(no_services, service!inner(name), collection_date!inner(date))`,
           { count: 'exact' }
         )
-        .not('status', 'eq', 'Pending Payment')
         .order('created_at', { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
 
@@ -119,6 +119,50 @@ export function BookingsListClient() {
     if (!prop) return '—'
     return prop.formatted_address ?? prop.address
   }
+
+  const handlePayNow = useCallback(async (bookingId: string) => {
+    setPayingBookingId(bookingId)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+
+      const origin = window.location.origin
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-checkout`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            booking_id: bookingId,
+            success_url: `${origin}/admin/bookings`,
+            cancel_url: `${origin}/admin/bookings`,
+          }),
+        }
+      )
+
+      if (!res.ok) {
+        console.error('create-checkout error:', res.status, await res.text())
+        alert('Failed to create payment session')
+        setPayingBookingId(null)
+        return
+      }
+
+      const data = (await res.json()) as { checkout_url?: string }
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url
+      } else {
+        alert('Failed to create payment session')
+        setPayingBookingId(null)
+      }
+    } catch (err) {
+      console.error('Pay now error:', err)
+      alert('Failed to create payment session')
+      setPayingBookingId(null)
+    }
+  }, [supabase])
 
   return (
     <>
@@ -262,12 +306,24 @@ export function BookingsListClient() {
                       {format(new Date(booking.created_at), 'd MMM')}
                     </td>
                     <td className="px-4 py-3">
-                      <Link
-                        href={`/admin/bookings/${booking.id}`}
-                        className="inline-flex items-center rounded-md border-[1.5px] border-gray-100 bg-white px-3 py-1 text-xs font-semibold text-[#293F52]"
-                      >
-                        View
-                      </Link>
+                      <div className="flex items-center gap-1.5">
+                        {booking.status === 'Pending Payment' && (
+                          <button
+                            type="button"
+                            onClick={() => handlePayNow(booking.id)}
+                            disabled={payingBookingId === booking.id}
+                            className="inline-flex items-center rounded-md border-[1.5px] border-[#00B864] bg-[#E8FDF0] px-3 py-1 text-xs font-semibold text-[#006A38] disabled:opacity-50"
+                          >
+                            {payingBookingId === booking.id ? 'Loading...' : 'Pay Now'}
+                          </button>
+                        )}
+                        <Link
+                          href={`/admin/bookings/${booking.id}`}
+                          className="inline-flex items-center rounded-md border-[1.5px] border-gray-100 bg-white px-3 py-1 text-xs font-semibold text-[#293F52]"
+                        >
+                          View
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 )
