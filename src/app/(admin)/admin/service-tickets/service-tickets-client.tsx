@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
+import { getStatusStyle } from '@/lib/ui/status-styles'
 import Link from 'next/link'
 import { SkeletonRow } from '@/components/ui/skeleton'
 import type { Database } from '@/lib/supabase/types'
@@ -41,13 +42,6 @@ const CATEGORY_OPTIONS: { value: TicketCategory | ''; label: string }[] = [
   { value: 'other', label: 'Other' },
 ]
 
-const STATUS_STYLE: Record<TicketStatus, { bg: string; text: string; label: string }> = {
-  open: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'Open' },
-  in_progress: { bg: 'bg-blue-50', text: 'text-blue-700', label: 'In Progress' },
-  waiting_on_customer: { bg: 'bg-purple-50', text: 'text-purple-700', label: 'Awaiting Reply' },
-  resolved: { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'Resolved' },
-  closed: { bg: 'bg-gray-100', text: 'text-gray-600', label: 'Closed' },
-}
 
 const PRIORITY_STYLE: Record<TicketPriority, { bg: string; text: string; label: string }> = {
   low: { bg: 'bg-gray-100', text: 'text-gray-600', label: 'Low' },
@@ -201,7 +195,7 @@ export function ServiceTicketsClient() {
               tickets.map((t) => {
                 const contact = t.contact as { full_name: string } | null
                 const assignedProfile = t.assigned_profile as { display_name: string | null } | null
-                const ss = STATUS_STYLE[t.status as TicketStatus]
+                const ss = getStatusStyle('ticket', t.status)
                 const ps = PRIORITY_STYLE[t.priority as TicketPriority]
 
                 return (

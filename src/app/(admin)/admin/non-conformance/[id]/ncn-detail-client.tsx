@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import { Dialog } from '@base-ui/react/dialog'
 import { updateNcnStatus, rebookNcn, resolveWithRefund } from './actions'
+import { getStatusStyle } from '@/lib/ui/status-styles'
 import type { Database } from '@/lib/supabase/types'
 
 type NcnStatus = Database['public']['Enums']['ncn_status']
@@ -50,16 +51,6 @@ interface NcnDetailClientProps {
   availableDates: { id: string; date: string }[]
 }
 
-const STATUS_STYLE: Record<string, { bg: string; text: string }> = {
-  Issued: { bg: 'bg-gray-100', text: 'text-gray-600' },
-  Open: { bg: 'bg-red-50', text: 'text-red-700' },
-  Disputed: { bg: 'bg-red-50', text: 'text-red-700' },
-  'Under Review': { bg: 'bg-amber-50', text: 'text-amber-700' },
-  Resolved: { bg: 'bg-emerald-50', text: 'text-emerald-700' },
-  Rescheduled: { bg: 'bg-blue-50', text: 'text-blue-700' },
-  Closed: { bg: 'bg-gray-50', text: 'text-gray-400' },
-}
-
 export function NcnDetailClient({ ncn, availableDates }: NcnDetailClientProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -76,7 +67,7 @@ export function NcnDetailClient({ ncn, availableDates }: NcnDetailClientProps) {
   const status = ncn.status as string
   const isActionable = status === 'Disputed' || status === 'Under Review'
   const isIssued = status === 'Issued'
-  const ss = STATUS_STYLE[ncn.status]
+  const ss = getStatusStyle('ncn', ncn.status)
 
   // Calculate paid amount for refund dialog
   const paidItems = booking?.booking_item.filter((i) => i.is_extra) ?? []

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
+import { getStatusStyle } from '@/lib/ui/status-styles'
 import type { Database } from '@/lib/supabase/types'
 
 type BugCategory = Database['public']['Enums']['bug_report_category']
@@ -40,14 +41,6 @@ const CATEGORY_OPTIONS: { value: BugCategory | ''; label: string }[] = [
   { value: 'other', label: 'Other' },
 ]
 
-const STATUS_STYLE: Record<BugStatus, { bg: string; text: string; label: string }> = {
-  new: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'New' },
-  triaged: { bg: 'bg-blue-50', text: 'text-blue-700', label: 'Triaged' },
-  in_progress: { bg: 'bg-purple-50', text: 'text-purple-700', label: 'In Progress' },
-  resolved: { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'Resolved' },
-  closed: { bg: 'bg-gray-100', text: 'text-gray-600', label: 'Closed' },
-  wont_fix: { bg: 'bg-gray-100', text: 'text-gray-500', label: "Won't Fix" },
-}
 
 const PRIORITY_STYLE: Record<BugPriority, { bg: string; text: string; label: string }> = {
   low: { bg: 'bg-gray-100', text: 'text-gray-600', label: 'Low' },
@@ -201,7 +194,7 @@ export function BugReportsClient() {
                 bugs.map((bug) => {
                   const reporter = bug.reporter as { display_name: string | null } | null
                   const assigned = bug.assigned as { display_name: string | null } | null
-                  const ss = STATUS_STYLE[bug.status as BugStatus]
+                  const ss = getStatusStyle('bug', bug.status)
                   const ps = PRIORITY_STYLE[bug.priority as BugPriority]
 
                   return (

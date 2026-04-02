@@ -15,6 +15,7 @@ import { BookingStatusBadge } from '@/components/booking/booking-status-badge'
 import { VercoButton } from '@/components/ui/verco-button'
 import { createClient } from '@/lib/supabase/client'
 import { cancelBooking, disputeNcn, disputeNp } from './actions'
+import { getStatusStyle } from '@/lib/ui/status-styles'
 import type { Database } from '@/lib/supabase/types'
 
 type BookingStatus = Database['public']['Enums']['booking_status']
@@ -84,13 +85,6 @@ interface BookingDetailClientProps {
   paymentSuccess?: boolean
 }
 
-const TICKET_STATUS_COLORS: Record<TicketStatus, { dot: string; bg: string; text: string; label: string }> = {
-  open: { dot: 'bg-amber-400', bg: 'bg-amber-50', text: 'text-amber-700', label: 'Open' },
-  in_progress: { dot: 'bg-blue-500', bg: 'bg-blue-50', text: 'text-blue-700', label: 'In Progress' },
-  waiting_on_customer: { dot: 'bg-purple-500', bg: 'bg-purple-50', text: 'text-purple-700', label: 'Awaiting Reply' },
-  resolved: { dot: 'bg-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'Resolved' },
-  closed: { dot: 'bg-gray-400', bg: 'bg-gray-100', text: 'text-gray-600', label: 'Closed' },
-}
 
 const CATEGORY_LABELS: Record<TicketCategory, string> = {
   general: 'General',
@@ -654,7 +648,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np, pay
               </div>
               <div className="flex flex-col gap-2">
                 {tickets.map((ticket) => {
-                  const statusStyle = TICKET_STATUS_COLORS[ticket.status]
+                  const statusStyle = getStatusStyle('ticket', ticket.status)
                   return (
                     <Link
                       key={ticket.id}

@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { BookingStatusBadge } from '@/components/booking/booking-status-badge'
+import { getStatusStyle } from '@/lib/ui/status-styles'
 import Link from 'next/link'
 import { SkeletonRow } from '@/components/ui/skeleton'
 import type { Database } from '@/lib/supabase/types'
@@ -13,16 +14,6 @@ type NcnStatus = Database['public']['Enums']['ncn_status']
 type NcnReason = Database['public']['Enums']['ncn_reason']
 
 const STATUS_OPTIONS: string[] = ['Issued', 'Disputed', 'Under Review', 'Resolved', 'Rescheduled', 'Closed']
-
-const STATUS_STYLE: Record<string, { bg: string; text: string }> = {
-  Issued: { bg: 'bg-gray-100', text: 'text-gray-600' },
-  Open: { bg: 'bg-red-50', text: 'text-red-700' },
-  Disputed: { bg: 'bg-red-50', text: 'text-red-700' },
-  'Under Review': { bg: 'bg-amber-50', text: 'text-amber-700' },
-  Resolved: { bg: 'bg-emerald-50', text: 'text-emerald-700' },
-  Rescheduled: { bg: 'bg-blue-50', text: 'text-blue-700' },
-  Closed: { bg: 'bg-gray-50', text: 'text-gray-400' },
-}
 
 const PAGE_SIZE = 20
 
@@ -176,7 +167,7 @@ export function NonConformanceClient() {
               )}
               {notices.map((ncn) => {
                 const bookingInfo = getBookingRef(ncn)
-                const ss = STATUS_STYLE[ncn.status] ?? STATUS_STYLE.Issued
+                const ss = getStatusStyle('ncn', ncn.status)
                 const reporter = ncn.reporter as { display_name: string | null } | null
                 return (
                   <tr key={ncn.id} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50">

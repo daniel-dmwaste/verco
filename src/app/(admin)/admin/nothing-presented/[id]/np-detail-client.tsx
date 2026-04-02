@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import { Dialog } from '@base-ui/react/dialog'
 import { updateNpStatus, rebookNp, resolveNpWithRefund } from './actions'
+import { getStatusStyle } from '@/lib/ui/status-styles'
 import type { Database } from '@/lib/supabase/types'
 
 type NpStatus = Database['public']['Enums']['np_status']
@@ -49,16 +50,6 @@ interface NpDetailClientProps {
   availableDates: { id: string; date: string }[]
 }
 
-const STATUS_STYLE: Record<string, { bg: string; text: string }> = {
-  Issued: { bg: 'bg-gray-100', text: 'text-gray-600' },
-  Open: { bg: 'bg-amber-50', text: 'text-amber-700' },
-  Disputed: { bg: 'bg-red-50', text: 'text-red-700' },
-  'Under Review': { bg: 'bg-blue-50', text: 'text-blue-700' },
-  Resolved: { bg: 'bg-emerald-50', text: 'text-emerald-700' },
-  Rebooked: { bg: 'bg-purple-50', text: 'text-purple-700' },
-  Closed: { bg: 'bg-gray-50', text: 'text-gray-400' },
-}
-
 export function NpDetailClient({ np, availableDates }: NpDetailClientProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -75,7 +66,7 @@ export function NpDetailClient({ np, availableDates }: NpDetailClientProps) {
   const status = np.status as string
   const isActionable = status === 'Disputed' || status === 'Under Review'
   const isIssued = status === 'Issued'
-  const ss = STATUS_STYLE[np.status]
+  const ss = getStatusStyle('np', np.status)
 
   const paidItems = booking?.booking_item.filter((i) => i.is_extra) ?? []
   const paidAmountCents = paidItems.reduce((sum, i) => sum + i.unit_price_cents * i.no_services, 0)

@@ -4,16 +4,11 @@ import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
+import { getStatusStyle } from '@/lib/ui/status-styles'
 import Link from 'next/link'
 import { SkeletonRow } from '@/components/ui/skeleton'
 
 const STATUS_OPTIONS = ['Pending', 'Approved', 'Rejected'] as const
-
-const STATUS_STYLE: Record<string, { bg: string; text: string; label: string }> = {
-  Pending: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'Pending' },
-  Approved: { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'Approved' },
-  Rejected: { bg: 'bg-red-50', text: 'text-red-700', label: 'Rejected' },
-}
 
 const PAGE_SIZE = 20
 
@@ -150,7 +145,7 @@ export function RefundsClient() {
         >
           <option value="">All Statuses</option>
           {STATUS_OPTIONS.map((s) => (
-            <option key={s} value={s}>{STATUS_STYLE[s]?.label ?? s}</option>
+            <option key={s} value={s}>{getStatusStyle('refund', s).label}</option>
           ))}
         </select>
 
@@ -196,7 +191,7 @@ export function RefundsClient() {
                 const booking = refund.booking as unknown as { id: string; ref: string } | null
                 const contact = refund.contact as { full_name: string } | null
                 const reviewer = refund.reviewer as { display_name: string | null } | null
-                const ss = STATUS_STYLE[refund.status] ?? { bg: 'bg-gray-100', text: 'text-gray-600', label: refund.status }
+                const ss = getStatusStyle('refund', refund.status)
                 return (
                   <tr key={refund.id} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
                     <td className="px-4 py-3">

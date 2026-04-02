@@ -4,46 +4,12 @@ import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
+import { getStatusStyle } from '@/lib/ui/status-styles'
 import type { Database } from '@/lib/supabase/types'
 
 type TicketStatus = Database['public']['Enums']['ticket_status']
 type TicketCategory = Database['public']['Enums']['ticket_category']
 
-const TICKET_STATUS_STYLES: Record<
-  TicketStatus,
-  { dot: string; bg: string; text: string; label: string }
-> = {
-  open: {
-    dot: 'bg-amber-400',
-    bg: 'bg-amber-50',
-    text: 'text-amber-700',
-    label: 'Open',
-  },
-  in_progress: {
-    dot: 'bg-blue-500',
-    bg: 'bg-blue-50',
-    text: 'text-blue-700',
-    label: 'In Progress',
-  },
-  waiting_on_customer: {
-    dot: 'bg-purple-500',
-    bg: 'bg-purple-50',
-    text: 'text-purple-700',
-    label: 'Awaiting Reply',
-  },
-  resolved: {
-    dot: 'bg-emerald-500',
-    bg: 'bg-emerald-50',
-    text: 'text-emerald-700',
-    label: 'Resolved',
-  },
-  closed: {
-    dot: 'bg-gray-400',
-    bg: 'bg-gray-100',
-    text: 'text-gray-600',
-    label: 'Closed',
-  },
-}
 
 const CATEGORY_LABELS: Record<TicketCategory, string> = {
   general: 'General',
@@ -101,7 +67,7 @@ export function TicketDetailClient({
   const threadEndRef = useRef<HTMLDivElement>(null)
 
   const isClosed = ticketStatus === 'closed' || ticketStatus === 'resolved'
-  const statusStyle = TICKET_STATUS_STYLES[ticketStatus]
+  const statusStyle = getStatusStyle('ticket', ticketStatus)
 
   // Scroll to bottom of thread when responses change
   useEffect(() => {

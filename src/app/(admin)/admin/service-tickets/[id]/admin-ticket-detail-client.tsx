@@ -5,19 +5,13 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
+import { getStatusStyle } from '@/lib/ui/status-styles'
 import type { Database } from '@/lib/supabase/types'
 
 type TicketStatus = Database['public']['Enums']['ticket_status']
 type TicketPriority = Database['public']['Enums']['ticket_priority']
 type TicketCategory = Database['public']['Enums']['ticket_category']
 
-const STATUS_STYLE: Record<TicketStatus, { bg: string; text: string; label: string }> = {
-  open: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'Open' },
-  in_progress: { bg: 'bg-blue-50', text: 'text-blue-700', label: 'In Progress' },
-  waiting_on_customer: { bg: 'bg-purple-50', text: 'text-purple-700', label: 'Awaiting Reply' },
-  resolved: { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'Resolved' },
-  closed: { bg: 'bg-gray-100', text: 'text-gray-600', label: 'Closed' },
-}
 
 const CATEGORY_LABELS: Record<TicketCategory, string> = {
   general: 'General',
@@ -101,7 +95,7 @@ export function AdminTicketDetailClient({
   const [copied, setCopied] = useState<string | null>(null)
   const threadEndRef = useRef<HTMLDivElement>(null)
 
-  const statusStyle = STATUS_STYLE[status]
+  const statusStyle = getStatusStyle('ticket', status)
 
   useEffect(() => {
     threadEndRef.current?.scrollIntoView({ behavior: 'smooth' })

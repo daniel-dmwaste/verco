@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
+import { getStatusStyle } from '@/lib/ui/status-styles'
 import Link from 'next/link'
 import { SkeletonRow } from '@/components/ui/skeleton'
 import type { Database } from '@/lib/supabase/types'
@@ -11,16 +12,6 @@ import type { Database } from '@/lib/supabase/types'
 type NpStatus = Database['public']['Enums']['np_status']
 
 const STATUS_OPTIONS: string[] = ['Issued', 'Disputed', 'Under Review', 'Resolved', 'Rebooked', 'Closed']
-
-const STATUS_STYLE: Record<string, { bg: string; text: string }> = {
-  Issued: { bg: 'bg-gray-100', text: 'text-gray-600' },
-  Open: { bg: 'bg-amber-50', text: 'text-amber-700' },
-  Disputed: { bg: 'bg-red-50', text: 'text-red-700' },
-  'Under Review': { bg: 'bg-blue-50', text: 'text-blue-700' },
-  Resolved: { bg: 'bg-emerald-50', text: 'text-emerald-700' },
-  Rebooked: { bg: 'bg-purple-50', text: 'text-purple-700' },
-  Closed: { bg: 'bg-gray-50', text: 'text-gray-400' },
-}
 
 const PAGE_SIZE = 20
 
@@ -163,7 +154,7 @@ export function NothingPresentedClient() {
               )}
               {records.map((np) => {
                 const bookingInfo = getBookingRef(np)
-                const ss = STATUS_STYLE[np.status] ?? STATUS_STYLE.Issued
+                const ss = getStatusStyle('np', np.status)
                 const reporter = np.reporter as { display_name: string | null } | null
                 return (
                   <tr key={np.id} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
