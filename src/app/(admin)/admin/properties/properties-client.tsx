@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { SkeletonRow } from '@/components/ui/skeleton'
 
 const PAGE_SIZE = 50
 
@@ -386,7 +387,9 @@ export function PropertiesClient() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+              <>{Array.from({ length: 5 }).map((_, i) => (
+                <SkeletonRow key={i} columns={5} />
+              ))}</>
             ) : properties.length === 0 ? (
               <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">No properties found</td></tr>
             ) : (

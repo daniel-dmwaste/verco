@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, addDays, addWeeks, addMonths } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
+import { SkeletonRow } from '@/components/ui/skeleton'
 
 const PAGE_SIZE = 50
 
@@ -392,7 +393,9 @@ export function CollectionDatesClient() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+              <>{Array.from({ length: 5 }).map((_, i) => (
+                <SkeletonRow key={i} columns={8} />
+              ))}</>
             ) : dates.length === 0 ? (
               <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">No collection dates found</td></tr>
             ) : (

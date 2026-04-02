@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { BookingStatusBadge } from '@/components/booking/booking-status-badge'
+import { SkeletonRow } from '@/components/ui/skeleton'
 import Link from 'next/link'
 import type { Database } from '@/lib/supabase/types'
 
@@ -265,7 +266,11 @@ export function BookingsListClient() {
             </thead>
             <tbody>
               {isLoading && (
-                <tr><td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-400">Loading...</td></tr>
+                <>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <SkeletonRow key={i} columns={9} />
+                  ))}
+                </>
               )}
               {!isLoading && bookings.length === 0 && (
                 <tr><td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-400">No bookings found</td></tr>

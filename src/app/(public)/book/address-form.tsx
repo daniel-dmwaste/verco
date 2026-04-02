@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic'
 import { createClient } from '@/lib/supabase/client'
 import { BookingStepper } from '@/components/booking/booking-stepper'
 import { AddressAutocomplete } from '@/components/booking/address-autocomplete'
+import { Spinner } from '@/components/ui/spinner'
 import type { Database } from '@/lib/supabase/types'
 
 type EligibleProperty = Database['public']['Tables']['eligible_properties']['Row']
@@ -70,7 +71,7 @@ export function AddressForm() {
   }, [initialAddress, hasAutoResolved, lookupProperty])
 
   // Fetch FY allocation at category level when a property is selected
-  const { data: allocationData } = useQuery({
+  const { data: allocationData, isLoading: allocationLoading } = useQuery({
     queryKey: ['allocations', selectedProperty?.id],
     enabled: !!selectedProperty,
     queryFn: async () => {
@@ -208,8 +209,16 @@ export function AddressForm() {
           )}
         </div>
 
+        {/* Loading state for allocation data */}
+        {selectedProperty && allocationLoading && (
+          <div className="flex flex-col items-center justify-center gap-3 rounded-xl bg-white px-4 py-12 shadow-sm">
+            <Spinner size="md" />
+            <p className="text-sm text-gray-500">Loading allocation data...</p>
+          </div>
+        )}
+
         {/* Two-column grid: Map (left) + Allocations (right) */}
-        {selectedProperty && allocationData && (
+        {selectedProperty && allocationData && !allocationLoading && (
           <div className="grid gap-4 md:grid-cols-2">
             {/* Left: Property location + map */}
             <div className="overflow-hidden rounded-xl bg-white shadow-sm">
@@ -306,7 +315,7 @@ export function AddressForm() {
         )}
 
         {/* Booking history — full width below the grid */}
-        {selectedProperty && allocationData && (
+        {selectedProperty && allocationData && !allocationLoading && (
           <div className="rounded-xl bg-white p-6 shadow-sm">
             <div className="mb-3 flex items-center gap-2">
               <span className="text-base">&#x1F550;</span>

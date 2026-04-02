@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { SkeletonRow } from '@/components/ui/skeleton'
 import type { Database } from '@/lib/supabase/types'
 
 type TicketStatus = Database['public']['Enums']['ticket_status']
@@ -191,7 +192,9 @@ export function ServiceTicketsClient() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+              <>{Array.from({ length: 5 }).map((_, i) => (
+                <SkeletonRow key={i} columns={9} />
+              ))}</>
             ) : tickets.length === 0 ? (
               <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">No tickets found</td></tr>
             ) : (

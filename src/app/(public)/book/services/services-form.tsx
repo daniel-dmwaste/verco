@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { BookingStepper } from '@/components/booking/booking-stepper'
 import { BookingCancelLink } from '@/components/booking/booking-cancel-link'
 import { VercoButton } from '@/components/ui/verco-button'
+import { Spinner } from '@/components/ui/spinner'
 import { encodeItems, decodeItems } from '@/lib/booking/search-params'
 import type { BookingItem } from '@/lib/booking/schemas'
 
@@ -43,7 +44,7 @@ export function ServicesForm() {
   const [quantities, setQuantities] = useState<Map<string, number>>(() => decodeItems(initialItems))
 
   // Fetch service rules for this collection area
-  const { data: serviceRules } = useQuery({
+  const { data: serviceRules, isLoading: serviceRulesLoading } = useQuery({
     queryKey: ['service-rules', collectionAreaId],
     enabled: !!collectionAreaId,
     queryFn: async () => {
@@ -59,7 +60,7 @@ export function ServicesForm() {
   })
 
   // Fetch allocation_rules at category level (Bulk max, Ancillary max)
-  const { data: categoryAllocations } = useQuery({
+  const { data: categoryAllocations, isLoading: categoryAllocationsLoading } = useQuery({
     queryKey: ['category-allocations', collectionAreaId],
     enabled: !!collectionAreaId,
     queryFn: async () => {
@@ -80,7 +81,7 @@ export function ServicesForm() {
   })
 
   // Fetch existing FY usage grouped by category code
-  const { data: fyUsageByCategory } = useQuery({
+  const { data: fyUsageByCategory, isLoading: fyUsageByCategoryLoading } = useQuery({
     queryKey: ['fy-usage-by-category', propertyId],
     enabled: !!propertyId,
     queryFn: async () => {
@@ -114,7 +115,7 @@ export function ServicesForm() {
   })
 
   // Also fetch per-service FY usage (for individual service pricing calc)
-  const { data: fyUsageByService } = useQuery({
+  const { data: fyUsageByService, isLoading: fyUsageByServiceLoading } = useQuery({
     queryKey: ['fy-usage-by-service', propertyId],
     enabled: !!propertyId,
     queryFn: async () => {
@@ -147,6 +148,9 @@ export function ServicesForm() {
       return usage
     },
   })
+
+  // Show loading state if any critical query is loading
+  const isLoadingData = serviceRulesLoading || categoryAllocationsLoading || fyUsageByCategoryLoading || fyUsageByServiceLoading
 
   // Group services by category code
   const grouped = useMemo(() => {
@@ -404,14 +408,27 @@ export function ServicesForm() {
           </p>
         </div>
 
-        {grouped.bulk.length > 0 &&
-          renderServiceSection('Bulk Collection', 'bulk', grouped.bulk)}
+        {/* Loading state */}
+        {isLoadingData && (
+          <div className="flex flex-col items-center justify-center gap-3 rounded-xl bg-white px-4 py-12 shadow-sm">
+            <Spinner size="md" />
+            <p className="text-sm text-gray-500">Loading service options...</p>
+          </div>
+        )}
 
-        {grouped.anc.length > 0 &&
-          renderServiceSection('Ancillary Collection', 'anc', grouped.anc)}
+        {/* Services sections — only show when data is loaded */}
+        {!isLoadingData && (
+          <>
+            {grouped.bulk.length > 0 &&
+              renderServiceSection('Bulk Collection', 'bulk', grouped.bulk)}
+
+            {grouped.anc.length > 0 &&
+              renderServiceSection('Ancillary Collection', 'anc', grouped.anc)}
+          </>
+        )}
 
         {/* Total bar */}
-        {totalChargeCents > 0 && (
+        {!isLoadingData && totalChargeCents > 0 && (
           <div className="flex items-center justify-between rounded-[10px] bg-[#E8EEF2] px-4 py-3.5">
             <span className="text-sm font-semibold text-[var(--brand)]">
               Total Extra Services Cost
@@ -436,7 +453,7 @@ export function ServicesForm() {
         <VercoButton
           className="flex-1"
           onClick={handleContinue}
-          disabled={totalItems === 0}
+          disabled={totalItems === 0 || isLoadingData}
         >
           Next Step &rarr;
         </VercoButton>

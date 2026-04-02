@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
+import { SkeletonRow } from '@/components/ui/skeleton'
 import { UserFormDialog } from './user-form-dialog'
 import type { EditUserData } from './user-form-dialog'
 import type { Database } from '@/lib/supabase/types'
@@ -209,9 +210,9 @@ export function UsersClient() {
               </tr>
             </thead>
             <tbody>
-              {isLoading && (
-                <tr><td colSpan={canManageUsers ? 7 : 6} className="px-4 py-8 text-center text-sm text-gray-400">Loading...</td></tr>
-              )}
+              {isLoading && Array.from({ length: 5 }).map((_, i) => (
+                <SkeletonRow key={i} columns={canManageUsers ? 7 : 6} />
+              ))}
               {!isLoading && users.length === 0 && (
                 <tr><td colSpan={canManageUsers ? 7 : 6} className="px-4 py-8 text-center text-sm text-gray-400">No users found</td></tr>
               )}

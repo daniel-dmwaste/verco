@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { BookingStepper } from '@/components/booking/booking-stepper'
 import { BookingCancelLink } from '@/components/booking/booking-cancel-link'
 import { VercoButton } from '@/components/ui/verco-button'
+import { Spinner } from '@/components/ui/spinner'
 import { decodeItems } from '@/lib/booking/search-params'
 import { cn } from '@/lib/utils'
 
@@ -30,7 +31,7 @@ export function DateForm() {
   const supabase = createClient()
 
   // Determine which buckets are needed based on selected items
-  const { data: neededBuckets } = useQuery({
+  const { data: neededBuckets, isLoading: neededBucketsLoading } = useQuery({
     queryKey: ['needed-buckets', itemsParam],
     enabled: selectedItems.size > 0,
     queryFn: async () => {
@@ -56,7 +57,7 @@ export function DateForm() {
   })
 
   // Fetch available collection dates
-  const { data: dates } = useQuery({
+  const { data: dates, isLoading: datesLoading } = useQuery({
     queryKey: ['collection-dates', collectionAreaId],
     enabled: !!collectionAreaId,
     queryFn: async () => {
@@ -72,6 +73,9 @@ export function DateForm() {
       return data ?? []
     },
   })
+
+  // Show loading state if any critical query is loading
+  const isLoadingData = neededBucketsLoading || datesLoading
 
   // Filter dates based on needed capacity buckets
   const availableDates = (dates ?? []).filter((d) => {
@@ -139,7 +143,7 @@ export function DateForm() {
         </div>
 
         {/* Selected services chips */}
-        {neededBuckets && neededBuckets.serviceChips.length > 0 && (
+        {!isLoadingData && neededBuckets && neededBuckets.serviceChips.length > 0 && (
           <div className="rounded-xl bg-white px-4 py-3.5 shadow-sm">
             <div className="mb-2 text-xs font-medium text-gray-500">
               Selected Services
@@ -157,72 +161,82 @@ export function DateForm() {
           </div>
         )}
 
-        {/* Date grid */}
-        <div>
-          <h2 className="mb-3 font-[family-name:var(--font-heading)] text-base font-semibold text-[var(--brand)]">
-            Available Dates
-          </h2>
-          <div className="grid grid-cols-3 gap-2">
-            {availableDates.map((d) => {
-              const isSelected = d.id === selectedDateId
-              const spotsRemaining = Math.max(
-                0,
-                d.bulk_capacity_limit - d.bulk_units_booked
-              )
-              const isAlmostFull = spotsRemaining <= 10 && spotsRemaining > 0
-              const dateObj = new Date(d.date + 'T00:00:00')
-
-              return (
-                <button
-                  key={d.id}
-                  type="button"
-                  onClick={() => setSelectedDateId(d.id)}
-                  className={cn(
-                    'flex flex-col gap-1 rounded-xl border-[1.5px] px-2.5 py-3 shadow-sm transition-colors',
-                    isSelected
-                      ? 'border-[var(--brand-accent)] border-2 bg-[var(--brand)]'
-                      : 'border-gray-100 bg-white hover:border-gray-200'
-                  )}
-                >
-                  <span
-                    className={cn(
-                      'text-xs font-semibold',
-                      isSelected ? 'text-white' : 'text-[var(--brand)]'
-                    )}
-                  >
-                    {format(dateObj, 'EEE d MMM')}
-                  </span>
-                  <span
-                    className={cn(
-                      'text-[11px]',
-                      isSelected
-                        ? 'text-green-200/85'
-                        : 'text-gray-500'
-                    )}
-                  >
-                    {spotsRemaining} spots
-                  </span>
-                  {isSelected && (
-                    <span className="text-[10px] font-medium text-[var(--brand-accent)]">
-                      Selected &#10003;
-                    </span>
-                  )}
-                  {!isSelected && isAlmostFull && (
-                    <span className="text-[10px] font-medium text-[#FF8C42]">
-                      Almost full
-                    </span>
-                  )}
-                </button>
-              )
-            })}
+        {/* Loading state */}
+        {isLoadingData && (
+          <div className="flex flex-col items-center justify-center gap-3 rounded-xl bg-white px-4 py-12 shadow-sm">
+            <Spinner size="md" />
+            <p className="text-sm text-gray-500">Loading available dates...</p>
           </div>
+        )}
 
-          {availableDates.length === 0 && (
-            <p className="py-8 text-center text-sm text-gray-500">
-              No available dates for this collection area.
-            </p>
-          )}
-        </div>
+        {/* Date grid */}
+        {!isLoadingData && (
+          <div>
+            <h2 className="mb-3 font-[family-name:var(--font-heading)] text-base font-semibold text-[var(--brand)]">
+              Available Dates
+            </h2>
+            <div className="grid grid-cols-3 gap-2">
+              {availableDates.map((d) => {
+                const isSelected = d.id === selectedDateId
+                const spotsRemaining = Math.max(
+                  0,
+                  d.bulk_capacity_limit - d.bulk_units_booked
+                )
+                const isAlmostFull = spotsRemaining <= 10 && spotsRemaining > 0
+                const dateObj = new Date(d.date + 'T00:00:00')
+
+                return (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => setSelectedDateId(d.id)}
+                    className={cn(
+                      'flex flex-col gap-1 rounded-xl border-[1.5px] px-2.5 py-3 shadow-sm transition-colors',
+                      isSelected
+                        ? 'border-[var(--brand-accent)] border-2 bg-[var(--brand)]'
+                        : 'border-gray-100 bg-white hover:border-gray-200'
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'text-xs font-semibold',
+                        isSelected ? 'text-white' : 'text-[var(--brand)]'
+                      )}
+                    >
+                      {format(dateObj, 'EEE d MMM')}
+                    </span>
+                    <span
+                      className={cn(
+                        'text-[11px]',
+                        isSelected
+                          ? 'text-green-200/85'
+                          : 'text-gray-500'
+                      )}
+                    >
+                      {spotsRemaining} spots
+                    </span>
+                    {isSelected && (
+                      <span className="text-[10px] font-medium text-[var(--brand-accent)]">
+                        Selected &#10003;
+                      </span>
+                    )}
+                    {!isSelected && isAlmostFull && (
+                      <span className="text-[10px] font-medium text-[#FF8C42]">
+                        Almost full
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+
+            {availableDates.length === 0 && (
+              <p className="py-8 text-center text-sm text-gray-500">
+                No available dates for this collection area.
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Bottom nav */}
@@ -238,7 +252,7 @@ export function DateForm() {
         <VercoButton
           className="flex-1"
           onClick={handleContinue}
-          disabled={!selectedDateId}
+          disabled={!selectedDateId || isLoadingData}
         >
           Next Step &rarr;
         </VercoButton>

@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { SkeletonRow } from '@/components/ui/skeleton'
 import type { Database } from '@/lib/supabase/types'
 
 type NpStatus = Database['public']['Enums']['np_status']
@@ -154,9 +155,9 @@ export function NothingPresentedClient() {
               </tr>
             </thead>
             <tbody>
-              {isLoading && (
-                <tr><td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-400">Loading...</td></tr>
-              )}
+              {isLoading && Array.from({ length: 5 }).map((_, i) => (
+                <SkeletonRow key={i} columns={9} />
+              ))}
               {!isLoading && records.length === 0 && (
                 <tr><td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-400">No nothing presented records found</td></tr>
               )}
