@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { BookingStepper } from '@/components/booking/booking-stepper'
+import { BookingCancelLink } from '@/components/booking/booking-cancel-link'
 import { decodeItems } from '@/lib/booking/search-params'
 import { cn } from '@/lib/utils'
 
@@ -232,6 +233,7 @@ export function DateForm() {
         >
           &larr; Back
         </button>
+        <BookingCancelLink />
         <button
           type="button"
           onClick={handleContinue}

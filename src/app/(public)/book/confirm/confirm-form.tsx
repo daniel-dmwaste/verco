@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { BookingStepper } from '@/components/booking/booking-stepper'
+import { BookingCancelLink } from '@/components/booking/booking-cancel-link'
 import { decodeItems } from '@/lib/booking/search-params'
 import {
   ContactSchema,
@@ -853,6 +854,7 @@ export function ConfirmForm() {
           >
             &larr; Back
           </button>
+          <BookingCancelLink />
           <button
             type="submit"
             form="confirm-form"

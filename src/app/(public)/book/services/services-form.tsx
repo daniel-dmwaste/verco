@@ -5,6 +5,7 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { BookingStepper } from '@/components/booking/booking-stepper'
+import { BookingCancelLink } from '@/components/booking/booking-cancel-link'
 import { encodeItems, decodeItems } from '@/lib/booking/search-params'
 import type { BookingItem } from '@/lib/booking/schemas'
 
@@ -430,6 +431,7 @@ export function ServicesForm() {
         >
           &larr; Back
         </button>
+        <BookingCancelLink />
         <button
           type="button"
           onClick={handleContinue}

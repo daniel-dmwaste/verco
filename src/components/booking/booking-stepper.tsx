@@ -1,7 +1,5 @@
 'use client'
 
-import { useSearchParams } from 'next/navigation'
-import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
 const STEPS = [
@@ -17,22 +15,8 @@ interface BookingStepperProps {
 }
 
 export function BookingStepper({ currentStep }: BookingStepperProps) {
-  const searchParams = useSearchParams()
-  const onBehalf = searchParams.get('on_behalf') === 'true'
-  const returnUrl = searchParams.get('return_url') ?? (onBehalf ? '/admin/bookings' : '/dashboard')
-
   return (
-    <div className="relative bg-white px-8 pb-3 pt-3.5 shadow-[0_2px_4px_rgba(0,0,0,0.04)]">
-      <Link
-        href={returnUrl}
-        className="absolute right-3 top-3 flex size-7 items-center justify-center rounded-full text-gray-300 transition-colors hover:bg-gray-100 hover:text-gray-600"
-        title="Exit booking"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18" />
-          <line x1="6" y1="6" x2="18" y2="18" />
-        </svg>
-      </Link>
+    <div className="bg-white px-8 pb-3 pt-3.5 shadow-[0_2px_4px_rgba(0,0,0,0.04)]">
       <div className="flex items-start justify-between">
         {STEPS.map((step) => {
           const isDone = step.number < currentStep

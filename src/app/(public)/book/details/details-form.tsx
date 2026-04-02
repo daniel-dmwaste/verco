@@ -3,6 +3,7 @@
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { BookingStepper } from '@/components/booking/booking-stepper'
+import { BookingCancelLink } from '@/components/booking/booking-cancel-link'
 import { LOCATION_OPTIONS, type LocationOption } from '@/lib/booking/schemas'
 import { cn } from '@/lib/utils'
 
@@ -141,6 +142,7 @@ export function DetailsForm() {
         >
           &larr; Back
         </button>
+        <BookingCancelLink />
         <button
           type="button"
           onClick={handleContinue}
