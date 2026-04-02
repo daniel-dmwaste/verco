@@ -3,7 +3,13 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
-const TABS = [
+interface Tab {
+  label: string
+  href: string
+  icon: (active: boolean) => React.ReactNode
+}
+
+const BASE_TABS: Tab[] = [
   {
     label: 'Home',
     href: '/',
@@ -35,9 +41,23 @@ const TABS = [
       </svg>
     ),
   },
-] as const
+]
 
-export function MobileBottomNav() {
+const ADMIN_TAB: Tab = {
+  label: 'Admin',
+  href: '/admin',
+  icon: (active: boolean) => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? '#293F52' : '#B0B0B0'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  ),
+}
+
+interface MobileBottomNavProps {
+  showAdminLink?: boolean
+}
+
+export function MobileBottomNav({ showAdminLink }: MobileBottomNavProps) {
   const pathname = usePathname()
 
   function isActive(href: string) {
@@ -45,9 +65,11 @@ export function MobileBottomNav() {
     return pathname.startsWith(href)
   }
 
+  const tabs = showAdminLink ? [...BASE_TABS, ADMIN_TAB] : BASE_TABS
+
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-gray-100 bg-white tablet:hidden">
-      {TABS.map((tab) => {
+      {tabs.map((tab) => {
         const active = isActive(tab.href)
         return (
           <Link

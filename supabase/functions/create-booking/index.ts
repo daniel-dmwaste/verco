@@ -197,14 +197,37 @@ serve(async (req) => {
     const initialStatus = requiresPayment ? 'Pending Payment' : 'Submitted'
 
     // ── 9. Build items payload for RPC ───────────────────────────────────────
+    // Split line items with both free and paid units into separate booking_item
+    // rows so the detail page can display "2 Included + 1 Paid" correctly.
 
-    const rpcItems = priceResult.line_items.map((li) => ({
-      service_id: li.service_id,
-      no_services: li.quantity,
-      unit_price_cents: li.unit_price_cents,
-      is_extra: li.is_extra,
-      category_code: li.category_code,
-    }))
+    const rpcItems: Array<{
+      service_id: string
+      no_services: number
+      unit_price_cents: number
+      is_extra: boolean
+      category_code: string
+    }> = []
+
+    for (const li of priceResult.line_items) {
+      if (li.free_units > 0) {
+        rpcItems.push({
+          service_id: li.service_id,
+          no_services: li.free_units,
+          unit_price_cents: 0,
+          is_extra: false,
+          category_code: li.category_code,
+        })
+      }
+      if (li.paid_units > 0) {
+        rpcItems.push({
+          service_id: li.service_id,
+          no_services: li.paid_units,
+          unit_price_cents: li.unit_price_cents,
+          is_extra: true,
+          category_code: li.category_code,
+        })
+      }
+    }
 
     // ── 10. Call capacity-safe RPC (advisory lock + insert) ──────────────────
 

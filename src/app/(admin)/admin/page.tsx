@@ -149,7 +149,7 @@ export default async function AdminDashboardPage() {
         </div>
         <div className="flex items-center gap-2.5">
           <Link
-            href="/admin/bookings"
+            href="/book?on_behalf=true"
             className="inline-flex items-center gap-1.5 rounded-lg bg-[#293F52] px-4 py-2 text-[13px] font-semibold text-white"
           >
             + New Booking

@@ -29,12 +29,35 @@ async function getClientBranding(): Promise<ClientBranding | null> {
   return data
 }
 
+const STAFF_ROLES = ['contractor-admin', 'contractor-staff', 'client-admin', 'client-staff']
+
+async function getIsStaff(): Promise<boolean> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return false
+
+    const { data: userRole } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single()
+
+    return STAFF_ROLES.includes(userRole?.role ?? '')
+  } catch {
+    return false
+  }
+}
+
 export default async function PublicLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const branding = await getClientBranding()
+  const [branding, isStaff] = await Promise.all([
+    getClientBranding(),
+    getIsStaff(),
+  ])
   const primaryColour = branding?.primary_colour ?? '#293F52'
 
   return (
@@ -48,12 +71,13 @@ export default async function PublicLayout({
         serviceName={branding?.service_name ?? 'Verge Collection'}
         logoUrl={branding?.logo_light_url ?? null}
         showPoweredBy={branding?.show_powered_by ?? true}
+        showAdminLink={isStaff}
       />
       <div className="pb-16 tablet:pb-0">
         {children}
       </div>
       <MobileFab />
-      <MobileBottomNav />
+      <MobileBottomNav showAdminLink={isStaff} />
     </div>
   )
 }

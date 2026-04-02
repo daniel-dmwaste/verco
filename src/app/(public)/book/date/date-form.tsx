@@ -17,6 +17,7 @@ export function DateForm() {
   const address = searchParams.get('address') ?? ''
   const itemsParam = searchParams.get('items') ?? ''
   const totalCents = searchParams.get('total_cents') ?? '0'
+  const onBehalf = searchParams.get('on_behalf') === 'true'
 
   const selectedItems = decodeItems(itemsParam)
 
@@ -86,6 +87,7 @@ export function DateForm() {
       items: itemsParam,
       total_cents: totalCents,
       collection_date_id: selectedDateId,
+      ...(onBehalf ? { on_behalf: 'true' } : {}),
     })
     router.push(`/book/details?${params.toString()}`)
   }
@@ -95,6 +97,7 @@ export function DateForm() {
       property_id: propertyId,
       collection_area_id: collectionAreaId,
       address,
+      ...(onBehalf ? { on_behalf: 'true' } : {}),
     })
     router.push(`/book/services?${params.toString()}`)
   }

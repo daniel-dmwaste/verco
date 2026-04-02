@@ -62,13 +62,12 @@ export default async function DashboardPage() {
     .not('status', 'eq', 'Pending Payment')
     .order('created_at', { ascending: false })
 
-  // Fetch open service tickets (RLS scopes to own tickets)
+  // Fetch all service tickets (RLS scopes to own tickets)
   const { data: tickets } = await supabase
     .from('service_ticket')
     .select('id, display_id, subject, status, category, created_at')
-    .in('status', ['open', 'in_progress', 'waiting_on_customer'])
     .order('created_at', { ascending: false })
-    .limit(5)
+    .limit(20)
 
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-8">

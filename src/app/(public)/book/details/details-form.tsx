@@ -15,6 +15,7 @@ export function DetailsForm() {
   const itemsParam = searchParams.get('items') ?? ''
   const totalCents = searchParams.get('total_cents') ?? '0'
   const collectionDateId = searchParams.get('collection_date_id') ?? ''
+  const onBehalf = searchParams.get('on_behalf') === 'true'
 
   const [location, setLocation] = useState<LocationOption>('Front Verge')
   const [notes, setNotes] = useState('')
@@ -29,6 +30,7 @@ export function DetailsForm() {
       collection_date_id: collectionDateId,
       location,
       ...(notes ? { notes } : {}),
+      ...(onBehalf ? { on_behalf: 'true' } : {}),
     })
     router.push(`/book/confirm?${params.toString()}`)
   }
@@ -40,6 +42,7 @@ export function DetailsForm() {
       address,
       items: itemsParam,
       total_cents: totalCents,
+      ...(onBehalf ? { on_behalf: 'true' } : {}),
     })
     router.push(`/book/date?${params.toString()}`)
   }

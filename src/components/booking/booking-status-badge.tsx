@@ -29,7 +29,7 @@ const STATUS_CONFIG: Record<
   },
   Cancelled: {
     label: 'Cancelled',
-    className: 'bg-gray-100 text-gray-500',
+    className: 'bg-[#FFF0F0] text-[#E53E3E]',
   },
   'Non-conformance': {
     label: 'Non-Conformance',

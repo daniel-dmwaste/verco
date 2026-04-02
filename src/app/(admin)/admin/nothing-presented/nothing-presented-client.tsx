@@ -9,13 +9,16 @@ import type { Database } from '@/lib/supabase/types'
 
 type NpStatus = Database['public']['Enums']['np_status']
 
-const STATUS_OPTIONS: NpStatus[] = ['Open', 'Under Review', 'Resolved', 'Rebooked']
+const STATUS_OPTIONS: string[] = ['Issued', 'Disputed', 'Under Review', 'Resolved', 'Rebooked', 'Closed']
 
-const STATUS_STYLE: Record<NpStatus, { bg: string; text: string }> = {
+const STATUS_STYLE: Record<string, { bg: string; text: string }> = {
+  Issued: { bg: 'bg-gray-100', text: 'text-gray-600' },
   Open: { bg: 'bg-amber-50', text: 'text-amber-700' },
+  Disputed: { bg: 'bg-red-50', text: 'text-red-700' },
   'Under Review': { bg: 'bg-blue-50', text: 'text-blue-700' },
   Resolved: { bg: 'bg-emerald-50', text: 'text-emerald-700' },
   Rebooked: { bg: 'bg-purple-50', text: 'text-purple-700' },
+  Closed: { bg: 'bg-gray-50', text: 'text-gray-400' },
 }
 
 const PAGE_SIZE = 20
@@ -44,7 +47,7 @@ export function NothingPresentedClient() {
         .order('reported_at', { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
 
-      if (statusFilter) query = query.eq('status', statusFilter as NpStatus)
+      if (statusFilter) query = query.eq('status', statusFilter as never)
       if (faultFilter === 'dm') query = query.eq('dm_fault', true)
       if (faultFilter === 'resident') query = query.eq('dm_fault', false)
       if (search) {
@@ -123,7 +126,7 @@ export function NothingPresentedClient() {
           className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-[13px] text-gray-700"
         >
           <option value="">All Fault Types</option>
-          <option value="dm">D&M Fault</option>
+          <option value="dm">Contractor Fault</option>
           <option value="resident">Resident Fault</option>
         </select>
 
@@ -159,7 +162,7 @@ export function NothingPresentedClient() {
               )}
               {records.map((np) => {
                 const bookingInfo = getBookingRef(np)
-                const ss = STATUS_STYLE[np.status as NpStatus]
+                const ss = STATUS_STYLE[np.status] ?? STATUS_STYLE.Issued
                 const reporter = np.reporter as { display_name: string | null } | null
                 return (
                   <tr key={np.id} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
@@ -181,7 +184,7 @@ export function NothingPresentedClient() {
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${np.dm_fault ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
-                        {np.dm_fault ? 'D&M' : 'Resident'}
+                        {np.dm_fault ? 'Contractor' : 'Resident'}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500">
@@ -199,14 +202,12 @@ export function NothingPresentedClient() {
                       {reporter?.display_name ?? '—'}
                     </td>
                     <td className="px-4 py-3">
-                      {bookingInfo && (
-                        <Link
-                          href={`/admin/bookings/${bookingInfo.id}`}
-                          className="inline-flex items-center rounded-md border-[1.5px] border-gray-100 bg-white px-3 py-1 text-xs font-semibold text-[#293F52]"
-                        >
-                          View
-                        </Link>
-                      )}
+                      <Link
+                        href={`/admin/nothing-presented/${np.id}`}
+                        className="inline-flex items-center rounded-md border-[1.5px] border-gray-100 bg-white px-3 py-1 text-xs font-semibold text-[#293F52]"
+                      >
+                        View
+                      </Link>
                     </td>
                   </tr>
                 )

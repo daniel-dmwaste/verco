@@ -67,17 +67,25 @@ serve(async (req) => {
       return errorResponse('Booking not found', 404)
     }
 
-    // ── 4. Validate booking belongs to calling user ──────────────────────────
+    // ── 4. Validate caller can access this booking ───────────────────────────
 
-    // Look up user's contact_id from their profile
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('contact_id')
-      .eq('id', user.id)
-      .single()
+    // Admin users (staff roles) can create checkout for any booking they can
+    // see via RLS — the SELECT query above already scopes to their tenant.
+    // Residents must own the booking via contact_id match.
+    const { data: roleData } = await supabase.rpc('current_user_role')
+    const adminRoles = ['contractor-admin', 'contractor-staff', 'client-admin', 'client-staff']
+    const isAdmin = adminRoles.includes(roleData)
 
-    if (!profile?.contact_id || profile.contact_id !== booking.contact_id) {
-      return errorResponse('Booking does not belong to this user', 403)
+    if (!isAdmin) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('contact_id')
+        .eq('id', user.id)
+        .single()
+
+      if (!profile?.contact_id || profile.contact_id !== booking.contact_id) {
+        return errorResponse('Booking does not belong to this user', 403)
+      }
     }
 
     // ── 5. Validate status ───────────────────────────────────────────────────
@@ -178,7 +186,7 @@ serve(async (req) => {
       },
       success_url,
       cancel_url,
-      expires_after: 1800, // 30 minutes
+      expires_at: Math.floor(Date.now() / 1000) + 1800, // 30 minutes from now
     })
 
     // ── 9. Insert booking_payment record ─────────────────────────────────────
@@ -204,7 +212,9 @@ serve(async (req) => {
 
     return jsonResponse({ checkout_url: session.url })
   } catch (err) {
-    console.error('create-checkout error:', err)
-    return errorResponse('Internal Server Error', 500)
+    console.error('create-checkout error:', err instanceof Error ? err.message : String(err))
+    console.error('create-checkout stack:', err instanceof Error ? err.stack : 'no stack')
+    const message = err instanceof Error ? err.message : String(err)
+    return errorResponse(`Internal Server Error: ${message}`, 500)
   }
 })

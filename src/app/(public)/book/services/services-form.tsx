@@ -32,6 +32,7 @@ export function ServicesForm() {
   const propertyId = searchParams.get('property_id') ?? ''
   const collectionAreaId = searchParams.get('collection_area_id') ?? ''
   const address = searchParams.get('address') ?? ''
+  const onBehalf = searchParams.get('on_behalf') === 'true'
 
   const supabase = createClient()
 
@@ -253,6 +254,7 @@ export function ServicesForm() {
       address,
       items: encodeItems(pricingItems),
       total_cents: totalChargeCents.toString(),
+      ...(onBehalf ? { on_behalf: 'true' } : {}),
     })
     router.push(`/book/date?${params.toString()}`)
   }

@@ -96,15 +96,23 @@ async function handleCheckoutCompleted(
     ? session.payment_intent
     : session.payment_intent?.id ?? null
 
-  // Retrieve the charge ID from the payment intent
+  // Retrieve the charge from the payment intent (for charge ID + receipt URL)
   let chargeId: string | null = null
+  let receiptUrl: string | null = null
   if (paymentIntentId) {
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, {
       apiVersion: '2024-12-18.acacia',
     })
-    const pi = await stripe.paymentIntents.retrieve(paymentIntentId)
+    const pi = await stripe.paymentIntents.retrieve(paymentIntentId, {
+      expand: ['latest_charge'],
+    })
     const latestCharge = pi.latest_charge
-    chargeId = typeof latestCharge === 'string' ? latestCharge : latestCharge?.id ?? null
+    if (typeof latestCharge === 'string') {
+      chargeId = latestCharge
+    } else if (latestCharge) {
+      chargeId = latestCharge.id
+      receiptUrl = latestCharge.receipt_url ?? null
+    }
   }
 
   // Update booking_payment
@@ -114,6 +122,7 @@ async function handleCheckoutCompleted(
       status: 'paid',
       stripe_payment_intent: paymentIntentId,
       stripe_charge_id: chargeId,
+      receipt_url: receiptUrl,
     })
     .eq('id', payment.id)
 

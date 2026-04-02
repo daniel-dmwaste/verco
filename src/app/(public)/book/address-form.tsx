@@ -23,6 +23,7 @@ export function AddressForm() {
   const supabase = createClient()
 
   const initialAddress = searchParams.get('address') ?? ''
+  const onBehalf = searchParams.get('on_behalf') === 'true'
 
   const [selectedProperty, setSelectedProperty] = useState<EligibleProperty | null>(null)
   const [notFound, setNotFound] = useState(false)
@@ -141,6 +142,7 @@ export function AddressForm() {
       property_id: selectedProperty.id,
       collection_area_id: selectedProperty.collection_area_id,
       address: selectedProperty.formatted_address ?? selectedProperty.address,
+      ...(onBehalf ? { on_behalf: 'true' } : {}),
     })
     router.push(`/book/services?${params.toString()}`)
   }

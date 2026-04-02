@@ -11,13 +11,16 @@ import type { Database } from '@/lib/supabase/types'
 type NcnStatus = Database['public']['Enums']['ncn_status']
 type NcnReason = Database['public']['Enums']['ncn_reason']
 
-const STATUS_OPTIONS: NcnStatus[] = ['Open', 'Under Review', 'Resolved', 'Rescheduled']
+const STATUS_OPTIONS: string[] = ['Issued', 'Disputed', 'Under Review', 'Resolved', 'Rescheduled', 'Closed']
 
-const STATUS_STYLE: Record<NcnStatus, { bg: string; text: string }> = {
+const STATUS_STYLE: Record<string, { bg: string; text: string }> = {
+  Issued: { bg: 'bg-gray-100', text: 'text-gray-600' },
   Open: { bg: 'bg-red-50', text: 'text-red-700' },
+  Disputed: { bg: 'bg-red-50', text: 'text-red-700' },
   'Under Review': { bg: 'bg-amber-50', text: 'text-amber-700' },
   Resolved: { bg: 'bg-emerald-50', text: 'text-emerald-700' },
   Rescheduled: { bg: 'bg-blue-50', text: 'text-blue-700' },
+  Closed: { bg: 'bg-gray-50', text: 'text-gray-400' },
 }
 
 const PAGE_SIZE = 20
@@ -57,7 +60,7 @@ export function NonConformanceClient() {
         .order('reported_at', { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
 
-      if (statusFilter) query = query.eq('status', statusFilter as NcnStatus)
+      if (statusFilter) query = query.eq('status', statusFilter as never)
       if (reasonFilter) query = query.eq('reason', reasonFilter as NcnReason)
       if (search) {
         query = query.or(`notes.ilike.%${search}%,reason.ilike.%${search}%`)
@@ -172,7 +175,7 @@ export function NonConformanceClient() {
               )}
               {notices.map((ncn) => {
                 const bookingInfo = getBookingRef(ncn)
-                const ss = STATUS_STYLE[ncn.status as NcnStatus]
+                const ss = STATUS_STYLE[ncn.status] ?? STATUS_STYLE.Issued
                 const reporter = ncn.reporter as { display_name: string | null } | null
                 return (
                   <tr key={ncn.id} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
@@ -210,14 +213,12 @@ export function NonConformanceClient() {
                       {reporter?.display_name ?? '—'}
                     </td>
                     <td className="px-4 py-3">
-                      {bookingInfo && (
-                        <Link
-                          href={`/admin/bookings/${bookingInfo.id}`}
-                          className="inline-flex items-center rounded-md border-[1.5px] border-gray-100 bg-white px-3 py-1 text-xs font-semibold text-[#293F52]"
-                        >
-                          View
-                        </Link>
-                      )}
+                      <Link
+                        href={`/admin/non-conformance/${ncn.id}`}
+                        className="inline-flex items-center rounded-md border-[1.5px] border-gray-100 bg-white px-3 py-1 text-xs font-semibold text-[#293F52]"
+                      >
+                        View
+                      </Link>
                     </td>
                   </tr>
                 )

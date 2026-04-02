@@ -4,11 +4,13 @@ interface PublicNavProps {
   serviceName: string
   logoUrl: string | null
   showPoweredBy: boolean
+  showAdminLink?: boolean
 }
 
 export function PublicNav({
   serviceName,
   showPoweredBy,
+  showAdminLink,
 }: PublicNavProps) {
   return (
     <nav className="sticky top-0 z-50 bg-[#293F52]">
@@ -42,6 +44,14 @@ export function PublicNav({
           >
             Book a Collection
           </Link>
+          {showAdminLink && (
+            <Link
+              href="/admin"
+              className="text-sm font-medium text-[#8FA5B8] hover:text-white"
+            >
+              Admin
+            </Link>
+          )}
           {showPoweredBy && (
             <div className="ml-4 flex items-center gap-1.5 border-l border-white/10 pl-4 text-[11px] md:text-[13px] text-[#8FA5B8]">
               Powered by

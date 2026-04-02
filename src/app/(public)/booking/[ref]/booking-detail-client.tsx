@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { Dialog } from '@base-ui/react/dialog'
 import {
   format,
   differenceInDays,
@@ -11,7 +12,7 @@ import {
   setMinutes,
 } from 'date-fns'
 import { BookingStatusBadge } from '@/components/booking/booking-status-badge'
-import { cancelBooking } from './actions'
+import { cancelBooking, disputeNcn, disputeNp } from './actions'
 import type { Database } from '@/lib/supabase/types'
 
 type BookingStatus = Database['public']['Enums']['booking_status']
@@ -45,12 +46,35 @@ interface Booking {
   notes: string | null
   created_at: string
   collection_area: { name: string }
+  contact: { full_name: string; email: string; mobile_e164: string | null } | null
+  property: { formatted_address: string | null; address: string } | null
   booking_item: BookingItem[]
+}
+
+interface NcnInfo {
+  id: string
+  reason: string
+  status: string
+  photos: string[]
+  reported_at: string
+  rescheduled_booking: { ref: string } | null
+}
+
+interface NpInfo {
+  id: string
+  status: string
+  photos: string[]
+  reported_at: string
+  contractor_fault: boolean
+  rescheduled_booking: { ref: string } | null
 }
 
 interface BookingDetailClientProps {
   booking: Booking
   tickets: Ticket[]
+  receiptUrl: string | null
+  ncn: NcnInfo | null
+  np: NpInfo | null
 }
 
 const TICKET_STATUS_COLORS: Record<TicketStatus, { dot: string; bg: string; text: string; label: string }> = {
@@ -81,12 +105,26 @@ function getCutoffDate(collectionDateStr: string): Date {
   return setMinutes(setHours(dayBefore, 15), 30)
 }
 
-const CANCELLABLE_STATUSES: BookingStatus[] = ['Submitted', 'Confirmed']
+function formatMobile(e164: string): string {
+  // +614XXXXXXXX → 04XX XXX XXX
+  if (e164.startsWith('+61') && e164.length === 12) {
+    const local = '0' + e164.slice(3)
+    return `${local.slice(0, 4)} ${local.slice(4, 7)} ${local.slice(7)}`
+  }
+  return e164
+}
 
-export function BookingDetailClient({ booking, tickets }: BookingDetailClientProps) {
+const CANCELLABLE_STATUSES: BookingStatus[] = ['Submitted', 'Confirmed']
+const TERMINAL_STATUSES: BookingStatus[] = [
+  'Completed', 'Cancelled', 'Non-conformance', 'Nothing Presented', 'Rebooked', 'Missed Collection',
+]
+
+export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: BookingDetailClientProps) {
   const router = useRouter()
   const [isCancelling, setIsCancelling] = useState(false)
   const [cancelError, setCancelError] = useState<string | null>(null)
+  const [showCancelDialog, setShowCancelDialog] = useState(false)
+  const [isDisputing, setIsDisputing] = useState(false)
 
   const collectionDateStr = getCollectionDate(booking)
   const collectionDateObj = collectionDateStr
@@ -101,12 +139,14 @@ export function BookingDetailClient({ booking, tickets }: BookingDetailClientPro
       : null
   const showPlaceOut = daysUntil !== null && daysUntil >= 0 && daysUntil <= 3
   const canCancel = CANCELLABLE_STATUSES.includes(booking.status)
+  const isTerminal = TERMINAL_STATUSES.includes(booking.status)
+  const rebookAddress = booking.property?.formatted_address ?? booking.property?.address ?? null
 
   const includedItems = booking.booking_item.filter((i) => !i.is_extra)
   const extraItems = booking.booking_item.filter((i) => i.is_extra)
 
   async function handleCancel() {
-    if (!confirm('Are you sure you want to cancel this booking?')) return
+    setShowCancelDialog(false)
     setIsCancelling(true)
     setCancelError(null)
 
@@ -123,34 +163,24 @@ export function BookingDetailClient({ booking, tickets }: BookingDetailClientPro
 
   return (
     <div className="flex flex-col">
-      {/* Detail header */}
+      {/* Header */}
       <div className="shrink-0 border-b border-gray-100 bg-white px-5 py-4">
         <Link
           href="/dashboard"
           className="mb-2.5 flex items-center gap-1.5 text-[13px] font-medium text-[#8FA5B8]"
         >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
           My Dashboard
         </Link>
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="font-[family-name:var(--font-heading)] text-[17px] font-bold text-[#293F52]">
+            <h1 className="font-[family-name:var(--font-heading)] text-[17px] font-bold text-[#293F52] md:text-lg">
               {booking.ref}
             </h1>
-            <p className="mt-0.5 text-[13px] text-gray-500">
-              {(booking.collection_area as { name: string }).name} &middot;{' '}
-              {booking.type}
+            <p className="mt-0.5 text-[13px] text-gray-500 md:text-sm">
+              {booking.property?.formatted_address ?? booking.property?.address ?? '—'}
             </p>
           </div>
           <BookingStatusBadge status={booking.status} />
@@ -158,21 +188,12 @@ export function BookingDetailClient({ booking, tickets }: BookingDetailClientPro
       </div>
 
       {/* Content */}
-      <div className="flex flex-1 flex-col gap-3 px-5 pb-24 pt-4">
-        {/* Place-out reminder */}
+      <div className="flex flex-1 flex-col gap-3 px-5 pb-24 pt-4 md:pb-8">
+        {/* Place-out reminder — full width */}
         {showPlaceOut && collectionDateStr && (
           <div className="rounded-[10px] border border-[#00B864] bg-gradient-to-br from-[#E8FDF0] to-[#d4f5e6] px-3.5 py-3">
             <div className="mb-0.5 flex items-center gap-1.5 text-[13px] font-semibold text-[#293F52]">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#00B864"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00B864" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
                 <polyline points="12 6 12 12 16 14" />
               </svg>
@@ -181,103 +202,154 @@ export function BookingDetailClient({ booking, tickets }: BookingDetailClientPro
             <div className="text-xs leading-snug text-gray-700">
               Items must be on the verge by{' '}
               <strong>
-                7am{' '}
-                {format(collectionDateObj!, 'EEEE d MMMM')}
+                7am {format(collectionDateObj!, 'EEEE d MMMM')}
               </strong>
               . Do not place out more than 48 hours before collection.
             </div>
           </div>
         )}
 
-        {/* Collection details */}
-        <div className="rounded-xl bg-white p-4 shadow-sm">
-          <div className="mb-2.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-            Collection Details
+        {/* Row 1: Contact Details (left) + Collection Details (right) */}
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          {/* Contact details */}
+          <div className="rounded-xl bg-white p-4 shadow-sm">
+            <div className="mb-2.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+              Contact Details
+            </div>
+            {booking.contact ? (
+              <div className="flex flex-col">
+                <div className="flex items-center justify-between border-b border-gray-100 py-2 text-[13px]">
+                  <span className="text-xs text-gray-500">Name</span>
+                  <span className="font-medium text-gray-900">{booking.contact.full_name}</span>
+                </div>
+                <div className="flex items-center justify-between border-b border-gray-100 py-2 text-[13px]">
+                  <span className="text-xs text-gray-500">Email</span>
+                  <span className="font-medium text-gray-900">{booking.contact.email}</span>
+                </div>
+                <div className="flex items-center justify-between py-2 text-[13px]">
+                  <span className="text-xs text-gray-500">Mobile</span>
+                  <span className="font-medium text-gray-900">
+                    {booking.contact.mobile_e164 ? formatMobile(booking.contact.mobile_e164) : '—'}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <p className="py-2 text-[13px] italic text-gray-400">No contact details available</p>
+            )}
           </div>
-          <div className="flex flex-col">
-            <div className="flex items-center justify-between border-b border-gray-100 py-2 text-[13px]">
-              <span className="text-xs text-gray-500">Date</span>
-              <span className="font-medium text-gray-900">
-                {collectionDateObj
-                  ? format(collectionDateObj, 'EEEE, d MMMM yyyy')
-                  : '—'}
-              </span>
+
+          {/* Collection details */}
+          <div className="rounded-xl bg-white p-4 shadow-sm">
+            <div className="mb-2.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+              Collection Details
             </div>
-            <div className="flex items-center justify-between border-b border-gray-100 py-2 text-[13px]">
-              <span className="text-xs text-gray-500">Area</span>
-              <span className="font-medium text-gray-900">
-                {(booking.collection_area as { name: string }).name}
-              </span>
-            </div>
-            <div className="flex items-center justify-between border-b border-gray-100 py-2 text-[13px]">
-              <span className="text-xs text-gray-500">Location</span>
-              <span className="font-medium text-gray-900">
-                {booking.location ?? '—'}
-              </span>
-            </div>
-            <div className="flex items-center justify-between py-2 text-[13px]">
-              <span className="text-xs text-gray-500">Notes</span>
-              <span className="font-medium text-gray-500 italic">
-                {booking.notes ?? '—'}
-              </span>
+            <div className="flex flex-col">
+              <div className="flex items-center justify-between border-b border-gray-100 py-2 text-[13px]">
+                <span className="text-xs text-gray-500">Date</span>
+                <span className="font-medium text-gray-900">
+                  {collectionDateObj
+                    ? format(collectionDateObj, 'EEEE, d MMMM yyyy')
+                    : '—'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between border-b border-gray-100 py-2 text-[13px]">
+                <span className="text-xs text-gray-500">Area</span>
+                <span className="font-medium text-gray-900">
+                  {(booking.collection_area as { name: string }).name}
+                </span>
+              </div>
+              <div className="flex items-center justify-between border-b border-gray-100 py-2 text-[13px]">
+                <span className="text-xs text-gray-500">Location</span>
+                <span className="font-medium text-gray-900">
+                  {booking.location ?? '—'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-2 text-[13px]">
+                <span className="text-xs text-gray-500">Notes</span>
+                <span className="font-medium text-gray-500 italic">
+                  {booking.notes ?? '—'}
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Services */}
-        <div className="rounded-xl bg-white p-4 shadow-sm">
-          <div className="mb-2.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-            Services
+        {/* Row 2: Included Services (left) + Extra Services (right) */}
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          {/* Included services */}
+          <div className="rounded-xl bg-white p-4 shadow-sm">
+            <div className="mb-2.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+              Included Services
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {includedItems.length > 0 ? (
+                includedItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between rounded-lg bg-[#E8FDF0] px-2.5 py-2 text-[13px]"
+                  >
+                    <span className="text-gray-900">
+                      {(item.service as { name: string }).name} &times; {item.no_services}
+                    </span>
+                    <span className="font-medium text-[#006A38]">Included</span>
+                  </div>
+                ))
+              ) : (
+                <p className="py-2 text-[13px] italic text-gray-400">None</p>
+              )}
+            </div>
           </div>
-          <div className="flex flex-col gap-1.5">
-            {includedItems.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between rounded-lg bg-[#E8FDF0] px-2.5 py-2 text-[13px]"
-              >
-                <span className="text-gray-900">
-                  {(item.service as { name: string }).name} &times;{' '}
-                  {item.no_services}
-                </span>
-                <span className="font-medium text-[#006A38]">Included</span>
-              </div>
-            ))}
-            {extraItems.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between rounded-lg bg-[#FFF3EA] px-2.5 py-2 text-[13px]"
-              >
-                <span className="text-gray-900">
-                  {(item.service as { name: string }).name} &times;{' '}
-                  {item.no_services} (extra)
-                </span>
-                <span className="font-semibold text-[#8B4000]">
-                  $
-                  {(
-                    (item.unit_price_cents * item.no_services) /
-                    100
-                  ).toFixed(2)}{' '}
-                  paid
-                </span>
-              </div>
-            ))}
+
+          {/* Extra services */}
+          <div className="rounded-xl bg-white p-4 shadow-sm">
+            <div className="mb-2.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+              Extra Services
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {extraItems.length > 0 ? (
+                <>
+                  {extraItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between rounded-lg bg-[#FFF3EA] px-2.5 py-2 text-[13px]"
+                    >
+                      <span className="text-gray-900">
+                        {(item.service as { name: string }).name} &times; {item.no_services}
+                      </span>
+                      <span className="font-semibold text-[#8B4000]">
+                        ${((item.unit_price_cents * item.no_services) / 100).toFixed(2)} paid
+                      </span>
+                    </div>
+                  ))}
+                  {receiptUrl && (
+                    <a
+                      href={receiptUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1 flex items-center gap-1.5 text-[12px] font-medium text-[#293F52] hover:underline"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                      </svg>
+                      View receipt
+                    </a>
+                  )}
+                </>
+              ) : (
+                <p className="py-2 text-[13px] italic text-gray-400">None</p>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Cancellation cutoff notice */}
+        {/* Cancellation cutoff — full width */}
         {canCancel && collectionDateStr && (
           <div className="rounded-[10px] bg-[#E8EEF2] px-3.5 py-3 text-xs text-[#293F52]">
             <div className="mb-1 flex items-center gap-1.5 font-semibold">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
                 <line x1="12" y1="8" x2="12" y2="12" />
                 <line x1="12" y1="16" x2="12.01" y2="16" />
@@ -298,123 +370,299 @@ export function BookingDetailClient({ booking, tickets }: BookingDetailClientPro
           </div>
         )}
 
-        {/* Enquiries */}
-        {tickets.length > 0 && (
-          <div className="rounded-xl bg-white p-4 shadow-sm">
+        {/* NCN card — shown when booking is Non-conformance or Rebooked */}
+        {ncn && (
+          <div className="rounded-xl border border-red-100 bg-white p-4 shadow-sm">
             <div className="mb-2.5 flex items-center gap-2">
               <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-                Enquiries
+                Non-Conformance Notice
               </span>
-              <span className="flex size-5 items-center justify-center rounded-full bg-[#E8EEF2] text-[10px] font-bold text-[#293F52]">
-                {tickets.length}
+              <span className={`inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                ncn.status === 'Issued' ? 'bg-gray-100 text-gray-600'
+                  : ncn.status === 'Disputed' ? 'bg-red-50 text-red-700'
+                  : ncn.status === 'Under Review' ? 'bg-amber-50 text-amber-700'
+                  : ncn.status === 'Resolved' ? 'bg-emerald-50 text-emerald-700'
+                  : ncn.status === 'Closed' ? 'bg-gray-50 text-gray-400'
+                  : 'bg-blue-50 text-blue-700'
+              }`}>
+                {ncn.status}
               </span>
             </div>
             <div className="flex flex-col gap-2">
-              {tickets.map((ticket) => {
-                const statusStyle = TICKET_STATUS_COLORS[ticket.status]
-                return (
+              <div className="flex items-center justify-between text-[13px]">
+                <span className="text-gray-500">Reason</span>
+                <span className="font-medium text-gray-900">{ncn.reason}</span>
+              </div>
+              <div className="flex items-center justify-between text-[13px]">
+                <span className="text-gray-500">Reported</span>
+                <span className="font-medium text-gray-900">
+                  {format(new Date(ncn.reported_at), 'd MMM yyyy')}
+                </span>
+              </div>
+              {ncn.rescheduled_booking && (
+                <div className="flex items-center justify-between text-[13px]">
+                  <span className="text-gray-500">Rebooked As</span>
                   <Link
-                    key={ticket.id}
-                    href={`/contact/tickets/${ticket.display_id}`}
-                    className="block rounded-lg border border-gray-100 px-3 py-2.5 transition-colors hover:border-[#293F52]/20 hover:bg-gray-50"
+                    href={`/booking/${ncn.rescheduled_booking.ref}`}
+                    className="font-semibold text-[#293F52] hover:underline"
                   >
-                    <div className="mb-1 flex items-center justify-between">
-                      <span className="font-mono text-[11px] text-gray-400">
-                        {ticket.display_id}
-                      </span>
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${statusStyle.bg} ${statusStyle.text}`}
-                      >
-                        <span className={`size-1.5 rounded-full ${statusStyle.dot}`} />
-                        {statusStyle.label}
-                      </span>
-                    </div>
-                    <div className="text-[13px] font-semibold text-[#293F52]">
-                      {ticket.subject}
-                    </div>
-                    <div className="mt-1 flex items-center gap-2">
-                      <span className="rounded-full border border-gray-200 px-2 py-0.5 text-[11px] text-gray-500">
-                        {CATEGORY_LABELS[ticket.category]}
-                      </span>
-                      <span className="text-[11px] text-gray-400">
-                        {format(new Date(ticket.created_at), 'd MMM yyyy')}
-                      </span>
-                    </div>
+                    {ncn.rescheduled_booking.ref} &rarr;
                   </Link>
-                )
-              })}
+                </div>
+              )}
+            </div>
+            {ncn.photos.length > 0 && (
+              <div className="mt-3 flex gap-2 overflow-x-auto">
+                {ncn.photos.map((url, i) => (
+                  <a
+                    key={i}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="size-16 shrink-0 overflow-hidden rounded-lg bg-gray-100"
+                  >
+                    <img src={url} alt={`Photo ${i + 1}`} className="size-full object-cover" />
+                  </a>
+                ))}
+              </div>
+            )}
+            {ncn.status === 'Issued' && (
+              <button
+                type="button"
+                disabled={isDisputing}
+                onClick={async () => {
+                  setIsDisputing(true)
+                  await disputeNcn(ncn.id)
+                  router.refresh()
+                }}
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border-[1.5px] border-[#E53E3E] bg-[#FFF0F0] px-3.5 py-2.5 text-[13px] font-semibold text-[#E53E3E] disabled:opacity-50"
+              >
+                {isDisputing ? 'Submitting...' : 'Dispute this Notice'}
+              </button>
+            )}
+            {ncn.status === 'Disputed' && (
+              <p className="mt-3 text-[12px] text-amber-600">
+                Your dispute has been submitted. Our team will review and respond.
+              </p>
+            )}
+          </div>
+
+        )}
+
+        {/* NP card — shown when booking is Nothing Presented or Rebooked */}
+        {np && (
+          <div className="rounded-xl border border-amber-100 bg-white p-4 shadow-sm">
+            <div className="mb-2.5 flex items-center gap-2">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                Nothing Presented
+              </span>
+              <span className={`inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                np.status === 'Issued' ? 'bg-gray-100 text-gray-600'
+                  : np.status === 'Disputed' ? 'bg-red-50 text-red-700'
+                  : np.status === 'Under Review' ? 'bg-blue-50 text-blue-700'
+                  : np.status === 'Resolved' ? 'bg-emerald-50 text-emerald-700'
+                  : np.status === 'Closed' ? 'bg-gray-50 text-gray-400'
+                  : 'bg-purple-50 text-purple-700'
+              }`}>
+                {np.status}
+              </span>
+            </div>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between text-[13px]">
+                <span className="text-gray-500">Reported</span>
+                <span className="font-medium text-gray-900">
+                  {format(new Date(np.reported_at), 'd MMM yyyy')}
+                </span>
+              </div>
+              {np.rescheduled_booking && (
+                <div className="flex items-center justify-between text-[13px]">
+                  <span className="text-gray-500">Rebooked As</span>
+                  <Link
+                    href={`/booking/${np.rescheduled_booking.ref}`}
+                    className="font-semibold text-[#293F52] hover:underline"
+                  >
+                    {np.rescheduled_booking.ref} &rarr;
+                  </Link>
+                </div>
+              )}
+            </div>
+            {np.photos.length > 0 && (
+              <div className="mt-3 flex gap-2 overflow-x-auto">
+                {np.photos.map((url, i) => (
+                  <a
+                    key={i}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="size-16 shrink-0 overflow-hidden rounded-lg bg-gray-100"
+                  >
+                    <img src={url} alt={`Photo ${i + 1}`} className="size-full object-cover" />
+                  </a>
+                ))}
+              </div>
+            )}
+            {np.status === 'Issued' && (
+              <button
+                type="button"
+                disabled={isDisputing}
+                onClick={async () => {
+                  setIsDisputing(true)
+                  await disputeNp(np.id)
+                  router.refresh()
+                }}
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border-[1.5px] border-[#E53E3E] bg-[#FFF0F0] px-3.5 py-2.5 text-[13px] font-semibold text-[#E53E3E] disabled:opacity-50"
+              >
+                {isDisputing ? 'Submitting...' : 'Dispute this Notice'}
+              </button>
+            )}
+            {np.status === 'Disputed' && (
+              <p className="mt-3 text-[12px] text-amber-600">
+                Your dispute has been submitted. Our team will review and respond.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Row 3: Enquiries — half width on desktop */}
+        {tickets.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2">
+            <div className="rounded-xl bg-white p-4 shadow-sm">
+              <div className="mb-2.5 flex items-center gap-2">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                  Enquiries
+                </span>
+                <span className="flex size-5 items-center justify-center rounded-full bg-[#E8EEF2] text-[10px] font-bold text-[#293F52]">
+                  {tickets.length}
+                </span>
+              </div>
+              <div className="flex flex-col gap-2">
+                {tickets.map((ticket) => {
+                  const statusStyle = TICKET_STATUS_COLORS[ticket.status]
+                  return (
+                    <Link
+                      key={ticket.id}
+                      href={`/contact/tickets/${ticket.display_id}`}
+                      className="block rounded-lg border border-gray-100 px-3 py-2.5 transition-colors hover:border-[#293F52]/20 hover:bg-gray-50"
+                    >
+                      <div className="mb-1 flex items-center justify-between">
+                        <span className="font-mono text-[11px] text-gray-400">
+                          {ticket.display_id}
+                        </span>
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${statusStyle.bg} ${statusStyle.text}`}
+                        >
+                          <span className={`size-1.5 rounded-full ${statusStyle.dot}`} />
+                          {statusStyle.label}
+                        </span>
+                      </div>
+                      <div className="text-[13px] font-semibold text-[#293F52]">
+                        {ticket.subject}
+                      </div>
+                      <div className="mt-1 flex items-center gap-2">
+                        <span className="rounded-full border border-gray-200 px-2 py-0.5 text-[11px] text-gray-500">
+                          {CATEGORY_LABELS[ticket.category]}
+                        </span>
+                        <span className="text-[11px] text-gray-400">
+                          {format(new Date(ticket.created_at), 'd MMM yyyy')}
+                        </span>
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
             </div>
           </div>
         )}
 
-        {/* Get Help / Raise Another Enquiry */}
-        <Link
-          href={`/contact?booking_ref=${encodeURIComponent(booking.ref)}&booking_id=${encodeURIComponent(booking.id)}`}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border-[1.5px] border-[#293F52] bg-white px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52]"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+        {/* Action buttons — single row on desktop */}
+        <div className="flex flex-col gap-2 md:flex-row md:gap-3">
+          <Link
+            href={`/contact?booking_ref=${encodeURIComponent(booking.ref)}&booking_id=${encodeURIComponent(booking.id)}`}
+            className="flex items-center justify-center gap-2 rounded-xl border-[1.5px] border-[#293F52] bg-white px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52] md:px-5 md:py-3 md:text-[14px]"
           >
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-          {tickets.length > 0
-            ? 'Raise Another Enquiry \u2192'
-            : 'Get Help with this Booking \u2192'}
-        </Link>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            {tickets.length > 0 ? 'Raise Enquiry' : 'Get Help'}
+          </Link>
 
-        {/* Actions */}
-        {canCancel && (
-          <div className="flex flex-col gap-2">
+          {canCancel && (
+            <>
+              <Link
+                href={`/book?edit=${booking.ref}`}
+                className="flex items-center justify-center gap-2 rounded-xl border-[1.5px] border-gray-100 bg-white px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52] md:px-5 md:py-3 md:text-[14px]"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+                Edit Booking
+              </Link>
+              <button
+                type="button"
+                onClick={() => setShowCancelDialog(true)}
+                disabled={isCancelling}
+                className="flex items-center justify-center gap-2 rounded-xl border-[1.5px] border-[#E53E3E] bg-[#FFF0F0] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#E53E3E] disabled:opacity-50 md:px-5 md:py-3 md:text-[14px]"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+                </svg>
+                {isCancelling ? 'Cancelling...' : 'Cancel Booking'}
+              </button>
+            </>
+          )}
+
+          {isTerminal && rebookAddress && (
             <Link
-              href={`/book?edit=${booking.ref}`}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border-[1.5px] border-gray-100 bg-white px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52]"
+              href={`/book?address=${encodeURIComponent(rebookAddress)}`}
+              className="flex items-center justify-center gap-2 rounded-xl border-[1.5px] border-[#00B864] bg-[#E8FDF0] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#006A38] md:px-5 md:py-3 md:text-[14px]"
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="23 4 23 10 17 10" />
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
               </svg>
-              Edit Booking
+              Rebook
             </Link>
-            <button
-              type="button"
-              onClick={handleCancel}
-              disabled={isCancelling}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border-[1.5px] border-[#E53E3E] bg-[#FFF0F0] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#E53E3E] disabled:opacity-50"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
-              </svg>
-              {isCancelling ? 'Cancelling...' : 'Cancel Booking'}
-            </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
+
+      {/* Cancel confirmation dialog */}
+      <Dialog.Root open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <Dialog.Portal>
+          <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/40" />
+          <Dialog.Popup className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+              <div className="mb-4 flex size-10 items-center justify-center rounded-full bg-[#FFF0F0]">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E53E3E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+              </div>
+              <Dialog.Title className="font-[family-name:var(--font-heading)] text-lg font-bold text-[#293F52]">
+                Cancel this booking?
+              </Dialog.Title>
+              <p className="mt-1.5 text-[13px] leading-relaxed text-gray-500">
+                This action cannot be undone. Any payment will be refunded to the original payment method.
+              </p>
+              <div className="mt-5 flex gap-2.5">
+                <Dialog.Close className="flex-1 rounded-xl border-[1.5px] border-gray-100 bg-white px-3.5 py-3 font-[family-name:var(--font-heading)] text-[14px] font-semibold text-[#293F52]">
+                  Keep Booking
+                </Dialog.Close>
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="flex-1 rounded-xl bg-[#E53E3E] px-3.5 py-3 font-[family-name:var(--font-heading)] text-[14px] font-semibold text-white"
+                >
+                  Cancel Booking
+                </button>
+              </div>
+            </div>
+          </Dialog.Popup>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   )
 }

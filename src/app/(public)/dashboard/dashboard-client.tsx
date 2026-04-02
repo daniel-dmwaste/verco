@@ -144,7 +144,8 @@ const CATEGORIES: Record<string, string> = {
 function BookingCard({ booking }: { booking: Booking }) {
   const collectionDateStr = getCollectionDate(booking)
   const daysUntil = collectionDateStr ? getDaysUntil(collectionDateStr) : null
-  const showPlaceOut = daysUntil !== null && daysUntil >= 0 && daysUntil <= 3
+  const isActive = UPCOMING_STATUSES.includes(booking.status)
+  const showPlaceOut = isActive && daysUntil !== null && daysUntil >= 0 && daysUntil <= 3
 
   return (
     <div className="mb-3">
@@ -192,8 +193,8 @@ function BookingCard({ booking }: { booking: Booking }) {
           {getAddress(booking)}
         </div>
 
-        {/* Countdown */}
-        {collectionDateStr && daysUntil !== null && daysUntil >= 0 && daysUntil <= 7 && (
+        {/* Countdown — only for active bookings */}
+        {isActive && collectionDateStr && daysUntil !== null && daysUntil >= 0 && daysUntil <= 7 && (
           <div className="mt-2 flex items-center gap-2 rounded-lg bg-[#E8EEF2] px-3 py-2 text-xs md:text-sm font-medium text-[#293F52]">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
@@ -246,6 +247,9 @@ export function DashboardClient({
 
   const upcomingBookings = bookings.filter((b) => UPCOMING_STATUSES.includes(b.status))
   const pastBookings = bookings.filter((b) => PAST_STATUSES.includes(b.status)).slice(0, 10)
+  const activeTicketCount = tickets.filter(
+    (t) => t.status === 'open' || t.status === 'in_progress' || t.status === 'waiting_on_customer'
+  ).length
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'upcoming', label: 'Upcoming' },
@@ -327,9 +331,9 @@ export function DashboardClient({
             </div>
             <div>
               <div className="font-[family-name:var(--font-heading)] text-xl md:text-3xl font-bold text-[#293F52]">
-                {tickets.length}
+                {activeTicketCount}
               </div>
-              <div className="text-xs md:text-sm text-gray-500">Enquiries</div>
+              <div className="text-xs md:text-sm text-gray-500">Active Enquiries</div>
             </div>
           </div>
         </div>

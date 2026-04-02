@@ -30,6 +30,7 @@ export function ConfirmForm() {
   const collectionDateId = searchParams.get('collection_date_id') ?? ''
   const location = searchParams.get('location') ?? ''
   const notes = searchParams.get('notes') ?? ''
+  const onBehalf = searchParams.get('on_behalf') === 'true'
 
   const selectedItems = decodeItems(itemsParam)
   const supabase = createClient()
@@ -57,8 +58,10 @@ export function ConfirmForm() {
     resolver: zodResolver(ContactSchema),
   })
 
-  // Pre-fill contact fields if user is logged in
+  // Pre-fill contact fields if user is logged in (skip for on-behalf bookings)
   useEffect(() => {
+    if (onBehalf) return
+
     async function prefill() {
       const {
         data: { user },
@@ -90,7 +93,7 @@ export function ConfirmForm() {
     }
 
     void prefill()
-  }, [supabase, setValue])
+  }, [supabase, setValue, onBehalf])
 
   // Handle mobile input with auto-formatting
   function handleMobileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -289,50 +292,62 @@ export function ConfirmForm() {
         requires_payment: boolean
       }
 
-      // Link profile → contact if not already linked
-      // This ensures the dashboard, RLS, and name display work on next page load
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
-          const { data: prof } = await supabase
-            .from('profiles')
-            .select('contact_id')
-            .eq('id', user.id)
-            .single()
+      // Link profile → contact if not already linked (skip for on-behalf bookings
+      // to avoid linking the admin's profile to the resident's contact)
+      if (!onBehalf) {
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            const { data: prof } = await supabase
+              .from('profiles')
+              .select('contact_id')
+              .eq('id', user.id)
+              .single()
 
-          if (prof && !prof.contact_id) {
-            const { data: contactRow } = await supabase
-              .from('contacts')
-              .select('id')
-              .eq('email', contact.email)
-              .maybeSingle()
+            if (prof && !prof.contact_id) {
+              const { data: contactRow } = await supabase
+                .from('contacts')
+                .select('id')
+                .eq('email', contact.email)
+                .maybeSingle()
 
-            if (contactRow) {
-              await supabase
-                .from('profiles')
-                .update({ contact_id: contactRow.id })
-                .eq('id', user.id)
+              if (contactRow) {
+                await supabase
+                  .from('profiles')
+                  .update({ contact_id: contactRow.id })
+                  .eq('id', user.id)
+              }
             }
           }
+        } catch {
+          // Non-critical — don't block booking flow
+          console.error('Failed to link profile to contact')
         }
-      } catch {
-        // Non-critical — don't block booking flow
-        console.error('Failed to link profile to contact')
       }
+
+      // Admin on-behalf → admin detail page; resident → public detail page
+      const bookingPath = onBehalf
+        ? `/admin/bookings/${result.booking_id}`
+        : `/booking/${result.ref}`
 
       if (result.requires_payment) {
         const origin = window.location.origin
         const checkoutUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-checkout`
+
+        // create-checkout requires a valid user JWT (calls auth.getUser())
+        const { data: { session: currentSession } } = await supabase.auth.getSession()
+        const token = currentSession?.access_token ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
         const checkoutRes = await fetch(checkoutUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             booking_id: result.booking_id,
-            success_url: `${origin}/booking/${result.ref}?success=true`,
-            cancel_url: `${origin}/booking/${result.ref}?cancelled=true`,
+            success_url: `${origin}${bookingPath}?success=true`,
+            cancel_url: `${origin}${bookingPath}?cancelled=true`,
           }),
         })
 
@@ -353,13 +368,13 @@ export function ConfirmForm() {
 
         window.location.href = checkoutData.checkout_url
       } else {
-        router.push(`/booking/${result.ref}?success=true`)
+        router.push(`${bookingPath}?success=true`)
       }
     } catch {
       setSubmitError('An unexpected error occurred. Please try again.')
       setIsSubmitting(false)
     }
-  }, [selectedItems, propertyId, collectionAreaId, collectionDateId, location, notes, router])
+  }, [selectedItems, propertyId, collectionAreaId, collectionDateId, location, notes, router, onBehalf])
 
   // OTP verification after code entry
   const verifyOtp = useCallback(async (code: string) => {
@@ -514,6 +529,7 @@ export function ConfirmForm() {
       items: itemsParam,
       total_cents: totalCents.toString(),
       collection_date_id: collectionDateId,
+      ...(onBehalf ? { on_behalf: 'true' } : {}),
     })
     router.push(`/book/details?${params.toString()}`)
   }

@@ -81,3 +81,39 @@ export async function cancelBooking(bookingId: string): Promise<Result<void>> {
 
   return { ok: true, data: undefined }
 }
+
+/**
+ * Dispute an NCN. Resident can only dispute notices in 'Issued' status
+ * on their own bookings. RLS policy enforces ownership + status transition.
+ */
+export async function disputeNcn(ncnId: string): Promise<Result<void>> {
+  if (!ncnId) return { ok: false, error: 'NCN ID is required.' }
+
+  const supabase = await createClient()
+
+  // RLS policy ncn_resident_update_dispute enforces: status must be 'Issued' + own booking
+  const { error } = await supabase
+    .from('non_conformance_notice')
+    .update({ status: 'Disputed' as never })
+    .eq('id', ncnId)
+
+  if (error) return { ok: false, error: error.message }
+  return { ok: true, data: undefined }
+}
+
+/**
+ * Dispute a Nothing Presented notice. Same pattern as NCN dispute.
+ */
+export async function disputeNp(npId: string): Promise<Result<void>> {
+  if (!npId) return { ok: false, error: 'NP ID is required.' }
+
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('nothing_presented')
+    .update({ status: 'Disputed' as never })
+    .eq('id', npId)
+
+  if (error) return { ok: false, error: error.message }
+  return { ok: true, data: undefined }
+}
