@@ -164,3 +164,86 @@ export async function cancelBooking(bookingId: string): Promise<Result<void>> {
 
   return { ok: true, data: undefined }
 }
+
+export async function updateContact(
+  contactId: string,
+  data: { full_name: string; email: string; mobile_e164: string | null },
+): Promise<Result<void>> {
+  const supabase = await createClient()
+
+  const { data: role } = await supabase.rpc('current_user_role')
+  const adminRoles = ['client-admin', 'client-staff', 'contractor-admin', 'contractor-staff']
+  if (!role || !adminRoles.includes(role)) {
+    return { ok: false, error: 'Insufficient permissions.' }
+  }
+
+  if (!data.full_name.trim() || !data.email.trim()) {
+    return { ok: false, error: 'Name and email are required.' }
+  }
+
+  const { error } = await supabase
+    .from('contacts')
+    .update({
+      full_name: data.full_name.trim(),
+      email: data.email.trim().toLowerCase(),
+      mobile_e164: data.mobile_e164?.trim() || null,
+    })
+    .eq('id', contactId)
+
+  if (error) return { ok: false, error: error.message }
+  return { ok: true, data: undefined }
+}
+
+export async function updateCollectionDetails(
+  bookingId: string,
+  data: { location: string; collection_date_id: string | null },
+): Promise<Result<void>> {
+  const supabase = await createClient()
+
+  const { data: role } = await supabase.rpc('current_user_role')
+  const adminRoles = ['client-admin', 'client-staff', 'contractor-admin', 'contractor-staff']
+  if (!role || !adminRoles.includes(role)) {
+    return { ok: false, error: 'Insufficient permissions.' }
+  }
+
+  // Update booking location
+  const { error: bookingError } = await supabase
+    .from('booking')
+    .update({ location: data.location })
+    .eq('id', bookingId)
+
+  if (bookingError) return { ok: false, error: bookingError.message }
+
+  // Update collection_date_id on all booking_items if changed
+  if (data.collection_date_id) {
+    const { error: itemError } = await supabase
+      .from('booking_item')
+      .update({ collection_date_id: data.collection_date_id })
+      .eq('booking_id', bookingId)
+
+    if (itemError) return { ok: false, error: itemError.message }
+  }
+
+  return { ok: true, data: undefined }
+}
+
+export async function updateNotes(
+  bookingId: string,
+  notes: string,
+): Promise<Result<void>> {
+  const supabase = await createClient()
+
+  const { data: role } = await supabase.rpc('current_user_role')
+  const adminRoles = ['client-admin', 'client-staff', 'contractor-admin', 'contractor-staff']
+  if (!role || !adminRoles.includes(role)) {
+    return { ok: false, error: 'Insufficient permissions.' }
+  }
+
+  const { error } = await supabase
+    .from('booking')
+    .update({ notes: notes.trim() || null })
+    .eq('id', bookingId)
+
+  if (error) return { ok: false, error: error.message }
+  return { ok: true, data: undefined }
+}

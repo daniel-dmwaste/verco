@@ -17,7 +17,7 @@ export default async function AdminBookingDetailPage({
     .from('booking')
     .select(
       `id, ref, status, type, location, notes, created_at, updated_at,
-       property_id, collection_area_id,
+       property_id, collection_area_id, contact_id,
        collection_area!inner(name, code),
        eligible_properties:property_id(formatted_address, address),
        contact:contact_id(full_name, mobile_e164, email),
