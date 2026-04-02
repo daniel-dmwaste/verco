@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { SkeletonRow } from '@/components/ui/skeleton'
@@ -425,7 +426,7 @@ export function PropertiesClient() {
                   <tr key={p.id} className={`border-b border-gray-50 ${!p.is_eligible ? 'opacity-60' : ''}`}>
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-[#293F52]">{p.formatted_address ?? p.address}</span>
+                        <Link href={`/admin/properties/${p.id}`} className="font-medium text-[#293F52] hover:underline">{p.formatted_address ?? p.address}</Link>
                         {!p.is_eligible && (
                           <span className="rounded-full bg-[#FFF0F0] px-2 py-0.5 text-2xs font-semibold text-[#E53E3E]">Ineligible</span>
                         )}

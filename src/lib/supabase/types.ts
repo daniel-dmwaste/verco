@@ -1046,6 +1046,7 @@ export type Database = {
         Row: {
           booking_id: string
           client_id: string
+          contractor_fault: boolean
           created_at: string
           id: string
           notes: string | null
@@ -1064,6 +1065,7 @@ export type Database = {
         Insert: {
           booking_id: string
           client_id: string
+          contractor_fault?: boolean
           created_at?: string
           id?: string
           notes?: string | null
@@ -1082,6 +1084,7 @@ export type Database = {
         Update: {
           booking_id?: string
           client_id?: string
+          contractor_fault?: boolean
           created_at?: string
           id?: string
           notes?: string | null
