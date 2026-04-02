@@ -13,6 +13,7 @@ type BookingStatus = Database['public']['Enums']['booking_status']
 
 interface BookingItem {
   id: string
+  service_id: string
   no_services: number
   is_extra: boolean
   unit_price_cents: number
@@ -87,6 +88,10 @@ export function BookingDetailPanel({
         collection_area_id: booking.collection_area_id!,
         address,
         on_behalf: 'true',
+        items: booking.booking_item
+          .filter((i) => i.no_services > 0)
+          .map((i) => `${i.service_id}:${i.no_services}`)
+          .join(','),
       }).toString()}`
     : '#'
 

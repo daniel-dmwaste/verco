@@ -5,7 +5,7 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { BookingStepper } from '@/components/booking/booking-stepper'
-import { encodeItems } from '@/lib/booking/search-params'
+import { encodeItems, decodeItems } from '@/lib/booking/search-params'
 import type { BookingItem } from '@/lib/booking/schemas'
 
 interface ServiceRuleRow {
@@ -36,8 +36,9 @@ export function ServicesForm() {
 
   const supabase = createClient()
 
-  // Quantities map: service_id → quantity (current form selections)
-  const [quantities, setQuantities] = useState<Map<string, number>>(new Map())
+  // Prefill from ?items= param (edit flow) or start empty
+  const initialItems = searchParams.get('items') ?? ''
+  const [quantities, setQuantities] = useState<Map<string, number>>(() => decodeItems(initialItems))
 
   // Fetch service rules for this collection area
   const { data: serviceRules } = useQuery({

@@ -22,6 +22,7 @@ type TicketCategory = Database['public']['Enums']['ticket_category']
 
 interface BookingItem {
   id: string
+  service_id: string
   no_services: number
   is_extra: boolean
   unit_price_cents: number
@@ -46,6 +47,8 @@ interface Booking {
   location: string | null
   notes: string | null
   created_at: string
+  property_id: string | null
+  collection_area_id: string | null
   collection_area: { name: string }
   contact: { full_name: string; email: string; mobile_e164: string | null } | null
   property: { formatted_address: string | null; address: string } | null
@@ -716,7 +719,18 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np, pay
           {canCancel && (
             <>
               <Link
-                href={`/book?edit=${booking.ref}`}
+                href={booking.property_id && booking.collection_area_id
+                  ? `/book/services?${new URLSearchParams({
+                      property_id: booking.property_id,
+                      collection_area_id: booking.collection_area_id,
+                      address: booking.property?.formatted_address ?? booking.property?.address ?? '',
+                      items: booking.booking_item
+                        .filter((i) => i.no_services > 0)
+                        .map((i) => `${i.service_id}:${i.no_services}`)
+                        .join(','),
+                    }).toString()}`
+                  : `/book?address=${encodeURIComponent(booking.property?.formatted_address ?? booking.property?.address ?? '')}`
+                }
                 className="flex items-center justify-center gap-2 rounded-xl border-[1.5px] border-gray-100 bg-white px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52] md:px-5 md:py-3 md:text-[14px]"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

@@ -22,7 +22,7 @@ export default async function AdminBookingDetailPage({
        eligible_properties:property_id(formatted_address, address),
        contact:contact_id(full_name, mobile_e164, email),
        booking_item(
-         id, no_services, is_extra, unit_price_cents,
+         id, service_id, no_services, is_extra, unit_price_cents,
          service!inner(name),
          collection_date!inner(date)
        )`
