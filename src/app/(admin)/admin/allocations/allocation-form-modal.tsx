@@ -28,6 +28,8 @@ export function AllocationFormModal({ open, onOpenChange, onSave, override }: Al
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [propertySearch, setPropertySearch] = useState('')
+  const [showPropertyResults, setShowPropertyResults] = useState(false)
 
   // Fetch current user ID for created_by
   useEffect(() => {
@@ -38,15 +40,17 @@ export function AllocationFormModal({ open, onOpenChange, onSave, override }: Al
     void fetchUser()
   }, [supabase])
 
-  // Fetch properties
+  // Search properties (debounced by query key)
   const { data: properties } = useQuery({
-    queryKey: ['eligible_properties'],
-    enabled: open,
+    queryKey: ['eligible_properties_search', propertySearch],
+    enabled: open && propertySearch.length >= 3 && !formData.property_id,
     queryFn: async () => {
       const { data } = await supabase
         .from('eligible_properties')
         .select('id, formatted_address, address')
+        .or(`formatted_address.ilike.%${propertySearch}%,address.ilike.%${propertySearch}%`)
         .order('formatted_address', { ascending: true })
+        .limit(10)
       return data ?? []
     },
   })
@@ -77,7 +81,7 @@ export function AllocationFormModal({ open, onOpenChange, onSave, override }: Al
     },
   })
 
-  // Load override data if editing
+  // Load override data if editing, reset if creating
   useEffect(() => {
     if (override) {
       setFormData({
@@ -87,17 +91,30 @@ export function AllocationFormModal({ open, onOpenChange, onSave, override }: Al
         set_remaining: override.set_remaining.toString(),
         reason: override.reason,
       })
+      setPropertySearch('') // Will show as disabled with address from parent
     } else {
-      setFormData({
-        property_id: '',
-        category_id: '',
-        fy_id: '',
-        set_remaining: '',
-        reason: '',
-      })
+      setFormData({ property_id: '', category_id: '', fy_id: '', set_remaining: '', reason: '' })
+      setPropertySearch('')
     }
+    setShowPropertyResults(false)
     setErrors({})
   }, [override, open])
+
+  // Fetch display address for editing mode
+  const { data: selectedProperty } = useQuery({
+    queryKey: ['property_display', formData.property_id],
+    enabled: !!formData.property_id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('eligible_properties')
+        .select('formatted_address, address')
+        .eq('id', formData.property_id)
+        .single()
+      return data
+    },
+  })
+
+  const selectedPropertyLabel = selectedProperty?.formatted_address || selectedProperty?.address || ''
 
   // Validate form
   const validateForm = (): boolean => {
@@ -179,24 +196,71 @@ export function AllocationFormModal({ open, onOpenChange, onSave, override }: Al
             {/* Form */}
             <div className="px-6 py-4">
               <div className="flex flex-col gap-3">
-                {/* Property */}
-                <div>
+                {/* Property — search input */}
+                <div className="relative">
                   <label className={labelClass}>
                     Property<span className="ml-0.5 text-red-500">*</span>
                   </label>
-                  <select
-                    value={formData.property_id}
-                    onChange={(e) => setFormData({ ...formData, property_id: e.target.value })}
-                    disabled={!!override}
-                    className={override ? disabledInputClass : inputClass}
-                  >
-                    <option value="">Select a property</option>
-                    {properties?.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.formatted_address || p.address}
-                      </option>
-                    ))}
-                  </select>
+                  {override || formData.property_id ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={selectedPropertyLabel}
+                        disabled
+                        className={disabledInputClass}
+                      />
+                      {!override && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData({ ...formData, property_id: '' })
+                            setPropertySearch('')
+                            setShowPropertyResults(false)
+                          }}
+                          className="shrink-0 rounded-lg border-[1.5px] border-gray-100 bg-white px-2.5 py-2.5 text-xs text-gray-500 hover:bg-gray-50"
+                          aria-label="Clear property selection"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <input
+                        type="text"
+                        value={propertySearch}
+                        onChange={(e) => {
+                          setPropertySearch(e.target.value)
+                          setShowPropertyResults(true)
+                        }}
+                        onFocus={() => propertySearch.length >= 3 && setShowPropertyResults(true)}
+                        placeholder="Start typing an address..."
+                        aria-label="Search for a property"
+                        className={inputClass}
+                      />
+                      {showPropertyResults && properties && properties.length > 0 && (
+                        <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-y-auto rounded-xl border border-gray-100 bg-white shadow-lg">
+                          {properties.map((p) => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => {
+                                setFormData({ ...formData, property_id: p.id })
+                                setPropertySearch('')
+                                setShowPropertyResults(false)
+                              }}
+                              className="w-full px-3.5 py-2.5 text-left text-body-sm text-gray-900 hover:bg-gray-50"
+                            >
+                              {p.formatted_address || p.address}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {propertySearch.length > 0 && propertySearch.length < 3 && (
+                        <p className="mt-1 text-[11px] text-gray-400">Type at least 3 characters to search</p>
+                      )}
+                    </>
+                  )}
                   {errors.property_id && <p className={errorClass}>{errors.property_id}</p>}
                 </div>
 
