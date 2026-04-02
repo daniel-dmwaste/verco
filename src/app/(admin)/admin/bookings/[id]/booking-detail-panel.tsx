@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { Dialog } from '@base-ui/react/dialog'
 import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
@@ -76,6 +77,7 @@ export function BookingDetailPanel({
   const supabase = createClient()
   const [isPending, setIsPending] = useState(false)
   const [isPaying, setIsPaying] = useState(false)
+  const [showCancelDialog, setShowCancelDialog] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Inline edit states
@@ -169,7 +171,7 @@ export function BookingDetailPanel({
   }
 
   async function handleCancel() {
-    if (!confirm('Are you sure you want to cancel this booking?')) return
+    setShowCancelDialog(false)
     setIsPending(true)
     setError(null)
     const result = await cancelBooking(booking.id)
@@ -615,7 +617,7 @@ export function BookingDetailPanel({
           {canCancel && (
             <button
               type="button"
-              onClick={handleCancel}
+              onClick={() => setShowCancelDialog(true)}
               disabled={isPending}
               className="flex w-full items-center justify-center gap-2 rounded-xl border-[1.5px] border-[#E53E3E] bg-[#FFF0F0] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#E53E3E] disabled:opacity-50"
             >
@@ -625,6 +627,42 @@ export function BookingDetailPanel({
           )}
         </div>
       )}
+
+      {/* Cancel confirmation dialog */}
+      <Dialog.Root open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <Dialog.Portal>
+          <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/40" />
+          <Dialog.Popup className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+              <div className="mb-4 flex size-10 items-center justify-center rounded-full bg-[#FFF0F0]">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E53E3E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+              </div>
+              <Dialog.Title className="font-[family-name:var(--font-heading)] text-lg font-bold text-[#293F52]">
+                Cancel this booking?
+              </Dialog.Title>
+              <p className="mt-1.5 text-[13px] leading-relaxed text-gray-500">
+                This action cannot be undone.{totalChargeCents > 0 ? ' A refund will be initiated for any paid services.' : ''}
+              </p>
+              <div className="mt-5 flex gap-2.5">
+                <Dialog.Close className="flex-1 rounded-xl border-[1.5px] border-gray-100 bg-white px-3.5 py-3 font-[family-name:var(--font-heading)] text-[14px] font-semibold text-[#293F52]">
+                  Keep Booking
+                </Dialog.Close>
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="flex-1 rounded-xl bg-[#E53E3E] px-3.5 py-3 font-[family-name:var(--font-heading)] text-[14px] font-semibold text-white"
+                >
+                  Cancel Booking
+                </button>
+              </div>
+            </div>
+          </Dialog.Popup>
+        </Dialog.Portal>
+      </Dialog.Root>
     </aside>
   )
 }
