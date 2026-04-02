@@ -247,11 +247,17 @@ export function ServicesForm() {
     })
   }
 
-  // Carry contact params through for on-behalf edit flow
+  // Carry forward params from later steps (edit flow)
+  const collectionDateId = searchParams.get('collection_date_id')
+  const locationParam = searchParams.get('location')
+  const notesParam = searchParams.get('notes')
   const contactName = searchParams.get('contact_name')
   const contactEmail = searchParams.get('contact_email')
   const contactMobile = searchParams.get('contact_mobile')
-  const contactParams = {
+  const carryParams = {
+    ...(collectionDateId ? { collection_date_id: collectionDateId } : {}),
+    ...(locationParam ? { location: locationParam } : {}),
+    ...(notesParam ? { notes: notesParam } : {}),
     ...(contactName ? { contact_name: contactName } : {}),
     ...(contactEmail ? { contact_email: contactEmail } : {}),
     ...(contactMobile ? { contact_mobile: contactMobile } : {}),
@@ -266,7 +272,7 @@ export function ServicesForm() {
       items: encodeItems(pricingItems),
       total_cents: totalChargeCents.toString(),
       ...(onBehalf ? { on_behalf: 'true' } : {}),
-      ...contactParams,
+      ...carryParams,
     })
     router.push(`/book/date?${params.toString()}`)
   }
@@ -276,7 +282,7 @@ export function ServicesForm() {
       address,
       ...(initialItems ? { items: initialItems } : {}),
       ...(onBehalf ? { on_behalf: 'true' } : {}),
-      ...contactParams,
+      ...carryParams,
     })
     router.push(`/book?${params.toString()}`)
   }
