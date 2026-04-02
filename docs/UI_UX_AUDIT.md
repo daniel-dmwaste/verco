@@ -5,47 +5,126 @@
 
 ---
 
-## Priority 1 — Design Tokens (Brand Colours)
+## Priority 1 — White-Label Colour System
 
-**Problem:** 426+ hardcoded hex colour values across the codebase. A brand colour change requires find-and-replace across 150+ files.
+**Problem:** The platform is white-labelled per client, but branding doesn't work. `client.primary_colour` exists in the DB and `--color-primary` is already injected as a CSS variable in `src/app/(public)/layout.tsx:67` — but all 150+ references to `#293F52` are hardcoded hex, so the variable is ignored. Every tenant currently looks like D&M branding regardless of their `primary_colour` setting.
 
-**Top offenders:**
+Additionally, 426+ hardcoded hex colour values across the codebase means any design change requires find-and-replace across 150+ files.
 
-| Colour | Hex | Approx. Usage |
+### Step 1 — Add `accent_colour` to `client` table
+
+Currently only `primary_colour` exists. Add a second field for the accent/CTA colour (the green `#00E47C` equivalent — councils may want a different highlight colour).
+
+**Migration:**
+```sql
+ALTER TABLE client ADD COLUMN accent_colour text;
+-- Default: null (falls back to #00E47C in CSS)
+```
+
+**DB fields after change:**
+| Field | Purpose | D&M Default | Example (other council) |
+|---|---|---|---|
+| `primary_colour` | Nav, buttons, headings, text | `#293F52` (navy) | `#1B4F72` (dark blue) |
+| `accent_colour` | CTAs, success states, highlights | `#00E47C` (green) | `#F39C12` (gold) |
+
+### Step 2 — Inject both colours + derived shades as CSS variables
+
+**File:** `src/app/(public)/layout.tsx`
+
+The layout already sets `--color-primary`. Extend to include accent and derived shades using CSS `color-mix()`:
+
+```tsx
+const primaryColour = branding?.primary_colour ?? '#293F52'
+const accentColour = branding?.accent_colour ?? '#00E47C'
+
+// In the style prop:
+style={{
+  '--color-primary': primaryColour,
+  '--color-primary-light': `color-mix(in srgb, ${primaryColour} 8%, white)`,
+  '--color-primary-hover': `color-mix(in srgb, ${primaryColour} 85%, black)`,
+  '--color-accent': accentColour,
+  '--color-accent-light': `color-mix(in srgb, ${accentColour} 10%, white)`,
+  '--color-accent-dark': `color-mix(in srgb, ${accentColour} 75%, black)`,
+} as React.CSSProperties}
+```
+
+This gives each tenant a full palette from just 2 DB fields — no extra columns needed for light/dark/hover variants.
+
+### Step 3 — Add fallback defaults to `globals.css`
+
+**File:** `src/app/globals.css` (in the `@theme inline` block)
+
+```css
+/* White-label brand colours — overridden per-tenant via layout.tsx inline style */
+--color-primary: #293F52;
+--color-primary-light: color-mix(in srgb, #293F52 8%, white);
+--color-primary-hover: color-mix(in srgb, #293F52 85%, black);
+--color-accent: #00E47C;
+--color-accent-light: color-mix(in srgb, #00E47C 10%, white);
+--color-accent-dark: color-mix(in srgb, #00E47C 75%, black);
+
+/* Fixed colours — not tenant-branded */
+--color-red: #E53E3E;
+--color-red-light: #FFF0F0;
+--color-orange: #FF8C42;
+--color-blue: #3182CE;
+```
+
+### Step 4 — Replace hardcoded hex values with CSS variables
+
+**Mapping:**
+
+| Hardcoded | CSS Variable | Scope |
 |---|---|---|
-| Navy (primary) | `#293F52` | ~150 |
-| Green (accent) | `#00E47C` | ~50 |
-| Green dark | `#00B864` | ~15 |
-| Red (destructive) | `#E53E3E` | ~20 |
-| Red light bg | `#FFF0F0` | ~10 |
-| Orange (warning) | `#FF8C42` | ~20 |
-| Green light bg | `#E8FDF0` | ~15 |
-| Blue (info) | `#3182CE` | ~10 |
+| `#293F52` (text, borders, bg) | `var(--color-primary)` | Public pages only |
+| `#1A2D3B` (dark navy) | `var(--color-primary-hover)` | Public pages only |
+| `#00E47C` (accent green) | `var(--color-accent)` | Public pages only |
+| `#00B864` (dark green) | `var(--color-accent-dark)` | Public pages only |
+| `#E8FDF0` (light green bg) | `var(--color-accent-light)` | Public pages only |
+| `#E53E3E` (red) | `var(--color-red)` | All pages (fixed) |
+| `#FFF0F0` (red light bg) | `var(--color-red-light)` | All pages (fixed) |
+| `#FF8C42` (orange) | `var(--color-orange)` | All pages (fixed) |
 
-**Fix:**
+**Usage pattern:**
+```tsx
+// Before
+className="text-[#293F52] bg-[#E8FDF0] border-[#00E47C]"
 
-1. Add brand colours to `@theme inline` block in `src/app/globals.css`:
-   ```css
-   --color-navy: #293F52;
-   --color-green: #00E47C;
-   --color-green-dark: #00B864;
-   --color-red: #E53E3E;
-   --color-red-light: #FFF0F0;
-   --color-orange: #FF8C42;
-   --color-green-light: #E8FDF0;
-   --color-blue: #3182CE;
-   ```
-2. Migrate incrementally — start with the 5 most-used colours (`#293F52`, `#00E47C`, `#00B864`, `#E53E3E`, `#E8FDF0`)
-3. Use `text-[var(--color-navy)]` / `bg-[var(--color-green)]` pattern until Tailwind v4 theme extension is configured
+// After
+className="text-[var(--color-primary)] bg-[var(--color-accent-light)] border-[var(--color-accent)]"
+```
 
-**Files with most violations:**
-- `src/components/tickets/service-ticket-form.tsx` (20+)
-- `src/app/(public)/page.tsx` (15+)
-- `src/app/(public)/auth/email-entry-form.tsx` (8+)
-- `src/components/booking/booking-status-badge.tsx` (10)
-- `src/app/(field)/field/booking/[ref]/mud-allocation-form.tsx` (12+)
+**Migration order (public pages first — these are tenant-branded):**
+1. `src/app/(public)/page.tsx` (landing — 15+ refs)
+2. `src/app/(public)/auth/email-entry-form.tsx` (8+ refs)
+3. `src/components/public/public-nav.tsx` (nav branding)
+4. `src/components/public/mobile-bottom-nav.tsx`
+5. `src/app/(public)/book/**` (wizard — 30+ refs across 5 files)
+6. `src/app/(public)/booking/[ref]/**` (booking detail)
+7. `src/app/(public)/dashboard/**`
+8. `src/components/booking/booking-status-badge.tsx` (10 refs)
+9. `src/components/tickets/service-ticket-form.tsx` (20+ refs)
 
-**Effort:** 2-3 hours | **Impact:** High
+**Admin pages (`src/app/(admin)/`)** — keep hardcoded to D&M branding for now. Admin is contractor-scoped, not tenant-branded. Can convert later if needed.
+
+**Field pages (`src/app/(field)/`)** — convert alongside public pages (field staff see tenant branding).
+
+### Step 5 — Update tenant API route
+
+**File:** `src/app/api/tenant/route.ts`
+
+Add `accent_colour` to the select query so client-side components can access it if needed.
+
+### Verification
+
+1. Set a test client's `primary_colour` to something obvious (e.g., `#FF0000`)
+2. Set `accent_colour` to `#0000FF`
+3. Load the tenant's public pages — all branded elements should reflect the new colours
+4. Confirm admin pages remain D&M navy
+5. Confirm null values fall back to defaults (#293F52 / #00E47C)
+6. `pnpm tsc --noEmit` — clean build
+
+**Effort:** 3-4 hours | **Impact:** Critical — white-labelling is broken without this
 
 ---
 
@@ -241,7 +320,7 @@ These patterns should be preserved, not refactored:
 ## Implementation Order
 
 ```
-P1: Design tokens (colours)     ████████████░░░░  2-3 hrs
+P1: White-label colour system   ████████████████  3-4 hrs  ← DO FIRST
 P2: Button component            ██████░░░░░░░░░░  1-2 hrs
 P3: Loading states              ████░░░░░░░░░░░░  1 hr
 P4: Typography scale            ████████░░░░░░░░  2 hrs
@@ -250,5 +329,7 @@ P6: Accessibility quick wins    ████░░░░░░░░░░░░
 P7: Remove dark mode CSS        █░░░░░░░░░░░░░░░  15 min
 P8: Admin mobile (defer)        ████████████████  4+ hrs
                                 ─────────────────
-                                Total: ~10-12 hrs (excl. P8)
+                                Total: ~12-14 hrs (excl. P8)
 ```
+
+**Note:** P1 subsumes the old "design tokens" task. Migrating hardcoded hex → CSS variables IS the white-label fix — they're the same work.
