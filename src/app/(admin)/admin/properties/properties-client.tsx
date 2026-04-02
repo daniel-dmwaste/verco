@@ -116,18 +116,20 @@ export function PropertiesClient() {
   const total = propertiesData?.total ?? 0
 
   async function handleToggleMud(id: string, currentValue: boolean) {
-    await supabase
+    const { error } = await supabase
       .from('eligible_properties')
       .update({ is_mud: !currentValue })
       .eq('id', id)
+    if (error) { alert(`Failed to update: ${error.message}`); return }
     void queryClient.invalidateQueries({ queryKey: ['admin-properties'] })
   }
 
   async function handleToggleEligible(id: string, currentValue: boolean) {
-    await supabase
+    const { error } = await supabase
       .from('eligible_properties')
       .update({ is_eligible: !currentValue })
       .eq('id', id)
+    if (error) { alert(`Failed to update: ${error.message}`); return }
     void queryClient.invalidateQueries({ queryKey: ['admin-properties'] })
   }
 
