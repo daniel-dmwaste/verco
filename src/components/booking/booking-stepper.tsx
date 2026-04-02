@@ -33,7 +33,7 @@ export function BookingStepper({ currentStep }: BookingStepperProps) {
                 <div
                   className={cn(
                     'absolute left-[calc(50%+14px)] right-[calc(-50%+14px)] top-3.5 h-0.5',
-                    isDone ? 'bg-[#293F52]' : 'bg-gray-100'
+                    isDone ? 'bg-[var(--brand)]' : 'bg-gray-100'
                   )}
                 />
               )}
@@ -43,9 +43,9 @@ export function BookingStepper({ currentStep }: BookingStepperProps) {
                 className={cn(
                   'relative z-10 flex size-7 items-center justify-center rounded-full text-[13px] font-semibold',
                   isActive &&
-                    'border-[1.5px] border-[#293F52] bg-[#293F52] text-[#00E47C]',
+                    'border-[1.5px] border-[var(--brand)] bg-[var(--brand)] text-[var(--brand-accent)]',
                   isDone &&
-                    'border-[1.5px] border-[#293F52] bg-[#293F52] text-white',
+                    'border-[1.5px] border-[var(--brand)] bg-[var(--brand)] text-white',
                   isFuture &&
                     'border-[1.5px] border-gray-100 bg-white text-gray-300'
                 )}
@@ -72,7 +72,7 @@ export function BookingStepper({ currentStep }: BookingStepperProps) {
               <span
                 className={cn(
                   'text-center text-[10px] whitespace-nowrap',
-                  isActive || isDone ? 'text-[#293F52]' : 'text-gray-300'
+                  isActive || isDone ? 'text-[var(--brand)]' : 'text-gray-300'
                 )}
               >
                 {step.label}

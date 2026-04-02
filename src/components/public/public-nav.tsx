@@ -13,10 +13,10 @@ export function PublicNav({
   showAdminLink,
 }: PublicNavProps) {
   return (
-    <nav className="sticky top-0 z-50 bg-[#293F52]">
+    <nav className="sticky top-0 z-50 bg-[var(--brand)]">
       <div className="flex h-16 items-center justify-between px-8">
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-[#00E47C] font-[family-name:var(--font-heading)] text-lg md:text-xl font-bold text-[#293F52]">
+          <div className="flex size-8 items-center justify-center rounded-lg bg-[var(--brand-accent)] font-[family-name:var(--font-heading)] text-lg md:text-xl font-bold text-[var(--brand)]">
             V
           </div>
           <span className="font-[family-name:var(--font-heading)] text-lg md:text-xl font-bold text-white">
@@ -40,7 +40,7 @@ export function PublicNav({
           </Link>
           <Link
             href="/book"
-            className="rounded-lg bg-[#00E47C] px-5 py-2 font-[family-name:var(--font-heading)] text-sm md:text-base font-semibold text-[#293F52]"
+            className="rounded-lg bg-[var(--brand-accent)] px-5 py-2 font-[family-name:var(--font-heading)] text-sm md:text-base font-semibold text-[var(--brand)]"
           >
             Book a Collection
           </Link>

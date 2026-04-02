@@ -260,7 +260,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np, pay
         </Link>
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="font-[family-name:var(--font-heading)] text-[17px] font-bold text-[#293F52] md:text-lg">
+            <h1 className="font-[family-name:var(--font-heading)] text-[17px] font-bold text-[var(--brand)] md:text-lg">
               {booking.ref}
             </h1>
             <p className="mt-0.5 text-[13px] text-gray-500 md:text-sm">
@@ -292,7 +292,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np, pay
 
         {/* Payment processing banner */}
         {isPolling && (
-          <div className="rounded-[10px] border border-[#00B864] bg-[#E8FDF0] px-3.5 py-3">
+          <div className="rounded-[10px] border border-[var(--brand-accent-dark)] bg-[var(--brand-accent-light)] px-3.5 py-3">
             <div className="mb-0.5 flex items-center gap-1.5 text-[13px] font-semibold text-[#006A38]">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#006A38" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin">
                 <path d="M21 12a9 9 0 1 1-6.219-8.56" />
@@ -307,9 +307,9 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np, pay
 
         {/* Place-out reminder — full width */}
         {showPlaceOut && collectionDateStr && (
-          <div className="rounded-[10px] border border-[#00B864] bg-gradient-to-br from-[#E8FDF0] to-[#d4f5e6] px-3.5 py-3">
-            <div className="mb-0.5 flex items-center gap-1.5 text-[13px] font-semibold text-[#293F52]">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00B864" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <div className="rounded-[10px] border border-[var(--brand-accent-dark)] bg-gradient-to-br from-[var(--brand-accent-light)] to-[#d4f5e6] px-3.5 py-3">
+            <div className="mb-0.5 flex items-center gap-1.5 text-[13px] font-semibold text-[var(--brand)]">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--brand-accent-dark)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
                 <polyline points="12 6 12 12 16 14" />
               </svg>
@@ -402,7 +402,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np, pay
                 includedItems.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between rounded-lg bg-[#E8FDF0] px-2.5 py-2 text-[13px]"
+                    className="flex items-center justify-between rounded-lg bg-[var(--brand-accent-light)] px-2.5 py-2 text-[13px]"
                   >
                     <span className="text-gray-900">
                       {(item.service as { name: string }).name} &times; {item.no_services}
@@ -442,7 +442,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np, pay
                       href={receiptUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="mt-1 flex items-center gap-1.5 text-[12px] font-medium text-[#293F52] hover:underline"
+                      className="mt-1 flex items-center gap-1.5 text-[12px] font-medium text-[var(--brand)] hover:underline"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -463,7 +463,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np, pay
 
         {/* Cancellation cutoff — full width */}
         {canCancel && collectionDateStr && (
-          <div className="rounded-[10px] bg-[#E8EEF2] px-3.5 py-3 text-xs text-[#293F52]">
+          <div className="rounded-[10px] bg-[#E8EEF2] px-3.5 py-3 text-xs text-[var(--brand)]">
             <div className="mb-1 flex items-center gap-1.5 font-semibold">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
@@ -520,7 +520,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np, pay
                   <span className="text-gray-500">Rebooked As</span>
                   <Link
                     href={`/booking/${ncn.rescheduled_booking.ref}`}
-                    className="font-semibold text-[#293F52] hover:underline"
+                    className="font-semibold text-[var(--brand)] hover:underline"
                   >
                     {ncn.rescheduled_booking.ref} &rarr;
                   </Link>
@@ -595,7 +595,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np, pay
                   <span className="text-gray-500">Rebooked As</span>
                   <Link
                     href={`/booking/${np.rescheduled_booking.ref}`}
-                    className="font-semibold text-[#293F52] hover:underline"
+                    className="font-semibold text-[var(--brand)] hover:underline"
                   >
                     {np.rescheduled_booking.ref} &rarr;
                   </Link>
@@ -647,7 +647,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np, pay
                 <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
                   Enquiries
                 </span>
-                <span className="flex size-5 items-center justify-center rounded-full bg-[#E8EEF2] text-[10px] font-bold text-[#293F52]">
+                <span className="flex size-5 items-center justify-center rounded-full bg-[#E8EEF2] text-[10px] font-bold text-[var(--brand)]">
                   {tickets.length}
                 </span>
               </div>
@@ -658,7 +658,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np, pay
                     <Link
                       key={ticket.id}
                       href={`/contact/tickets/${ticket.display_id}`}
-                      className="block rounded-lg border border-gray-100 px-3 py-2.5 transition-colors hover:border-[#293F52]/20 hover:bg-gray-50"
+                      className="block rounded-lg border border-gray-100 px-3 py-2.5 transition-colors hover:border-[var(--brand)]/20 hover:bg-gray-50"
                     >
                       <div className="mb-1 flex items-center justify-between">
                         <span className="font-mono text-[11px] text-gray-400">
@@ -671,7 +671,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np, pay
                           {statusStyle.label}
                         </span>
                       </div>
-                      <div className="text-[13px] font-semibold text-[#293F52]">
+                      <div className="text-[13px] font-semibold text-[var(--brand)]">
                         {ticket.subject}
                       </div>
                       <div className="mt-1 flex items-center gap-2">
@@ -697,7 +697,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np, pay
               type="button"
               onClick={handlePayNow}
               disabled={isPaying}
-              className="flex items-center justify-center gap-2 rounded-xl border-[1.5px] border-[#00B864] bg-[#E8FDF0] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#006A38] disabled:opacity-50 md:px-5 md:py-3 md:text-[14px]"
+              className="flex items-center justify-center gap-2 rounded-xl border-[1.5px] border-[var(--brand-accent-dark)] bg-[var(--brand-accent-light)] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#006A38] disabled:opacity-50 md:px-5 md:py-3 md:text-[14px]"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
@@ -709,7 +709,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np, pay
 
           <Link
             href={`/contact?booking_ref=${encodeURIComponent(booking.ref)}&booking_id=${encodeURIComponent(booking.id)}`}
-            className="flex items-center justify-center gap-2 rounded-xl border-[1.5px] border-[#293F52] bg-white px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52] md:px-5 md:py-3 md:text-[14px]"
+            className="flex items-center justify-center gap-2 rounded-xl border-[1.5px] border-[var(--brand)] bg-white px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[var(--brand)] md:px-5 md:py-3 md:text-[14px]"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -737,7 +737,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np, pay
                     }).toString()}`
                   : `/book?address=${encodeURIComponent(booking.property?.formatted_address ?? booking.property?.address ?? '')}`
                 }
-                className="flex items-center justify-center gap-2 rounded-xl border-[1.5px] border-gray-100 bg-white px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52] md:px-5 md:py-3 md:text-[14px]"
+                className="flex items-center justify-center gap-2 rounded-xl border-[1.5px] border-gray-100 bg-white px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[var(--brand)] md:px-5 md:py-3 md:text-[14px]"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -763,7 +763,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np, pay
           {isTerminal && rebookAddress && (
             <Link
               href={`/book?address=${encodeURIComponent(rebookAddress)}`}
-              className="flex items-center justify-center gap-2 rounded-xl border-[1.5px] border-[#00B864] bg-[#E8FDF0] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#006A38] md:px-5 md:py-3 md:text-[14px]"
+              className="flex items-center justify-center gap-2 rounded-xl border-[1.5px] border-[var(--brand-accent-dark)] bg-[var(--brand-accent-light)] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#006A38] md:px-5 md:py-3 md:text-[14px]"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="23 4 23 10 17 10" />
@@ -788,14 +788,14 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np, pay
                   <line x1="12" y1="17" x2="12.01" y2="17" />
                 </svg>
               </div>
-              <Dialog.Title className="font-[family-name:var(--font-heading)] text-lg font-bold text-[#293F52]">
+              <Dialog.Title className="font-[family-name:var(--font-heading)] text-lg font-bold text-[var(--brand)]">
                 Cancel this booking?
               </Dialog.Title>
               <p className="mt-1.5 text-[13px] leading-relaxed text-gray-500">
                 This action cannot be undone. Any payment will be refunded to the original payment method.
               </p>
               <div className="mt-5 flex gap-2.5">
-                <Dialog.Close className="flex-1 rounded-xl border-[1.5px] border-gray-100 bg-white px-3.5 py-3 font-[family-name:var(--font-heading)] text-[14px] font-semibold text-[#293F52]">
+                <Dialog.Close className="flex-1 rounded-xl border-[1.5px] border-gray-100 bg-white px-3.5 py-3 font-[family-name:var(--font-heading)] text-[14px] font-semibold text-[var(--brand)]">
                   Keep Booking
                 </Dialog.Close>
                 <button

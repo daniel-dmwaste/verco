@@ -104,9 +104,9 @@ function getBorderClass(status: BookingStatus): string {
   switch (status) {
     case 'Submitted':
     case 'Confirmed':
-      return 'border-l-[#293F52]'
+      return 'border-l-[var(--brand)]'
     case 'Scheduled':
-      return 'border-l-[#00B864]'
+      return 'border-l-[var(--brand-accent-dark)]'
     case 'Completed':
       return 'border-l-gray-300'
     case 'Non-conformance':
@@ -122,7 +122,7 @@ const TICKET_DOT_COLORS: Partial<Record<TicketStatus, string>> = {
   open: 'bg-[#3182CE]',
   in_progress: 'bg-[#3182CE]',
   waiting_on_customer: 'bg-[#FF8C42]',
-  resolved: 'bg-[#00B864]',
+  resolved: 'bg-[var(--brand-accent-dark)]',
 }
 
 const TICKET_STATUS_LABELS: Partial<Record<TicketStatus, string>> = {
@@ -151,9 +151,9 @@ function BookingCard({ booking }: { booking: Booking }) {
   return (
     <div className="mb-3">
       {showPlaceOut && collectionDateStr && (
-        <div className="mb-2.5 rounded-[10px] border border-[#00B864] bg-gradient-to-br from-[#E8FDF0] to-[#d4f5e6] px-3.5 py-3">
-          <div className="mb-0.5 flex items-center gap-1.5 text-[13px] md:text-[15px] font-semibold text-[#293F52]">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00B864" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <div className="mb-2.5 rounded-[10px] border border-[var(--brand-accent-dark)] bg-gradient-to-br from-[var(--brand-accent-light)] to-[#d4f5e6] px-3.5 py-3">
+          <div className="mb-0.5 flex items-center gap-1.5 text-[13px] md:text-[15px] font-semibold text-[var(--brand)]">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--brand-accent-dark)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
               <polyline points="12 6 12 12 16 14" />
             </svg>
@@ -184,7 +184,7 @@ function BookingCard({ booking }: { booking: Booking }) {
 
         {/* Date */}
         {collectionDateStr && (
-          <div className="text-sm md:text-base font-semibold text-[#293F52]">
+          <div className="text-sm md:text-base font-semibold text-[var(--brand)]">
             {format(new Date(collectionDateStr + 'T00:00:00'), 'EEE d MMMM yyyy')}
           </div>
         )}
@@ -196,7 +196,7 @@ function BookingCard({ booking }: { booking: Booking }) {
 
         {/* Countdown — only for active bookings */}
         {isActive && collectionDateStr && daysUntil !== null && daysUntil >= 0 && daysUntil <= 7 && (
-          <div className="mt-2 flex items-center gap-2 rounded-lg bg-[#E8EEF2] px-3 py-2 text-xs md:text-sm font-medium text-[#293F52]">
+          <div className="mt-2 flex items-center gap-2 rounded-lg bg-[#E8EEF2] px-3 py-2 text-xs md:text-sm font-medium text-[var(--brand)]">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
               <polyline points="12 6 12 12 16 14" />
@@ -217,7 +217,7 @@ function BookingCard({ booking }: { booking: Booking }) {
             <span
               key={item.id}
               className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] md:text-[13px] font-medium ${
-                item.is_extra ? 'bg-[#FFF3EA] text-[#8B4000]' : 'bg-[#E8EEF2] text-[#293F52]'
+                item.is_extra ? 'bg-[#FFF3EA] text-[#8B4000]' : 'bg-[#E8EEF2] text-[var(--brand)]'
               }`}
             >
               {(item.service as { name: string }).name} &times; {item.no_services}
@@ -229,7 +229,7 @@ function BookingCard({ booking }: { booking: Booking }) {
         {/* Bottom: location + view details */}
         <div className="mt-2 flex items-center justify-between border-t border-gray-100 pt-2">
           <span className="text-xs md:text-sm text-gray-500">{booking.location}</span>
-          <span className="text-xs md:text-sm font-semibold text-[#00B864]">View details &rarr;</span>
+          <span className="text-xs md:text-sm font-semibold text-[var(--brand-accent-dark)]">View details &rarr;</span>
         </div>
       </Link>
     </div>
@@ -263,7 +263,7 @@ export function DashboardClient({
       {/* Header area */}
       <div className="flex flex-col gap-4 tablet:flex-row tablet:items-start tablet:justify-between">
         <div>
-          <h1 className="font-[family-name:var(--font-heading)] text-xl md:text-3xl font-bold text-[#293F52]">
+          <h1 className="font-[family-name:var(--font-heading)] text-xl md:text-3xl font-bold text-[var(--brand)]">
             My Dashboard
           </h1>
           <p className="mt-1 text-sm md:text-base text-gray-500">
@@ -285,7 +285,7 @@ export function DashboardClient({
               </svg>
             </div>
             <div>
-              <div className="font-[family-name:var(--font-heading)] text-xl md:text-3xl font-bold text-[#293F52]">
+              <div className="font-[family-name:var(--font-heading)] text-xl md:text-3xl font-bold text-[var(--brand)]">
                 {upcomingBookings.length}
               </div>
               <div className="text-xs md:text-sm text-gray-500">Upcoming</div>
@@ -294,13 +294,13 @@ export function DashboardClient({
         </div>
         <div className="rounded-xl bg-white p-4 shadow-sm">
           <div className="flex items-center gap-2.5">
-            <div className="flex size-9 md:size-11 items-center justify-center rounded-lg bg-[#E8FDF0]">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00B864" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <div className="flex size-9 md:size-11 items-center justify-center rounded-lg bg-[var(--brand-accent-light)]">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand-accent-dark)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </div>
             <div>
-              <div className="font-[family-name:var(--font-heading)] text-xl md:text-3xl font-bold text-[#293F52]">
+              <div className="font-[family-name:var(--font-heading)] text-xl md:text-3xl font-bold text-[var(--brand)]">
                 {pastBookings.filter((b) => b.status === 'Completed').length}
               </div>
               <div className="text-xs md:text-sm text-gray-500">Completed</div>
@@ -316,7 +316,7 @@ export function DashboardClient({
               </svg>
             </div>
             <div>
-              <div className="font-[family-name:var(--font-heading)] text-xl md:text-3xl font-bold text-[#293F52]">
+              <div className="font-[family-name:var(--font-heading)] text-xl md:text-3xl font-bold text-[var(--brand)]">
                 {bookings.length}
               </div>
               <div className="text-xs md:text-sm text-gray-500">Total {fyLabel}</div>
@@ -331,7 +331,7 @@ export function DashboardClient({
               </svg>
             </div>
             <div>
-              <div className="font-[family-name:var(--font-heading)] text-xl md:text-3xl font-bold text-[#293F52]">
+              <div className="font-[family-name:var(--font-heading)] text-xl md:text-3xl font-bold text-[var(--brand)]">
                 {activeTicketCount}
               </div>
               <div className="text-xs md:text-sm text-gray-500">Active Enquiries</div>
@@ -349,7 +349,7 @@ export function DashboardClient({
             onClick={() => setActiveTab(tab.key)}
             className={`shrink-0 rounded-t-lg px-4 py-2.5 text-sm md:text-base font-medium transition-colors ${
               activeTab === tab.key
-                ? 'border-b-2 border-[#293F52] text-[#293F52]'
+                ? 'border-b-2 border-[var(--brand)] text-[var(--brand)]'
                 : 'text-gray-400 hover:text-gray-600'
             }`}
           >
@@ -372,7 +372,7 @@ export function DashboardClient({
                     <line x1="3" y1="10" x2="21" y2="10" />
                   </svg>
                 </div>
-                <span className="text-sm md:text-base font-semibold text-[#293F52]">
+                <span className="text-sm md:text-base font-semibold text-[var(--brand)]">
                   No upcoming bookings
                 </span>
                 <span className="text-xs md:text-sm text-gray-500">
@@ -380,7 +380,7 @@ export function DashboardClient({
                 </span>
                 <Link
                   href="/book"
-                  className="mt-2 rounded-lg bg-[#00E47C] px-5 py-2.5 font-[family-name:var(--font-heading)] text-sm md:text-base font-semibold text-[#293F52]"
+                  className="mt-2 rounded-lg bg-[var(--brand-accent)] px-5 py-2.5 font-[family-name:var(--font-heading)] text-sm md:text-base font-semibold text-[var(--brand)]"
                 >
                   Book a Collection
                 </Link>
@@ -397,7 +397,7 @@ export function DashboardClient({
           <>
             {pastBookings.length === 0 ? (
               <div className="flex flex-col items-center gap-2 rounded-xl bg-white p-8 text-center shadow-sm">
-                <span className="text-sm md:text-base font-semibold text-[#293F52]">No past bookings</span>
+                <span className="text-sm md:text-base font-semibold text-[var(--brand)]">No past bookings</span>
                 <span className="text-xs md:text-sm text-gray-500">Completed bookings will appear here.</span>
               </div>
             ) : (
@@ -417,11 +417,11 @@ export function DashboardClient({
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                   </svg>
                 </div>
-                <span className="text-sm md:text-base font-semibold text-[#293F52]">No enquiries yet</span>
+                <span className="text-sm md:text-base font-semibold text-[var(--brand)]">No enquiries yet</span>
                 <span className="text-xs md:text-sm text-gray-500">Need help? Submit an enquiry and we&apos;ll get back to you.</span>
                 <Link
                   href="/contact"
-                  className="mt-2 rounded-lg bg-[#293F52] px-5 py-2.5 font-[family-name:var(--font-heading)] text-sm md:text-base font-semibold text-white"
+                  className="mt-2 rounded-lg bg-[var(--brand)] px-5 py-2.5 font-[family-name:var(--font-heading)] text-sm md:text-base font-semibold text-white"
                 >
                   Contact Us
                 </Link>
@@ -438,11 +438,11 @@ export function DashboardClient({
                       <div className="mb-1 font-[family-name:var(--font-heading)] text-xs md:text-sm font-semibold text-[#8FA5B8]">
                         {ticket.display_id}
                       </div>
-                      <div className="text-[13px] md:text-[15px] font-semibold text-[#293F52]">
+                      <div className="text-[13px] md:text-[15px] font-semibold text-[var(--brand)]">
                         {ticket.subject}
                       </div>
                       <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                        <span className="inline-flex rounded-full bg-[#E8EEF2] px-2.5 py-0.5 text-[11px] md:text-[13px] font-medium text-[#293F52]">
+                        <span className="inline-flex rounded-full bg-[#E8EEF2] px-2.5 py-0.5 text-[11px] md:text-[13px] font-medium text-[var(--brand)]">
                           {CATEGORIES[ticket.category] ?? ticket.category}
                         </span>
                         <span className="text-[11px] md:text-[13px] text-gray-500">

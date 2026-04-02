@@ -128,7 +128,7 @@ export function DateForm() {
       {/* Content */}
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto pb-24 pt-6">
         <div>
-          <h1 className="font-[family-name:var(--font-heading)] text-[22px] font-bold leading-tight text-[#293F52]">
+          <h1 className="font-[family-name:var(--font-heading)] text-[22px] font-bold leading-tight text-[var(--brand)]">
             Select Collection Date
           </h1>
           <p className="mt-1 text-[13px] leading-relaxed text-gray-500">
@@ -158,7 +158,7 @@ export function DateForm() {
 
         {/* Date grid */}
         <div>
-          <h2 className="mb-3 font-[family-name:var(--font-heading)] text-base font-semibold text-[#293F52]">
+          <h2 className="mb-3 font-[family-name:var(--font-heading)] text-base font-semibold text-[var(--brand)]">
             Available Dates
           </h2>
           <div className="grid grid-cols-3 gap-2">
@@ -179,14 +179,14 @@ export function DateForm() {
                   className={cn(
                     'flex flex-col gap-1 rounded-xl border-[1.5px] px-2.5 py-3 shadow-sm transition-colors',
                     isSelected
-                      ? 'border-[#00E47C] border-2 bg-[#293F52]'
+                      ? 'border-[var(--brand-accent)] border-2 bg-[var(--brand)]'
                       : 'border-gray-100 bg-white hover:border-gray-200'
                   )}
                 >
                   <span
                     className={cn(
                       'text-xs font-semibold',
-                      isSelected ? 'text-white' : 'text-[#293F52]'
+                      isSelected ? 'text-white' : 'text-[var(--brand)]'
                     )}
                   >
                     {format(dateObj, 'EEE d MMM')}
@@ -202,7 +202,7 @@ export function DateForm() {
                     {spotsRemaining} spots
                   </span>
                   {isSelected && (
-                    <span className="text-[10px] font-medium text-[#00E47C]">
+                    <span className="text-[10px] font-medium text-[var(--brand-accent)]">
                       Selected &#10003;
                     </span>
                   )}
@@ -229,7 +229,7 @@ export function DateForm() {
         <button
           type="button"
           onClick={handleBack}
-          className="flex h-[52px] flex-1 items-center justify-center rounded-xl border-[1.5px] border-gray-100 bg-white font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52] transition-opacity hover:opacity-90"
+          className="flex h-[52px] flex-1 items-center justify-center rounded-xl border-[1.5px] border-gray-100 bg-white font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[var(--brand)] transition-opacity hover:opacity-90"
         >
           &larr; Back
         </button>
@@ -238,7 +238,7 @@ export function DateForm() {
           type="button"
           onClick={handleContinue}
           disabled={!selectedDateId}
-          className="flex h-[52px] flex-1 items-center justify-center rounded-xl bg-[#293F52] font-[family-name:var(--font-heading)] text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="flex h-[52px] flex-1 items-center justify-center rounded-xl bg-[var(--brand)] font-[family-name:var(--font-heading)] text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           Next Step &rarr;
         </button>

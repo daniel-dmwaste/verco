@@ -495,9 +495,9 @@ export function ConfirmForm() {
       return `${base} border-red-500 bg-red-50 text-red-500`
     }
     if (otpDigits[index]) {
-      return `${base} border-[#293F52] bg-white text-[#293F52]`
+      return `${base} border-[var(--brand)] bg-white text-[var(--brand)]`
     }
-    return `${base} border-gray-100 bg-gray-50 text-[#293F52] focus:border-[#293F52] focus:border-2 focus:bg-white`
+    return `${base} border-gray-100 bg-gray-50 text-[var(--brand)] focus:border-[var(--brand)] focus:border-2 focus:bg-white`
   }
 
   // Form submit handler — checks session, triggers OTP if guest
@@ -571,7 +571,7 @@ export function ConfirmForm() {
       {/* Content */}
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto pb-24 pt-6">
         <div>
-          <h1 className="font-[family-name:var(--font-heading)] text-[22px] font-bold leading-tight text-[#293F52]">
+          <h1 className="font-[family-name:var(--font-heading)] text-[22px] font-bold leading-tight text-[var(--brand)]">
             Confirm Your Booking
           </h1>
           <p className="mt-1 text-[13px] leading-relaxed text-gray-500">
@@ -585,7 +585,7 @@ export function ConfirmForm() {
           onSubmit={handleSubmit(onSubmit)}
           className="rounded-xl bg-white p-6 shadow-sm"
         >
-          <h2 className="mb-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52]">
+          <h2 className="mb-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[var(--brand)]">
             Contact Information
           </h2>
           <div className="flex flex-col gap-2.5">
@@ -597,7 +597,7 @@ export function ConfirmForm() {
                 type="text"
                 placeholder="Full name"
                 {...register('full_name')}
-                className="w-full rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-300 focus:border-[#293F52] focus:bg-white"
+                className="w-full rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-300 focus:border-[var(--brand)] focus:bg-white"
               />
               {errors.full_name && (
                 <p className="mt-1 text-[11px] text-red-500">
@@ -613,7 +613,7 @@ export function ConfirmForm() {
                 type="email"
                 placeholder="Email address"
                 {...register('email')}
-                className="w-full rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-300 focus:border-[#293F52] focus:bg-white"
+                className="w-full rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-300 focus:border-[var(--brand)] focus:bg-white"
               />
               {errors.email && (
                 <p className="mt-1 text-[11px] text-red-500">
@@ -630,7 +630,7 @@ export function ConfirmForm() {
                 placeholder="Mobile number (e.g. 0412 345 678)"
                 value={mobileDisplay}
                 onChange={handleMobileChange}
-                className="w-full rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-300 focus:border-[#293F52] focus:bg-white"
+                className="w-full rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-300 focus:border-[var(--brand)] focus:bg-white"
               />
               {/* Hidden field for react-hook-form */}
               <input type="hidden" {...register('mobile')} />
@@ -645,7 +645,7 @@ export function ConfirmForm() {
 
         {/* Booking Summary */}
         <div className="rounded-xl bg-white p-6 shadow-sm">
-          <h2 className="mb-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52]">
+          <h2 className="mb-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[var(--brand)]">
             Booking Summary
           </h2>
           <div className="flex flex-col">
@@ -675,7 +675,7 @@ export function ConfirmForm() {
         {/* Services breakdown */}
         {summaryData && (
           <div className="rounded-xl bg-white p-6 shadow-sm">
-            <h2 className="mb-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52]">
+            <h2 className="mb-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[var(--brand)]">
               Services
             </h2>
 
@@ -717,7 +717,7 @@ export function ConfirmForm() {
                       {item.name} &times; {item.qty} @ $
                       {item.unitPrice.toFixed(2)}
                     </span>
-                    <span className="font-semibold text-[#293F52]">
+                    <span className="font-semibold text-[var(--brand)]">
                       ${item.lineTotal.toFixed(2)}
                     </span>
                   </div>
@@ -728,11 +728,11 @@ export function ConfirmForm() {
         )}
 
         {/* Total block */}
-        <div className="flex items-center justify-between rounded-xl bg-[#293F52] px-5 py-4">
+        <div className="flex items-center justify-between rounded-xl bg-[var(--brand)] px-5 py-4">
           <span className="font-[family-name:var(--font-heading)] text-base font-semibold text-white">
             Total
           </span>
-          <span className="font-[family-name:var(--font-heading)] text-2xl font-bold text-[#00E47C]">
+          <span className="font-[family-name:var(--font-heading)] text-2xl font-bold text-[var(--brand-accent)]">
             {totalCents > 0
               ? `$${(totalCents / 100).toFixed(2)}`
               : 'Free'}
@@ -756,13 +756,13 @@ export function ConfirmForm() {
         {otpStep && (
           <div className="flex flex-col gap-4 rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
             <div>
-              <h2 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
+              <h2 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[var(--brand)]">
                 Verify Email
               </h2>
               <p className="mt-1.5 text-[13px] leading-relaxed text-gray-500">
                 We sent a 6-digit code to
                 <br />
-                <strong className="text-[#293F52]">{otpEmail}</strong>
+                <strong className="text-[var(--brand)]">{otpEmail}</strong>
               </p>
             </div>
 
@@ -813,7 +813,7 @@ export function ConfirmForm() {
                 const code = otpDigits.join('')
                 if (code.length === OTP_LENGTH) void verifyOtp(code)
               }}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#293F52] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand)] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               {otpState === 'verifying' ? 'Verifying...' : otpState === 'error' ? 'Try Again' : 'Verify Code'}
             </button>
@@ -823,7 +823,7 @@ export function ConfirmForm() {
               {resendCooldown > 0 ? (
                 <>
                   Code expires in{' '}
-                  <strong className="text-[#293F52]">
+                  <strong className="text-[var(--brand)]">
                     {Math.floor(resendCooldown / 60)}:{(resendCooldown % 60).toString().padStart(2, '0')}
                   </strong>
                   {' · '}
@@ -834,7 +834,7 @@ export function ConfirmForm() {
                   type="button"
                   onClick={handleOtpResend}
                   disabled={isResending}
-                  className="font-semibold text-[#00B864] hover:underline disabled:text-gray-300"
+                  className="font-semibold text-[var(--brand-accent-dark)] hover:underline disabled:text-gray-300"
                 >
                   {isResending ? 'Sending...' : 'Request a new code'}
                 </button>
@@ -850,7 +850,7 @@ export function ConfirmForm() {
           <button
             type="button"
             onClick={handleBack}
-            className="flex h-[52px] flex-1 items-center justify-center rounded-xl border-[1.5px] border-gray-100 bg-white font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52] transition-opacity hover:opacity-90"
+            className="flex h-[52px] flex-1 items-center justify-center rounded-xl border-[1.5px] border-gray-100 bg-white font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[var(--brand)] transition-opacity hover:opacity-90"
           >
             &larr; Back
           </button>
@@ -861,8 +861,8 @@ export function ConfirmForm() {
             disabled={isSubmitting}
             className={`flex h-[52px] flex-1 items-center justify-center rounded-xl font-[family-name:var(--font-heading)] text-[15px] font-semibold transition-opacity hover:opacity-90 disabled:opacity-50 ${
               totalCents > 0
-                ? 'bg-[#00E47C] text-[#293F52]'
-                : 'bg-[#293F52] text-white'
+                ? 'bg-[var(--brand-accent)] text-[var(--brand)]'
+                : 'bg-[var(--brand)] text-white'
             }`}
           >
             {isSubmitting

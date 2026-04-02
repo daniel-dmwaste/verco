@@ -195,7 +195,7 @@ export function NcnForm({ bookingId, bookingRef, address }: NcnFormProps) {
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Add details about the non-conformance..."
-            className="h-[72px] w-full resize-none rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-[13px] text-gray-900 outline-none placeholder:text-gray-400 focus:border-[#293F52] focus:bg-white"
+            className="h-[72px] w-full resize-none rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-[13px] text-gray-900 outline-none placeholder:text-gray-400 focus:border-[var(--brand)] focus:bg-white"
           />
         </div>
 

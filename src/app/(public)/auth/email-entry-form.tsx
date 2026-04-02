@@ -34,7 +34,7 @@ export function EmailEntryForm() {
       className="flex flex-col gap-5 rounded-2xl border border-gray-100 bg-white p-7 shadow-lg"
     >
       <div>
-        <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
+        <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[var(--brand)]">
           Sign in
         </h1>
         <p className="mt-1.5 text-[13px] leading-relaxed text-gray-500">
@@ -58,7 +58,7 @@ export function EmailEntryForm() {
           placeholder="you@example.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className={`w-full rounded-[10px] border-[1.5px] bg-gray-50 px-3.5 py-3 text-[15px] text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-[#293F52] focus:border-2 focus:bg-white ${
+          className={`w-full rounded-[10px] border-[1.5px] bg-gray-50 px-3.5 py-3 text-[15px] text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-[var(--brand)] focus:border-2 focus:bg-white ${
             error ? 'border-red-500 bg-red-50' : 'border-gray-100'
           }`}
         />
@@ -86,7 +86,7 @@ export function EmailEntryForm() {
       <button
         type="submit"
         disabled={isPending}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#293F52] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-white transition-opacity hover:opacity-90 active:opacity-85 disabled:opacity-50"
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand)] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-white transition-opacity hover:opacity-90 active:opacity-85 disabled:opacity-50"
       >
         {isPending ? 'Sending...' : 'Send Code'}
         {!isPending && (

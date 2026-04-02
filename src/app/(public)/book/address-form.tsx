@@ -159,7 +159,7 @@ export function AddressForm() {
       {/* Content */}
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto pb-24 pt-6">
         <div>
-          <h1 className="font-[family-name:var(--font-heading)] text-[22px] font-bold leading-tight text-[#293F52]">
+          <h1 className="font-[family-name:var(--font-heading)] text-[22px] font-bold leading-tight text-[var(--brand)]">
             Book a Collection
           </h1>
           <p className="mt-1 text-[13px] leading-relaxed text-gray-500">
@@ -183,7 +183,7 @@ export function AddressForm() {
 
           {/* Property found banner */}
           {selectedProperty && (
-            <div className="mt-3 flex items-center gap-2.5 rounded-[10px] border border-[#00B864] bg-[#E8FDF0] px-4 py-3 text-[13px] font-medium text-[#006A38]">
+            <div className="mt-3 flex items-center gap-2.5 rounded-[10px] border border-[var(--brand-accent-dark)] bg-[var(--brand-accent-light)] px-4 py-3 text-[13px] font-medium text-[#006A38]">
               <span className="shrink-0 text-base">&#10003;</span>
               <div>
                 <div className="font-semibold">Property found!</div>
@@ -214,12 +214,12 @@ export function AddressForm() {
             {/* Left: Property location + map */}
             <div className="overflow-hidden rounded-xl bg-white shadow-sm">
               <div className="flex items-center gap-2.5 px-4 py-3.5">
-                <span className="text-base text-[#00B864]">&#x1F4CD;</span>
+                <span className="text-base text-[var(--brand-accent-dark)]">&#x1F4CD;</span>
                 <div>
-                  <div className="text-[13px] font-semibold text-[#293F52]">
+                  <div className="text-[13px] font-semibold text-[var(--brand)]">
                     Property Location
                   </div>
-                  <div className="mt-px text-xs text-[#00B864]">
+                  <div className="mt-px text-xs text-[var(--brand-accent-dark)]">
                     {selectedProperty.formatted_address ??
                       selectedProperty.address}
                   </div>
@@ -262,7 +262,7 @@ export function AddressForm() {
             <div className="rounded-xl bg-white p-6 shadow-sm">
               <div className="mb-3.5 flex items-center gap-2">
                 <span className="text-base">&#x1F4E6;</span>
-                <span className="font-[family-name:var(--font-heading)] text-sm font-semibold text-[#293F52]">
+                <span className="font-[family-name:var(--font-heading)] text-sm font-semibold text-[var(--brand)]">
                   Service Allocations &mdash; {allocationData.fy.label}
                 </span>
               </div>
@@ -284,7 +284,7 @@ export function AddressForm() {
                     <div
                       className={`whitespace-nowrap rounded-full border px-3 py-1 text-[11px] font-medium ${
                         alloc.remaining > 0
-                          ? 'border-[#00B864] bg-[#E8FDF0] text-[#006A38]'
+                          ? 'border-[var(--brand-accent-dark)] bg-[var(--brand-accent-light)] text-[#006A38]'
                           : 'border-[#E53E3E] bg-[#FFF0F0] text-[#E53E3E]'
                       }`}
                     >
@@ -297,7 +297,7 @@ export function AddressForm() {
               <button
                 type="button"
                 onClick={handleContinue}
-                className="mt-4 flex h-12 w-full items-center justify-center rounded-xl bg-[#293F52] font-[family-name:var(--font-heading)] text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                className="mt-4 flex h-12 w-full items-center justify-center rounded-xl bg-[var(--brand)] font-[family-name:var(--font-heading)] text-sm font-semibold text-white transition-opacity hover:opacity-90"
               >
                 Book New Collection &rarr;
               </button>
@@ -310,14 +310,14 @@ export function AddressForm() {
           <div className="rounded-xl bg-white p-6 shadow-sm">
             <div className="mb-3 flex items-center gap-2">
               <span className="text-base">&#x1F550;</span>
-              <span className="font-[family-name:var(--font-heading)] text-sm font-semibold text-[#293F52]">
+              <span className="font-[family-name:var(--font-heading)] text-sm font-semibold text-[var(--brand)]">
                 Booking History &mdash; {allocationData.fy.label}
               </span>
             </div>
 
             {allocationData.bookings.length === 0 ? (
               <div className="flex items-center gap-2.5">
-                <span className="text-base text-[#00B864]">&#10003;</span>
+                <span className="text-base text-[var(--brand-accent-dark)]">&#10003;</span>
                 <span className="text-[13px] text-gray-500">
                   No bookings yet for this financial year.
                 </span>

@@ -41,7 +41,7 @@ export default async function ContactPage() {
   return (
     <main className="mx-auto w-full max-w-2xl px-6 py-8">
       <div className="mb-6">
-        <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52] md:text-3xl">
+        <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[var(--brand)] md:text-3xl">
           Contact Us
         </h1>
         <p className="mt-1 text-sm text-gray-500 md:text-base">
@@ -73,20 +73,20 @@ export default async function ContactPage() {
             </div>
             <div>
               <div className="text-xs text-gray-500">Managed by</div>
-              <div className="text-sm font-medium text-[#293F52]">
+              <div className="text-sm font-medium text-[var(--brand)]">
                 {contactName}
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#E8FDF0]">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[var(--brand-accent-light)]">
               <svg
                 width="16"
                 height="16"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke="#00B864"
+                stroke="var(--brand-accent-dark)"
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -98,7 +98,7 @@ export default async function ContactPage() {
               <div className="text-xs text-gray-500">Phone</div>
               <a
                 href={`tel:${contactPhone.replace(/\s/g, '')}`}
-                className="text-sm font-medium text-[#00B864] hover:underline"
+                className="text-sm font-medium text-[var(--brand-accent-dark)] hover:underline"
               >
                 {contactPhone}
               </a>
@@ -150,7 +150,7 @@ export default async function ContactPage() {
             </div>
             <div>
               <div className="text-xs text-gray-500">Hours</div>
-              <div className="text-sm font-medium text-[#293F52]">
+              <div className="text-sm font-medium text-[var(--brand)]">
                 Mon&ndash;Fri 8am&ndash;5pm AWST
               </div>
             </div>
@@ -160,14 +160,14 @@ export default async function ContactPage() {
 
       {/* FAQ accordion */}
       <div id="faqs" className="mb-6">
-        <h2 className="mb-4 font-[family-name:var(--font-heading)] text-lg font-bold text-[#293F52] md:text-xl">
+        <h2 className="mb-4 font-[family-name:var(--font-heading)] text-lg font-bold text-[var(--brand)] md:text-xl">
           Frequently Asked Questions
         </h2>
         <FaqAccordion faqs={faqs} />
       </div>
 
       {/* Bridging heading */}
-      <h2 className="mb-4 font-[family-name:var(--font-heading)] text-lg font-bold text-[#293F52] md:text-xl">
+      <h2 className="mb-4 font-[family-name:var(--font-heading)] text-lg font-bold text-[var(--brand)] md:text-xl">
         Still have a question?
       </h2>
 
@@ -176,7 +176,7 @@ export default async function ContactPage() {
         fallback={
           <div className="rounded-xl bg-white p-6 shadow-sm">
             <div className="flex items-center justify-center py-8">
-              <div className="size-6 animate-spin rounded-full border-2 border-gray-200 border-t-[#293F52]" />
+              <div className="size-6 animate-spin rounded-full border-2 border-gray-200 border-t-[var(--brand)]" />
             </div>
           </div>
         }

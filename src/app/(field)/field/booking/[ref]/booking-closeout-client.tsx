@@ -134,7 +134,7 @@ function CloseoutInner({ booking }: { booking: Booking }) {
         </Link>
         <div className="flex items-center justify-between">
           <div>
-            <div className="font-[family-name:var(--font-heading)] text-base font-bold text-[#293F52]">
+            <div className="font-[family-name:var(--font-heading)] text-base font-bold text-[var(--brand)]">
               {booking.ref}
             </div>
             <div className="mt-0.5 text-[13px] text-gray-500">{address}</div>
@@ -171,7 +171,7 @@ function CloseoutInner({ booking }: { booking: Booking }) {
           href={mapsUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 rounded-[10px] bg-[#E8EEF2] px-3 py-3 text-[13px] font-semibold text-[#293F52]"
+          className="flex items-center justify-center gap-2 rounded-[10px] bg-[#E8EEF2] px-3 py-3 text-[13px] font-semibold text-[var(--brand)]"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
@@ -191,7 +191,7 @@ function CloseoutInner({ booking }: { booking: Booking }) {
                 type="button"
                 onClick={handleComplete}
                 disabled={isPending}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#00E47C] px-3.5 py-3.5 text-sm font-semibold text-[#293F52] disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-accent)] px-3.5 py-3.5 text-sm font-semibold text-[var(--brand)] disabled:opacity-50"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 6 9 17 4 12"/>

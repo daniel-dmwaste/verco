@@ -14,9 +14,9 @@ export function AlreadySubmitted({
   return (
     <div className="flex min-h-screen flex-col bg-white">
       {/* Header */}
-      <div className="shrink-0 bg-[#293F52] px-5 pb-5 pt-4">
+      <div className="shrink-0 bg-[var(--brand)] px-5 pb-5 pt-4">
         <div className="flex items-center gap-2">
-          <div className="flex size-[26px] items-center justify-center rounded-[6px] bg-[#00E47C] font-[family-name:var(--font-heading)] text-sm font-bold text-[#293F52]">
+          <div className="flex size-[26px] items-center justify-center rounded-[6px] bg-[var(--brand-accent)] font-[family-name:var(--font-heading)] text-sm font-bold text-[var(--brand)]">
             V
           </div>
           <span className="font-[family-name:var(--font-heading)] text-[15px] font-bold text-white">
@@ -44,7 +44,7 @@ export function AlreadySubmitted({
           </svg>
         </div>
 
-        <h1 className="mb-2 font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
+        <h1 className="mb-2 font-[family-name:var(--font-heading)] text-xl font-bold text-[var(--brand)]">
           Survey already submitted
         </h1>
         <p className="max-w-[280px] text-sm leading-relaxed text-gray-500">
@@ -54,7 +54,7 @@ export function AlreadySubmitted({
 
         <Link
           href="/dashboard"
-          className="mt-8 flex w-full max-w-[280px] items-center justify-center rounded-xl bg-[#293F52] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-white"
+          className="mt-8 flex w-full max-w-[280px] items-center justify-center rounded-xl bg-[var(--brand)] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-white"
         >
           Back to Dashboard
         </Link>

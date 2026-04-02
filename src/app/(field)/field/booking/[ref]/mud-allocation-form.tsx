@@ -66,7 +66,7 @@ export function MudAllocationForm({
           Run Sheet
         </Link>
         <div>
-          <div className="font-[family-name:var(--font-heading)] text-base font-bold text-[#293F52]">
+          <div className="font-[family-name:var(--font-heading)] text-base font-bold text-[var(--brand)]">
             {bookingRef}{' '}
             <span className="text-xs font-normal text-gray-500">
               &middot; MUD
@@ -96,8 +96,8 @@ export function MudAllocationForm({
           </div>
           <div className="flex flex-col items-center gap-4 py-6">
             {/* Large circular counter */}
-            <div className="flex size-[100px] items-center justify-center rounded-full bg-[#293F52] shadow-[0_8px_24px_rgba(41,63,82,0.3)]">
-              <span className="font-[family-name:var(--font-heading)] text-[40px] font-bold text-[#00E47C]">
+            <div className="flex size-[100px] items-center justify-center rounded-full bg-[var(--brand)] shadow-[0_8px_24px_rgba(41,63,82,0.3)]">
+              <span className="font-[family-name:var(--font-heading)] text-[40px] font-bold text-[var(--brand-accent)]">
                 {count}
               </span>
             </div>
@@ -107,7 +107,7 @@ export function MudAllocationForm({
               <button
                 type="button"
                 onClick={() => setCount((c) => Math.max(0, c - 1))}
-                className="flex size-[52px] items-center justify-center rounded-full border-2 border-gray-100 bg-white text-[28px] font-bold text-[#293F52] shadow-sm"
+                className="flex size-[52px] items-center justify-center rounded-full border-2 border-gray-100 bg-white text-[28px] font-bold text-[var(--brand)] shadow-sm"
               >
                 &minus;
               </button>
@@ -115,7 +115,7 @@ export function MudAllocationForm({
               <button
                 type="button"
                 onClick={() => setCount((c) => c + 1)}
-                className="flex size-[52px] items-center justify-center rounded-full border-2 border-[#293F52] bg-[#293F52] text-[28px] font-bold text-[#00E47C] shadow-[0_4px_12px_rgba(41,63,82,0.3)]"
+                className="flex size-[52px] items-center justify-center rounded-full border-2 border-[var(--brand)] bg-[var(--brand)] text-[28px] font-bold text-[var(--brand-accent)] shadow-[0_4px_12px_rgba(41,63,82,0.3)]"
               >
                 +
               </button>
@@ -136,7 +136,7 @@ export function MudAllocationForm({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="e.g. large volume, overflow from adjacent unit..."
-            className="h-[72px] w-full resize-none rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-[13px] text-gray-900 outline-none placeholder:text-gray-400 focus:border-[#293F52] focus:bg-white"
+            className="h-[72px] w-full resize-none rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-[13px] text-gray-900 outline-none placeholder:text-gray-400 focus:border-[var(--brand)] focus:bg-white"
           />
         </div>
 
@@ -151,7 +151,7 @@ export function MudAllocationForm({
           type="button"
           onClick={handleSubmit}
           disabled={isSubmitting}
-          className="flex w-full items-center justify-center rounded-xl bg-[#00E47C] px-3.5 py-3.5 text-sm font-semibold text-[#293F52] disabled:opacity-50"
+          className="flex w-full items-center justify-center rounded-xl bg-[var(--brand-accent)] px-3.5 py-3.5 text-sm font-semibold text-[var(--brand)] disabled:opacity-50"
         >
           {isSubmitting ? 'Submitting...' : 'Confirm Allocation & Complete'}
         </button>

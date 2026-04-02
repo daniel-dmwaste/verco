@@ -224,7 +224,7 @@ export function TicketDetailClient({
                 {statusStyle.label}
               </span>
             </div>
-            <h1 className="font-[family-name:var(--font-heading)] text-lg font-bold text-[#293F52] md:text-xl">
+            <h1 className="font-[family-name:var(--font-heading)] text-lg font-bold text-[var(--brand)] md:text-xl">
               {ticket.subject}
             </h1>
             <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -248,8 +248,8 @@ export function TicketDetailClient({
               {/* Original message — always resident, right-aligned */}
               <div className="flex justify-end">
                 <div className="max-w-[85%]">
-                  <div className="rounded-2xl rounded-br-md bg-[#E8FDF0] px-4 py-3">
-                    <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-[#293F52]">
+                  <div className="rounded-2xl rounded-br-md bg-[var(--brand-accent-light)] px-4 py-3">
+                    <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-[var(--brand)]">
                       {ticket.message}
                     </p>
                   </div>
@@ -280,11 +280,11 @@ export function TicketDetailClient({
                       <div
                         className={`px-4 py-3 ${
                           isResident
-                            ? 'rounded-2xl rounded-br-md bg-[#E8FDF0]'
+                            ? 'rounded-2xl rounded-br-md bg-[var(--brand-accent-light)]'
                             : 'rounded-2xl rounded-bl-md bg-[#F5F5F5]'
                         }`}
                       >
-                        <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-[#293F52]">
+                        <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-[var(--brand)]">
                           {resp.message}
                         </p>
                       </div>
@@ -315,7 +315,7 @@ export function TicketDetailClient({
                 onChange={(e) => setReplyText(e.target.value)}
                 placeholder="Write a reply..."
                 rows={3}
-                className="w-full resize-none rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-300 focus:border-[#293F52] focus:bg-white"
+                className="w-full resize-none rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-300 focus:border-[var(--brand)] focus:bg-white"
               />
               {sendError && (
                 <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-700">
@@ -326,7 +326,7 @@ export function TicketDetailClient({
                 type="button"
                 onClick={handleSendReply}
                 disabled={isSending || !replyText.trim()}
-                className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[#00E47C] px-3.5 py-3 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52] transition-opacity hover:opacity-90 disabled:opacity-50"
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-accent)] px-3.5 py-3 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[var(--brand)] transition-opacity hover:opacity-90 disabled:opacity-50"
               >
                 <svg
                   width="16"
@@ -349,7 +349,7 @@ export function TicketDetailClient({
               This enquiry has been {ticketStatus}. If you need further help,{' '}
               <Link
                 href="/contact"
-                className="font-semibold text-[#00B864] hover:underline"
+                className="font-semibold text-[var(--brand-accent-dark)] hover:underline"
               >
                 submit a new enquiry
               </Link>
@@ -369,13 +369,13 @@ export function TicketDetailClient({
               </div>
               <Link
                 href={`/booking/${linkedBooking.ref}`}
-                className="block rounded-lg border border-gray-100 p-3 transition-colors hover:border-[#293F52]/20 hover:bg-gray-50"
+                className="block rounded-lg border border-gray-100 p-3 transition-colors hover:border-[var(--brand)]/20 hover:bg-gray-50"
               >
                 <div className="font-[family-name:var(--font-heading)] text-xs font-semibold text-[#8FA5B8]">
                   {linkedBooking.ref}
                 </div>
                 {linkedBooking.address && (
-                  <div className="mt-1 text-[13px] text-[#293F52]">
+                  <div className="mt-1 text-[13px] text-[var(--brand)]">
                     {linkedBooking.address}
                   </div>
                 )}
@@ -392,14 +392,14 @@ export function TicketDetailClient({
                     {linkedBooking.services.map((svc) => (
                       <span
                         key={svc}
-                        className="rounded-full bg-[#E8EEF2] px-2 py-0.5 text-[10px] font-medium text-[#293F52]"
+                        className="rounded-full bg-[#E8EEF2] px-2 py-0.5 text-[10px] font-medium text-[var(--brand)]"
                       >
                         {svc}
                       </span>
                     ))}
                   </div>
                 )}
-                <div className="mt-2 text-[11px] font-semibold text-[#00B864]">
+                <div className="mt-2 text-[11px] font-semibold text-[var(--brand-accent-dark)]">
                   View booking &rarr;
                 </div>
               </Link>

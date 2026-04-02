@@ -31,7 +31,7 @@ export function FaqAccordion({ faqs }: FaqAccordionProps) {
               onClick={() => toggle(i)}
               className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
             >
-              <span className="text-sm font-semibold text-[#293F52] md:text-base">
+              <span className="text-sm font-semibold text-[var(--brand)] md:text-base">
                 {faq.question}
               </span>
               <svg

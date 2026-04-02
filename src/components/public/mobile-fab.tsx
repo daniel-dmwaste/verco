@@ -11,7 +11,7 @@ export function MobileFab() {
   return (
     <Link
       href="/book"
-      className="fixed bottom-24 right-6 z-50 flex size-14 items-center justify-center rounded-full bg-[#00E47C] text-2xl font-bold text-[#293F52] shadow-lg tablet:hidden"
+      className="fixed bottom-24 right-6 z-50 flex size-14 items-center justify-center rounded-full bg-[var(--brand-accent)] text-2xl font-bold text-[var(--brand)] shadow-lg tablet:hidden"
       aria-label="Book a Collection"
     >
       +

@@ -578,6 +578,7 @@ export type Database = {
       }
       client: {
         Row: {
+          accent_colour: string | null
           contact_email: string | null
           contact_name: string | null
           contact_phone: string | null
@@ -606,6 +607,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          accent_colour?: string | null
           contact_email?: string | null
           contact_name?: string | null
           contact_phone?: string | null
@@ -634,6 +636,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          accent_colour?: string | null
           contact_email?: string | null
           contact_name?: string | null
           contact_phone?: string | null

@@ -31,9 +31,9 @@ const FEATURES = [
   {
     title: 'Included in Your Rates',
     body: 'Your annual allocation is already included in council rates. Book your included services first — extra services are available if you need more.',
-    colorClass: 'bg-[#E8FDF0]',
+    colorClass: 'bg-[var(--brand-accent-light)]',
     icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00B864" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--brand-accent-dark)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
     ),
   },
   {
@@ -41,7 +41,7 @@ const FEATURES = [
     body: 'See all available collection dates for your area and pick the one that suits you. Dates are shown in real-time so you always know what\u2019s available.',
     colorClass: 'bg-[#E8EEF2]',
     icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#293F52" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
     ),
   },
   {
@@ -63,11 +63,11 @@ const STEPS = [
 ]
 
 const SERVICES = [
-  { name: 'General Waste', desc: 'Household bulk items \u2014 furniture, timber, general rubbish', tag: 'Bulk', tagClass: 'bg-[#E8FDF0] text-[#00B864]' },
-  { name: 'Green Waste', desc: 'Garden organics \u2014 prunings, lawn clippings, branches', tag: 'Bulk', tagClass: 'bg-[#E8FDF0] text-[#00B864]' },
-  { name: 'Mattress', desc: 'Bed mattresses of any size \u2014 single, double, queen, king', tag: 'Ancillary', tagClass: 'bg-[#E8EEF2] text-[#293F52]' },
-  { name: 'E-Waste', desc: 'Electronics \u2014 TVs, computers, monitors, appliances', tag: 'Ancillary', tagClass: 'bg-[#E8EEF2] text-[#293F52]' },
-  { name: 'Whitegoods', desc: 'Fridges, washing machines, dryers, dishwashers', tag: 'Ancillary', tagClass: 'bg-[#E8EEF2] text-[#293F52]' },
+  { name: 'General Waste', desc: 'Household bulk items \u2014 furniture, timber, general rubbish', tag: 'Bulk', tagClass: 'bg-[var(--brand-accent-light)] text-[var(--brand-accent-dark)]' },
+  { name: 'Green Waste', desc: 'Garden organics \u2014 prunings, lawn clippings, branches', tag: 'Bulk', tagClass: 'bg-[var(--brand-accent-light)] text-[var(--brand-accent-dark)]' },
+  { name: 'Mattress', desc: 'Bed mattresses of any size \u2014 single, double, queen, king', tag: 'Ancillary', tagClass: 'bg-[#E8EEF2] text-[var(--brand)]' },
+  { name: 'E-Waste', desc: 'Electronics \u2014 TVs, computers, monitors, appliances', tag: 'Ancillary', tagClass: 'bg-[#E8EEF2] text-[var(--brand)]' },
+  { name: 'Whitegoods', desc: 'Fridges, washing machines, dryers, dishwashers', tag: 'Ancillary', tagClass: 'bg-[#E8EEF2] text-[var(--brand)]' },
 ]
 
 export default async function LandingPage() {
@@ -77,22 +77,22 @@ export default async function LandingPage() {
   return (
     <div className="flex min-h-screen flex-col">
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#1A2D3B] via-[#293F52] to-[#3A5A73] px-8 py-20 lg:px-20 lg:py-24">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-hover)] via-[var(--brand)] to-[#3A5A73] px-8 py-20 lg:px-20 lg:py-24">
         {/* Decorative radials */}
         <div className="absolute -right-32 -top-32 size-[500px] rounded-full bg-[radial-gradient(circle,rgba(0,228,124,0.12)_0%,transparent_70%)]" />
         <div className="absolute -bottom-20 -left-20 size-[400px] rounded-full bg-[radial-gradient(circle,rgba(0,228,124,0.06)_0%,transparent_70%)]" />
 
         <div className="relative z-10 max-w-[640px]">
           {/* Tenant tag */}
-          <div className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-[#00E47C]/30 bg-[#00E47C]/15 px-3.5 py-1.5 text-xs md:text-sm font-semibold text-[#00E47C]">
-            <div className="size-1.5 rounded-full bg-[#00E47C]" />
+          <div className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-[var(--brand-accent)]/30 bg-[var(--brand-accent)]/15 px-3.5 py-1.5 text-xs md:text-sm font-semibold text-[var(--brand-accent)]">
+            <div className="size-1.5 rounded-full bg-[var(--brand-accent)]" />
             {branding.name} &middot; Bulk Verge Collection
           </div>
 
           <h1 className="mb-5 font-[family-name:var(--font-heading)] text-4xl md:text-5xl font-bold leading-[1.1] text-white lg:text-[52px]">
             Book Your
             <br />
-            <span className="text-[#00E47C]">Verge Collection</span>
+            <span className="text-[var(--brand-accent)]">Verge Collection</span>
             <br />
             in Minutes
           </h1>
@@ -113,10 +113,10 @@ export default async function LandingPage() {
 
       {/* Features */}
       <section className="bg-white px-8 py-[72px] lg:px-20">
-        <div className="mb-3 text-xs md:text-sm font-semibold uppercase tracking-[1px] text-[#00B864]">
+        <div className="mb-3 text-xs md:text-sm font-semibold uppercase tracking-[1px] text-[var(--brand-accent-dark)]">
           Why book online
         </div>
-        <h2 className="mb-3 font-[family-name:var(--font-heading)] text-3xl md:text-4xl font-bold text-[#293F52] lg:text-4xl">
+        <h2 className="mb-3 font-[family-name:var(--font-heading)] text-3xl md:text-4xl font-bold text-[var(--brand)] lg:text-4xl">
           Fast, Simple, Paperless
         </h2>
         <p className="mb-14 max-w-[520px] text-base md:text-lg text-gray-500">
@@ -131,7 +131,7 @@ export default async function LandingPage() {
               >
                 {feature.icon}
               </div>
-              <h3 className="font-[family-name:var(--font-heading)] text-base md:text-lg font-semibold text-[#293F52]">
+              <h3 className="font-[family-name:var(--font-heading)] text-base md:text-lg font-semibold text-[var(--brand)]">
                 {feature.title}
               </h3>
               <p className="text-sm md:text-base leading-relaxed text-gray-500">
@@ -144,7 +144,7 @@ export default async function LandingPage() {
 
       {/* How it works */}
       <section id="how-it-works" className="bg-gray-50 px-8 py-[72px] lg:px-20">
-        <h2 className="mb-12 font-[family-name:var(--font-heading)] text-3xl md:text-4xl font-bold text-[#293F52] lg:text-4xl">
+        <h2 className="mb-12 font-[family-name:var(--font-heading)] text-3xl md:text-4xl font-bold text-[var(--brand)] lg:text-4xl">
           How it works
         </h2>
         <div className="relative grid grid-cols-2 gap-y-10 md:grid-cols-5 md:gap-0">
@@ -155,10 +155,10 @@ export default async function LandingPage() {
               key={step.title}
               className="flex flex-col items-center gap-3.5 px-4"
             >
-              <div className="relative z-10 flex size-10 items-center justify-center rounded-full bg-[#00E47C] font-[family-name:var(--font-heading)] text-base md:text-lg font-bold text-[#293F52] shadow-[0_0_0_6px_#F5F5F5]">
+              <div className="relative z-10 flex size-10 items-center justify-center rounded-full bg-[var(--brand-accent)] font-[family-name:var(--font-heading)] text-base md:text-lg font-bold text-[var(--brand)] shadow-[0_0_0_6px_#F5F5F5]">
                 {i + 1}
               </div>
-              <h3 className="text-center text-[13px] md:text-[15px] font-semibold text-[#293F52]">
+              <h3 className="text-center text-[13px] md:text-[15px] font-semibold text-[var(--brand)]">
                 {step.title}
               </h3>
               <p className="text-center text-xs md:text-sm leading-relaxed text-gray-500">
@@ -171,7 +171,7 @@ export default async function LandingPage() {
 
       {/* What We Collect */}
       <section id="services" className="bg-white px-8 py-[72px] lg:px-20">
-        <h2 className="mb-3 font-[family-name:var(--font-heading)] text-3xl md:text-4xl font-bold text-[#293F52] lg:text-4xl">
+        <h2 className="mb-3 font-[family-name:var(--font-heading)] text-3xl md:text-4xl font-bold text-[var(--brand)] lg:text-4xl">
           What We Collect
         </h2>
         <p className="mb-12 text-base md:text-lg text-gray-500">
@@ -184,7 +184,7 @@ export default async function LandingPage() {
               key={svc.name}
               className="flex flex-col gap-2 rounded-xl border-[1.5px] border-gray-100 bg-gray-50 px-5 py-5"
             >
-              <h3 className="font-[family-name:var(--font-heading)] text-[15px] md:text-[17px] font-semibold text-[#293F52]">
+              <h3 className="font-[family-name:var(--font-heading)] text-[15px] md:text-[17px] font-semibold text-[var(--brand)]">
                 {svc.name}
               </h3>
               <p className="text-[13px] md:text-[15px] text-gray-500">{svc.desc}</p>
@@ -202,7 +202,7 @@ export default async function LandingPage() {
               height="24"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="#293F52"
+              stroke="var(--brand)"
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -213,7 +213,7 @@ export default async function LandingPage() {
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
             <div>
-              <h3 className="font-[family-name:var(--font-heading)] text-[15px] md:text-[17px] font-semibold text-[#293F52]">
+              <h3 className="font-[family-name:var(--font-heading)] text-[15px] md:text-[17px] font-semibold text-[var(--brand)]">
                 Not sure what&apos;s eligible?
               </h3>
               <p className="text-xs md:text-sm text-gray-500">
@@ -225,7 +225,7 @@ export default async function LandingPage() {
       </section>
 
       {/* CTA band */}
-      <section className="relative overflow-hidden bg-[#293F52] px-8 py-[72px] lg:px-20">
+      <section className="relative overflow-hidden bg-[var(--brand)] px-8 py-[72px] lg:px-20">
         <div className="absolute -right-24 -top-24 size-[400px] rounded-full bg-[radial-gradient(circle,rgba(0,228,124,0.10)_0%,transparent_70%)]" />
         <div className="relative z-10 flex flex-col items-start justify-between gap-8 lg:flex-row lg:items-center">
           <div>
@@ -241,7 +241,7 @@ export default async function LandingPage() {
           </div>
           <Link
             href="/book"
-            className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[#00E47C] px-9 py-4 font-[family-name:var(--font-heading)] text-base md:text-lg font-bold text-[#293F52]"
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[var(--brand-accent)] px-9 py-4 font-[family-name:var(--font-heading)] text-base md:text-lg font-bold text-[var(--brand)]"
           >
             Book a Collection
             <svg
@@ -262,9 +262,9 @@ export default async function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="flex flex-col items-center justify-between gap-4 bg-[#1A2D3B] px-8 py-8 sm:flex-row lg:px-20">
+      <footer className="flex flex-col items-center justify-between gap-4 bg-[var(--brand-hover)] px-8 py-8 sm:flex-row lg:px-20">
         <div className="flex items-center gap-3">
-          <div className="flex size-6 items-center justify-center rounded-md bg-[#00E47C] font-[family-name:var(--font-heading)] text-[13px] md:text-[15px] font-bold text-[#293F52]">
+          <div className="flex size-6 items-center justify-center rounded-md bg-[var(--brand-accent)] font-[family-name:var(--font-heading)] text-[13px] md:text-[15px] font-bold text-[var(--brand)]">
             V
           </div>
           <span className="text-[13px] md:text-[15px] text-[#8FA5B8]">

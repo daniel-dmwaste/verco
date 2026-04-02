@@ -7,10 +7,10 @@ export default function AuthPage() {
         {/* Brand block */}
         <div className="flex flex-col items-center gap-2.5 pb-10 pt-8">
           <div className="flex items-center gap-2.5">
-            <div className="flex size-10 items-center justify-center rounded-[10px] bg-[#00E47C] font-[family-name:var(--font-heading)] text-[22px] font-bold text-[#293F52]">
+            <div className="flex size-10 items-center justify-center rounded-[10px] bg-[var(--brand-accent)] font-[family-name:var(--font-heading)] text-[22px] font-bold text-[var(--brand)]">
               V
             </div>
-            <span className="font-[family-name:var(--font-heading)] text-[22px] font-bold text-[#293F52]">
+            <span className="font-[family-name:var(--font-heading)] text-[22px] font-bold text-[var(--brand)]">
               Verge Collection
             </span>
           </div>

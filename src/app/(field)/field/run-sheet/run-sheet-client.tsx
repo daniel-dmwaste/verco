@@ -62,8 +62,8 @@ function getMapsUrl(b: Booking): string | null {
 
 function getBorderClass(status: BookingStatus): string {
   switch (status) {
-    case 'Scheduled': return 'border-l-[#293F52]'
-    case 'Completed': return 'border-l-[#00B864] opacity-70'
+    case 'Scheduled': return 'border-l-[var(--brand)]'
+    case 'Completed': return 'border-l-[var(--brand-accent-dark)] opacity-70'
     case 'Non-conformance': return 'border-l-[#E53E3E] opacity-70'
     case 'Nothing Presented': return 'border-l-[#FF8C42] opacity-70'
     default: return 'border-l-transparent'
@@ -91,13 +91,13 @@ export function RunSheetClient({ bookings }: RunSheetClientProps) {
       {/* Summary strip */}
       <div className="grid grid-cols-3 gap-2">
         <div className="rounded-[10px] bg-white p-2.5 text-center shadow-sm">
-          <div className="font-[family-name:var(--font-heading)] text-[22px] font-bold text-[#293F52]">
+          <div className="font-[family-name:var(--font-heading)] text-[22px] font-bold text-[var(--brand)]">
             {total}
           </div>
           <div className="text-[10px] text-gray-500">Total</div>
         </div>
         <div className="rounded-[10px] bg-white p-2.5 text-center shadow-sm">
-          <div className="font-[family-name:var(--font-heading)] text-[22px] font-bold text-[#00B864]">
+          <div className="font-[family-name:var(--font-heading)] text-[22px] font-bold text-[var(--brand-accent-dark)]">
             {completedCount}
           </div>
           <div className="text-[10px] text-gray-500">Completed</div>
@@ -113,7 +113,7 @@ export function RunSheetClient({ bookings }: RunSheetClientProps) {
       {/* Progress bar */}
       <div className="h-1.5 overflow-hidden rounded-full bg-gray-100">
         <div
-          className="h-full rounded-full bg-[#00B864] transition-all"
+          className="h-full rounded-full bg-[var(--brand-accent-dark)] transition-all"
           style={{ width: `${progressPct}%` }}
         />
       </div>
@@ -122,7 +122,7 @@ export function RunSheetClient({ bookings }: RunSheetClientProps) {
       {remaining.length > 0 && (
         <>
           <div className="flex items-center justify-between px-0 py-1">
-            <span className="font-[family-name:var(--font-heading)] text-[13px] font-semibold text-[#293F52]">
+            <span className="font-[family-name:var(--font-heading)] text-[13px] font-semibold text-[var(--brand)]">
               Remaining
             </span>
             <span className="text-[11px] text-gray-500">
@@ -146,7 +146,7 @@ export function RunSheetClient({ bookings }: RunSheetClientProps) {
                       {booking.ref}
                       {isMud && ' · MUD'}
                     </div>
-                    <div className="text-sm font-semibold leading-snug text-[#293F52]">
+                    <div className="text-sm font-semibold leading-snug text-[var(--brand)]">
                       {street}
                     </div>
                     {suburb && (
@@ -170,7 +170,7 @@ export function RunSheetClient({ bookings }: RunSheetClientProps) {
                       className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
                         item.is_extra
                           ? 'bg-[#FFF3EA] text-[#8B4000]'
-                          : 'bg-[#E8EEF2] text-[#293F52]'
+                          : 'bg-[#E8EEF2] text-[var(--brand)]'
                       }`}
                     >
                       {(item.service as { name: string }).name} &times;{' '}
@@ -200,7 +200,7 @@ export function RunSheetClient({ bookings }: RunSheetClientProps) {
                         href={mapsUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-[11px] font-medium text-[#00B864]"
+                        className="flex items-center gap-1 text-[11px] font-medium text-[var(--brand-accent-dark)]"
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
@@ -214,7 +214,7 @@ export function RunSheetClient({ bookings }: RunSheetClientProps) {
                   {isMud ? (
                     <Link
                       href={`/field/booking/${booking.ref}?mud=true`}
-                      className="rounded-lg bg-[#293F52] px-3 py-1.5 text-xs font-semibold text-white"
+                      className="rounded-lg bg-[var(--brand)] px-3 py-1.5 text-xs font-semibold text-white"
                     >
                       Enter Count
                     </Link>
@@ -235,7 +235,7 @@ export function RunSheetClient({ bookings }: RunSheetClientProps) {
                       <button
                         type="button"
                         onClick={() => handleQuickComplete(booking.id)}
-                        className="rounded-lg bg-[#293F52] px-3 py-1.5 text-xs font-semibold text-white"
+                        className="rounded-lg bg-[var(--brand)] px-3 py-1.5 text-xs font-semibold text-white"
                       >
                         Done &#10003;
                       </button>
@@ -252,7 +252,7 @@ export function RunSheetClient({ bookings }: RunSheetClientProps) {
       {completed.length > 0 && (
         <>
           <div className="mt-1 flex items-center justify-between px-0 py-1">
-            <span className="font-[family-name:var(--font-heading)] text-[13px] font-semibold text-[#293F52]">
+            <span className="font-[family-name:var(--font-heading)] text-[13px] font-semibold text-[var(--brand)]">
               Completed
             </span>
             <span className="text-[11px] text-gray-500">
@@ -272,7 +272,7 @@ export function RunSheetClient({ bookings }: RunSheetClientProps) {
                     <div className="font-[family-name:var(--font-heading)] text-xs font-semibold text-[#8FA5B8]">
                       {booking.ref}
                     </div>
-                    <div className="text-sm font-semibold leading-snug text-[#293F52]">
+                    <div className="text-sm font-semibold leading-snug text-[var(--brand)]">
                       {street}
                     </div>
                     {suburb && (
@@ -285,7 +285,7 @@ export function RunSheetClient({ bookings }: RunSheetClientProps) {
                   {booking.booking_item.map((item) => (
                     <span
                       key={item.id}
-                      className="inline-flex rounded-full bg-[#E8EEF2] px-2.5 py-0.5 text-[11px] font-medium text-[#293F52]"
+                      className="inline-flex rounded-full bg-[#E8EEF2] px-2.5 py-0.5 text-[11px] font-medium text-[var(--brand)]"
                     >
                       {(item.service as { name: string }).name} &times;{' '}
                       {item.no_services}
@@ -300,7 +300,7 @@ export function RunSheetClient({ bookings }: RunSheetClientProps) {
 
       {total === 0 && (
         <div className="flex flex-col items-center gap-2 rounded-xl bg-white p-8 text-center shadow-sm">
-          <span className="text-sm font-semibold text-[#293F52]">
+          <span className="text-sm font-semibold text-[var(--brand)]">
             No scheduled collections today
           </span>
           <span className="text-xs text-gray-500">

@@ -299,10 +299,10 @@ export function ServicesForm() {
     const remaining = getLiveRemaining(categoryCode)
     const badgeClass =
       remaining > 0
-        ? 'bg-[#E8FDF0] text-[#006A38]'
+        ? 'bg-[var(--brand-accent-light)] text-[#006A38]'
         : 'bg-[#FFF0F0] text-[#E53E3E]'
     const accentBg =
-      categoryCode === 'bulk' ? 'bg-[#00B864]' : 'bg-[#293F52]'
+      categoryCode === 'bulk' ? 'bg-[var(--brand-accent-dark)]' : 'bg-[var(--brand)]'
 
     // Extra cost rows for this section
     const extraRows = pricingItems.filter(
@@ -314,7 +314,7 @@ export function ServicesForm() {
     return (
       <div>
         <div className="mb-2.5 flex items-center justify-between">
-          <span className="font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52]">
+          <span className="font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[var(--brand)]">
             {title}
           </span>
           <span
@@ -352,13 +352,13 @@ export function ServicesForm() {
                   >
                     &minus;
                   </button>
-                  <span className="min-w-[16px] text-center text-[15px] font-semibold text-[#293F52]">
+                  <span className="min-w-[16px] text-center text-[15px] font-semibold text-[var(--brand)]">
                     {qty}
                   </span>
                   <button
                     type="button"
                     onClick={() => updateQty(rule.service_id, 1)}
-                    className="flex size-7 items-center justify-center rounded-full bg-[#293F52] text-lg font-semibold text-white"
+                    className="flex size-7 items-center justify-center rounded-full bg-[var(--brand)] text-lg font-semibold text-white"
                   >
                     +
                   </button>
@@ -371,14 +371,14 @@ export function ServicesForm() {
           {extraRows.map((item) => (
             <div
               key={`extra-${item.service_id}`}
-              className="flex items-center justify-between rounded-lg border border-[#00B864] bg-[#F0FBF5] px-3.5 py-2.5 text-[13px]"
+              className="flex items-center justify-between rounded-lg border border-[var(--brand-accent-dark)] bg-[#F0FBF5] px-3.5 py-2.5 text-[13px]"
             >
               <div className="flex items-center gap-2 text-gray-700">
-                <span className="font-semibold text-[#00B864]">$</span>
+                <span className="font-semibold text-[var(--brand-accent-dark)]">$</span>
                 {item.paid_units} extra {item.service_name.toLowerCase()} @
                 ${(item.unit_price_cents / 100).toFixed(2)} each
               </div>
-              <span className="font-semibold text-[#293F52]">
+              <span className="font-semibold text-[var(--brand)]">
                 ${(item.line_charge_cents / 100).toFixed(2)}
               </span>
             </div>
@@ -395,7 +395,7 @@ export function ServicesForm() {
       {/* Content */}
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto pb-24 pt-6">
         <div>
-          <h1 className="font-[family-name:var(--font-heading)] text-[22px] font-bold leading-tight text-[#293F52]">
+          <h1 className="font-[family-name:var(--font-heading)] text-[22px] font-bold leading-tight text-[var(--brand)]">
             Select Services
           </h1>
           <p className="mt-1 text-[13px] leading-relaxed text-gray-500">
@@ -412,10 +412,10 @@ export function ServicesForm() {
         {/* Total bar */}
         {totalChargeCents > 0 && (
           <div className="flex items-center justify-between rounded-[10px] bg-[#E8EEF2] px-4 py-3.5">
-            <span className="text-sm font-semibold text-[#293F52]">
+            <span className="text-sm font-semibold text-[var(--brand)]">
               Total Extra Services Cost
             </span>
-            <span className="font-[family-name:var(--font-heading)] text-lg font-bold text-[#293F52]">
+            <span className="font-[family-name:var(--font-heading)] text-lg font-bold text-[var(--brand)]">
               ${(totalChargeCents / 100).toFixed(2)}
             </span>
           </div>
@@ -427,7 +427,7 @@ export function ServicesForm() {
         <button
           type="button"
           onClick={handleBack}
-          className="flex h-[52px] flex-1 items-center justify-center rounded-xl border-[1.5px] border-gray-100 bg-white font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52] transition-opacity hover:opacity-90"
+          className="flex h-[52px] flex-1 items-center justify-center rounded-xl border-[1.5px] border-gray-100 bg-white font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[var(--brand)] transition-opacity hover:opacity-90"
         >
           &larr; Back
         </button>
@@ -436,7 +436,7 @@ export function ServicesForm() {
           type="button"
           onClick={handleContinue}
           disabled={totalItems === 0}
-          className="flex h-[52px] flex-1 items-center justify-center rounded-xl bg-[#293F52] font-[family-name:var(--font-heading)] text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="flex h-[52px] flex-1 items-center justify-center rounded-xl bg-[var(--brand)] font-[family-name:var(--font-heading)] text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           Next Step &rarr;
         </button>

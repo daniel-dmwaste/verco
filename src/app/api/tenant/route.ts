@@ -9,6 +9,7 @@ interface TenantResponse {
   name: string
   slug: string
   primary_colour: string | null
+  accent_colour: string | null
   logo_light_url: string | null
   logo_dark_url: string | null
   service_name: string | null
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<TenantResp
 
   const { data, error } = await supabase
     .from('client')
-    .select('id, name, slug, primary_colour, logo_light_url, logo_dark_url, service_name, show_powered_by')
+    .select('id, name, slug, primary_colour, accent_colour, logo_light_url, logo_dark_url, service_name, show_powered_by')
     .eq('id', clientId)
     .single()
 
@@ -39,6 +40,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<TenantResp
     name: data.name,
     slug: data.slug,
     primary_colour: data.primary_colour,
+    accent_colour: data.accent_colour,
     logo_light_url: data.logo_light_url,
     logo_dark_url: data.logo_dark_url,
     service_name: data.service_name,

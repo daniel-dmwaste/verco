@@ -153,15 +153,15 @@ export function OtpVerifyForm() {
       'flex size-[52px] h-[60px] items-center justify-center rounded-[10px] border-[1.5px] text-center font-[family-name:var(--font-heading)] text-2xl font-bold outline-none transition-colors'
 
     if (state === 'success') {
-      return `${base} border-[#00B864] bg-[#E8FDF0] text-[#00B864]`
+      return `${base} border-[var(--brand-accent-dark)] bg-[var(--brand-accent-light)] text-[var(--brand-accent-dark)]`
     }
     if (state === 'error') {
       return `${base} border-red-500 bg-red-50 text-red-500`
     }
     if (digits[index]) {
-      return `${base} border-[#293F52] bg-white text-[#293F52]`
+      return `${base} border-[var(--brand)] bg-white text-[var(--brand)]`
     }
-    return `${base} border-gray-100 bg-gray-50 text-[#293F52] focus:border-[#293F52] focus:border-2 focus:bg-white`
+    return `${base} border-gray-100 bg-gray-50 text-[var(--brand)] focus:border-[var(--brand)] focus:border-2 focus:bg-white`
   }
 
   const minutesLeft = Math.floor(resendCooldown / 60)
@@ -197,13 +197,13 @@ export function OtpVerifyForm() {
       {/* Title */}
       {state === 'success' ? (
         <div className="text-center">
-          <div className="mx-auto mb-3 flex size-14 items-center justify-center rounded-full bg-[#E8FDF0]">
+          <div className="mx-auto mb-3 flex size-14 items-center justify-center rounded-full bg-[var(--brand-accent-light)]">
             <svg
               width="28"
               height="28"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="#00B864"
+              stroke="var(--brand-accent-dark)"
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -211,7 +211,7 @@ export function OtpVerifyForm() {
               <polyline points="20 6 9 17 4 12" />
             </svg>
           </div>
-          <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
+          <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[var(--brand)]">
             You&apos;re signed in
           </h1>
           <p className="mt-1.5 text-[13px] text-gray-500">
@@ -220,13 +220,13 @@ export function OtpVerifyForm() {
         </div>
       ) : (
         <div>
-          <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
+          <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[var(--brand)]">
             Check your email
           </h1>
           <p className="mt-1.5 text-[13px] leading-relaxed text-gray-500">
             We sent a 6-digit code to
             <br />
-            <strong className="text-[#293F52]">{email}</strong>
+            <strong className="text-[var(--brand)]">{email}</strong>
           </p>
         </div>
       )}
@@ -274,7 +274,7 @@ export function OtpVerifyForm() {
 
         {state === 'success' && (
           <div className="overflow-hidden rounded-sm bg-gray-100">
-            <div className="h-1 w-[70%] animate-pulse rounded-sm bg-[#00B864]" />
+            <div className="h-1 w-[70%] animate-pulse rounded-sm bg-[var(--brand-accent-dark)]" />
           </div>
         )}
 
@@ -290,7 +290,7 @@ export function OtpVerifyForm() {
         <button
           type="submit"
           disabled={state === 'verifying' || digits.join('').length < OTP_LENGTH}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#293F52] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-white transition-opacity hover:opacity-90 active:opacity-85 disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand)] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-white transition-opacity hover:opacity-90 active:opacity-85 disabled:opacity-50"
         >
           {state === 'verifying' ? (
             'Verifying...'
@@ -322,7 +322,7 @@ export function OtpVerifyForm() {
           {resendCooldown > 0 ? (
             <>
               Code expires in{' '}
-              <strong className="text-[#293F52]">{countdownText}</strong>
+              <strong className="text-[var(--brand)]">{countdownText}</strong>
               {' · '}
               <span className="text-gray-300">Resend code</span>
             </>
@@ -331,7 +331,7 @@ export function OtpVerifyForm() {
               type="button"
               onClick={handleResend}
               disabled={isResending}
-              className="font-semibold text-[#00B864] hover:underline disabled:text-gray-300"
+              className="font-semibold text-[var(--brand-accent-dark)] hover:underline disabled:text-gray-300"
             >
               {isResending ? 'Sending...' : 'Request a new code'}
             </button>
