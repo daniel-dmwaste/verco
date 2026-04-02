@@ -14,6 +14,7 @@ type BookingStatus = Database['public']['Enums']['booking_status']
 interface BookingItem {
   id: string
   service_id: string
+  collection_date_id: string
   no_services: number
   is_extra: boolean
   unit_price_cents: number
@@ -82,6 +83,7 @@ export function BookingDetailPanel({
   const canEdit = ['Pending Payment', 'Submitted', 'Confirmed'].includes(booking.status)
     && booking.property_id && booking.collection_area_id
 
+  const collectionDateIdFromItems = booking.booking_item[0]?.collection_date_id ?? ''
   const editUrl = canEdit
     ? `/book/services?${new URLSearchParams({
         property_id: booking.property_id!,
@@ -92,6 +94,10 @@ export function BookingDetailPanel({
           .filter((i) => i.no_services > 0)
           .map((i) => `${i.service_id}:${i.no_services}`)
           .join(','),
+        total_cents: totalChargeCents.toString(),
+        ...(collectionDateIdFromItems ? { collection_date_id: collectionDateIdFromItems } : {}),
+        ...(booking.location ? { location: booking.location } : {}),
+        ...(booking.notes ? { notes: booking.notes } : {}),
       }).toString()}`
     : '#'
 

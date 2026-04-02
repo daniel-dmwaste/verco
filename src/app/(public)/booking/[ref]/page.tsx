@@ -44,6 +44,7 @@ export default async function BookingDetailPage({
       booking_item(
         id,
         service_id,
+        collection_date_id,
         no_services,
         is_extra,
         unit_price_cents,

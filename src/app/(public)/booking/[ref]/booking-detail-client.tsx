@@ -23,6 +23,7 @@ type TicketCategory = Database['public']['Enums']['ticket_category']
 interface BookingItem {
   id: string
   service_id: string
+  collection_date_id: string
   no_services: number
   is_extra: boolean
   unit_price_cents: number
@@ -728,6 +729,10 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np, pay
                         .filter((i) => i.no_services > 0)
                         .map((i) => `${i.service_id}:${i.no_services}`)
                         .join(','),
+                      total_cents: extraItems.reduce((s, i) => s + i.unit_price_cents * i.no_services, 0).toString(),
+                      ...(booking.booking_item[0]?.collection_date_id ? { collection_date_id: booking.booking_item[0].collection_date_id } : {}),
+                      ...(booking.location ? { location: booking.location } : {}),
+                      ...(booking.notes ? { notes: booking.notes } : {}),
                     }).toString()}`
                   : `/book?address=${encodeURIComponent(booking.property?.formatted_address ?? booking.property?.address ?? '')}`
                 }
