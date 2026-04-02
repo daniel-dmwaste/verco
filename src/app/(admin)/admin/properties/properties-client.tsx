@@ -241,15 +241,15 @@ export function PropertiesClient() {
   }
 
   return (
-    <div className="p-6">
+    <>
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="flex items-center justify-between border-b border-gray-100 bg-white px-7 pb-5 pt-6">
         <div>
           <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
             Eligible Properties
           </h1>
-          <p className="mt-0.5 text-sm text-gray-500">
-            Manage property addresses and geocoding
+          <p className="mt-0.5 text-body-sm text-gray-500">
+            {total} propert{total !== 1 ? 'ies' : 'y'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -272,14 +272,14 @@ export function PropertiesClient() {
       </div>
 
       {geocodeResult && (
-        <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700">
+        <div className="mx-7 mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700">
           {geocodeResult}
         </div>
       )}
 
       {/* CSV Import */}
       {showImport && (
-        <div className="mb-4 rounded-xl border border-gray-200 bg-white p-5">
+        <div className="mx-7 mt-4 rounded-xl border border-gray-200 bg-white p-5">
           <h3 className="mb-3 text-sm font-semibold text-[#293F52]">Import Properties from CSV</h3>
           <p className="mb-3 text-xs text-gray-500">
             CSV must have columns: <code className="rounded bg-gray-100 px-1">address</code>, <code className="rounded bg-gray-100 px-1">collection_area_code</code>, <code className="rounded bg-gray-100 px-1">is_mud</code> (optional, true/false)
@@ -342,7 +342,7 @@ export function PropertiesClient() {
       )}
 
       {/* Filters */}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="mb-4 flex flex-wrap items-center gap-3 px-7 pt-6">
         <div className="flex-1">
           <input
             type="text"
@@ -377,7 +377,7 @@ export function PropertiesClient() {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+      <div className="mx-7 overflow-x-auto rounded-xl border border-gray-200 bg-white">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -444,7 +444,7 @@ export function PropertiesClient() {
 
       {/* Pagination */}
       {total > 0 && (
-        <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
+        <div className="mx-7 mt-4 flex items-center justify-between text-sm text-gray-500">
           <span>
             Showing {page * PAGE_SIZE + 1}&ndash;{Math.min((page + 1) * PAGE_SIZE, total)} of {total}
           </span>
@@ -458,6 +458,6 @@ export function PropertiesClient() {
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }

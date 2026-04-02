@@ -137,19 +137,21 @@ export function ServiceTicketsClient() {
   }
 
   return (
-    <div className="p-6">
+    <>
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
-          Service Tickets
-        </h1>
-        <p className="mt-0.5 text-sm text-gray-500">
-          Manage customer enquiries and support requests
-        </p>
+      <div className="flex items-center justify-between border-b border-gray-100 bg-white px-7 pb-5 pt-6">
+        <div>
+          <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
+            Service Tickets
+          </h1>
+          <p className="mt-0.5 text-body-sm text-gray-500">
+            {total} ticket{total !== 1 ? 's' : ''}
+          </p>
+        </div>
       </div>
 
       {/* Filters */}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="mb-4 flex flex-wrap items-center gap-3 px-7 pt-6">
         <input
           type="text"
           value={search}
@@ -170,7 +172,7 @@ export function ServiceTicketsClient() {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+      <div className="mx-7 overflow-x-auto rounded-xl border border-gray-200 bg-white">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -262,7 +264,7 @@ export function ServiceTicketsClient() {
 
       {/* Pagination */}
       {total > 0 && (
-        <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
+        <div className="mx-7 mt-4 flex items-center justify-between text-sm text-gray-500">
           <span>Showing {page * PAGE_SIZE + 1}&ndash;{Math.min((page + 1) * PAGE_SIZE, total)} of {total}</span>
           <div className="flex gap-2">
             <button type="button" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0} className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium disabled:opacity-30">Previous</button>
@@ -270,6 +272,6 @@ export function ServiceTicketsClient() {
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }

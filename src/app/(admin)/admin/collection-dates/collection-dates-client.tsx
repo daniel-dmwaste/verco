@@ -213,15 +213,15 @@ export function CollectionDatesClient() {
   const bulkPreviewDates = showBulkPreview ? generateBulkDates() : []
 
   return (
-    <div className="p-6">
+    <>
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="flex items-center justify-between border-b border-gray-100 bg-white px-7 pb-5 pt-6">
         <div>
           <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
             Collection Dates
           </h1>
-          <p className="mt-0.5 text-sm text-gray-500">
-            Manage collection date capacity and availability
+          <p className="mt-0.5 text-body-sm text-gray-500">
+            {total} date{total !== 1 ? 's' : ''}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -255,7 +255,7 @@ export function CollectionDatesClient() {
 
       {/* Create form */}
       {showCreate && (
-        <div className="mb-4 rounded-xl border border-gray-200 bg-white p-5">
+        <div className="mx-7 mt-4 rounded-xl border border-gray-200 bg-white p-5">
           <h3 className="mb-3 text-sm font-semibold text-[#293F52]">Create Collection Date</h3>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <div>
@@ -306,7 +306,7 @@ export function CollectionDatesClient() {
 
       {/* Bulk create form */}
       {showBulkCreate && (
-        <div className="mb-4 rounded-xl border border-gray-200 bg-white p-5">
+        <div className="mx-7 mt-4 rounded-xl border border-gray-200 bg-white p-5">
           <h3 className="mb-3 text-sm font-semibold text-[#293F52]">Bulk Create Collection Dates</h3>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <div>
@@ -377,7 +377,7 @@ export function CollectionDatesClient() {
       )}
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+      <div className="mx-7 mt-6 overflow-x-auto rounded-xl border border-gray-200 bg-white">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -493,7 +493,7 @@ export function CollectionDatesClient() {
 
       {/* Pagination */}
       {total > 0 && (
-        <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
+        <div className="mx-7 mt-4 flex items-center justify-between text-sm text-gray-500">
           <span>
             Showing {page * PAGE_SIZE + 1}&ndash;{Math.min((page + 1) * PAGE_SIZE, total)} of {total}
           </span>
@@ -507,6 +507,6 @@ export function CollectionDatesClient() {
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }
