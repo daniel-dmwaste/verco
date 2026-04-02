@@ -461,6 +461,21 @@ Table action menus (three-dot dropdowns) must open **upward** (`bottom-full`). T
 ### Turbopack root for special-character paths
 `next.config.ts` sets `turbopack: { root: process.cwd() }` to fix workspace root detection when the project path contains `&` (OneDrive).
 
+### Booking wizard state — URL params are the source of truth
+Every wizard step must carry ALL accumulated params through both forward and back navigation. When adding a new param, update `carryParams` in every step (services, date, details, confirm). Common params: `property_id`, `collection_area_id`, `address`, `items`, `total_cents`, `collection_date_id`, `location`, `notes`, `contact_name`, `contact_email`, `contact_mobile`, `on_behalf`, `return_url`.
+
+### Resident dashboard — always filter by contact_id
+The resident dashboard (`/dashboard`) must filter bookings by the user's `contact_id`, not rely on RLS alone. Staff roles (client-admin, contractor-admin) have RLS access to all client bookings — correct for admin pages, wrong for the personal dashboard. Use `profile.contact_id` with email fallback.
+
+### Refund flow — create refund_request first, then call Edge Function
+Never call `process-refund` directly with `booking_id`. Always: (1) create a `refund_request` record with status `Pending`, (2) pass `refund_request_id` to the Edge Function. Status casing: `Pending`, `Approved`, `Rejected` (capitalised, matching Edge Function).
+
+### Cancellation includes Pending Payment
+`Pending Payment → Cancelled` is a valid state transition. All three cancellable status lists must include it: admin action (`actions.ts`), admin panel (`booking-detail-panel.tsx`), resident action (`booking/[ref]/actions.ts`), resident detail (`booking-detail-client.tsx`).
+
+### Admin booking detail — hybrid inline edit
+Contact, collection details (date + location + notes) edit inline on the detail panel. Services edit links to the wizard (pricing/capacity implications). No full-wizard edit for simple field updates. Use Base UI Dialog for destructive confirmations (cancel booking), not `window.confirm()`.
+
 ---
 
 *Keep this file current. If a decision changes in the PRD or TECH_SPEC, update CLAUDE.md in the same PR.*
