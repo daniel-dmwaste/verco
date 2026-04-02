@@ -7,6 +7,7 @@ import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { BookingStepper } from '@/components/booking/booking-stepper'
 import { BookingCancelLink } from '@/components/booking/booking-cancel-link'
+import { VercoButton } from '@/components/ui/verco-button'
 import { decodeItems } from '@/lib/booking/search-params'
 import { cn } from '@/lib/utils'
 
@@ -226,22 +227,21 @@ export function DateForm() {
 
       {/* Bottom nav */}
       <div className="sticky bottom-0 flex gap-2.5 pb-5 pt-3">
-        <button
-          type="button"
+        <VercoButton
+          variant="secondary"
+          className="flex-1"
           onClick={handleBack}
-          className="flex h-[52px] flex-1 items-center justify-center rounded-xl border-[1.5px] border-gray-100 bg-white font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[var(--brand)] transition-opacity hover:opacity-90"
         >
           &larr; Back
-        </button>
+        </VercoButton>
         <BookingCancelLink />
-        <button
-          type="button"
+        <VercoButton
+          className="flex-1"
           onClick={handleContinue}
           disabled={!selectedDateId}
-          className="flex h-[52px] flex-1 items-center justify-center rounded-xl bg-[var(--brand)] font-[family-name:var(--font-heading)] text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           Next Step &rarr;
-        </button>
+        </VercoButton>
       </div>
     </div>
   )

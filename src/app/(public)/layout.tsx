@@ -59,8 +59,10 @@ export default async function PublicLayout({
     getClientBranding(),
     getIsStaff(),
   ])
-  const primaryColour = branding?.primary_colour ?? '#293F52'
-  const accentColour = branding?.accent_colour ?? '#00E47C'
+  const rawPrimary = branding?.primary_colour ?? '#293F52'
+  const rawAccent = branding?.accent_colour ?? '#00E47C'
+  const primaryColour = rawPrimary.startsWith('#') ? rawPrimary : `#${rawPrimary}`
+  const accentColour = rawAccent.startsWith('#') ? rawAccent : `#${rawAccent}`
 
   return (
     <div

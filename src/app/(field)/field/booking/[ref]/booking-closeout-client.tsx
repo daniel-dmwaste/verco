@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { VercoButton } from '@/components/ui/verco-button'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import { BookingStatusBadge } from '@/components/booking/booking-status-badge'
@@ -187,39 +188,44 @@ function CloseoutInner({ booking }: { booking: Booking }) {
               Close Out
             </div>
             <div className="flex flex-col gap-2">
-              <button
+              <VercoButton
+                variant="accent"
+                className="w-full"
                 type="button"
                 onClick={handleComplete}
                 disabled={isPending}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-accent)] px-3.5 py-3.5 text-sm font-semibold text-[var(--brand)] disabled:opacity-50"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 6 9 17 4 12"/>
                 </svg>
                 {isPending ? 'Completing...' : 'Mark as Completed'}
-              </button>
+              </VercoButton>
               <div className="flex gap-2">
-                <Link
+                <VercoButton
+                  variant="destructive"
+                  size="sm"
                   href={`/field/booking/${booking.ref}?action=ncn`}
-                  className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border-[1.5px] border-[#E53E3E] bg-[#FFF0F0] px-3 py-3.5 text-sm font-semibold text-[#E53E3E]"
+                  className="flex-1"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
                   </svg>
                   Raise NCN
-                </Link>
-                <button
+                </VercoButton>
+                <VercoButton
+                  variant="warning"
+                  size="sm"
                   type="button"
                   onClick={handleNp}
                   disabled={isPending}
-                  className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border-[1.5px] border-[#FF8C42] bg-[#FFF3EA] px-3 py-3.5 text-sm font-semibold text-[#8B4000] disabled:opacity-50"
+                  className="flex-1"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="10"/>
                     <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
                   </svg>
                   Nothing Presented
-                </button>
+                </VercoButton>
               </div>
             </div>
           </div>

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { sendOtp } from './actions'
+import { VercoButton } from '@/components/ui/verco-button'
 
 export function EmailEntryForm() {
   const router = useRouter()
@@ -83,10 +84,10 @@ export function EmailEntryForm() {
         )}
       </div>
 
-      <button
+      <VercoButton
         type="submit"
         disabled={isPending}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand)] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-white transition-opacity hover:opacity-90 active:opacity-85 disabled:opacity-50"
+        className="w-full"
       >
         {isPending ? 'Sending...' : 'Send Code'}
         {!isPending && (
@@ -104,7 +105,7 @@ export function EmailEntryForm() {
             <polyline points="12 5 19 12 12 19" />
           </svg>
         )}
-      </button>
+      </VercoButton>
 
       <div className="flex items-start gap-2 rounded-lg bg-gray-50 p-2.5 text-[11px] leading-snug text-gray-500">
         <svg

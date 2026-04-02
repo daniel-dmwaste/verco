@@ -9,6 +9,7 @@ interface PublicNavProps {
 
 export function PublicNav({
   serviceName,
+  logoUrl,
   showPoweredBy,
   showAdminLink,
 }: PublicNavProps) {
@@ -16,9 +17,13 @@ export function PublicNav({
     <nav className="sticky top-0 z-50 bg-[var(--brand)]">
       <div className="flex h-16 items-center justify-between px-8">
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-[var(--brand-accent)] font-[family-name:var(--font-heading)] text-lg md:text-xl font-bold text-[var(--brand)]">
-            V
-          </div>
+          {logoUrl ? (
+            <img src={logoUrl} alt={serviceName} className="h-8 w-auto" />
+          ) : (
+            <div className="flex size-8 items-center justify-center rounded-lg bg-[var(--brand-accent)] font-[family-name:var(--font-heading)] text-lg md:text-xl font-bold text-[var(--brand)]">
+              V
+            </div>
+          )}
           <span className="font-[family-name:var(--font-heading)] text-lg md:text-xl font-bold text-white">
             {serviceName}
           </span>

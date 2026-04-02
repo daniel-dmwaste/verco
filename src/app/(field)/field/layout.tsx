@@ -49,8 +49,8 @@ export default async function FieldLayout({
       .eq('id', clientId)
       .single()
 
-    if (client?.primary_colour) primaryColour = client.primary_colour
-    if (client?.accent_colour) accentColour = client.accent_colour
+    if (client?.primary_colour) primaryColour = client.primary_colour.startsWith('#') ? client.primary_colour : `#${client.primary_colour}`
+    if (client?.accent_colour) accentColour = client.accent_colour.startsWith('#') ? client.accent_colour : `#${client.accent_colour}`
   }
 
   return (

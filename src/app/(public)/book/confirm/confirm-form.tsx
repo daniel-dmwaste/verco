@@ -9,6 +9,7 @@ import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { BookingStepper } from '@/components/booking/booking-stepper'
 import { BookingCancelLink } from '@/components/booking/booking-cancel-link'
+import { VercoButton } from '@/components/ui/verco-button'
 import { decodeItems } from '@/lib/booking/search-params'
 import {
   ContactSchema,
@@ -806,17 +807,16 @@ export function ConfirmForm() {
             </div>
 
             {/* Verify button */}
-            <button
-              type="button"
+            <VercoButton
+              className="w-full"
               disabled={otpState === 'verifying' || otpDigits.join('').length < OTP_LENGTH}
               onClick={() => {
                 const code = otpDigits.join('')
                 if (code.length === OTP_LENGTH) void verifyOtp(code)
               }}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand)] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               {otpState === 'verifying' ? 'Verifying...' : otpState === 'error' ? 'Try Again' : 'Verify Code'}
-            </button>
+            </VercoButton>
 
             {/* Resend */}
             <div className="text-center text-[13px] text-gray-500">
@@ -847,30 +847,27 @@ export function ConfirmForm() {
       {/* Bottom nav */}
       {!otpStep && (
         <div className="sticky bottom-0 flex gap-2.5 pb-5 pt-3">
-          <button
-            type="button"
+          <VercoButton
+            variant="secondary"
+            className="flex-1"
             onClick={handleBack}
-            className="flex h-[52px] flex-1 items-center justify-center rounded-xl border-[1.5px] border-gray-100 bg-white font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[var(--brand)] transition-opacity hover:opacity-90"
           >
             &larr; Back
-          </button>
+          </VercoButton>
           <BookingCancelLink />
-          <button
+          <VercoButton
             type="submit"
             form="confirm-form"
+            variant={totalCents > 0 ? 'accent' : 'primary'}
+            className="flex-1"
             disabled={isSubmitting}
-            className={`flex h-[52px] flex-1 items-center justify-center rounded-xl font-[family-name:var(--font-heading)] text-[15px] font-semibold transition-opacity hover:opacity-90 disabled:opacity-50 ${
-              totalCents > 0
-                ? 'bg-[var(--brand-accent)] text-[var(--brand)]'
-                : 'bg-[var(--brand)] text-white'
-            }`}
           >
             {isSubmitting
               ? 'Sending code...'
               : totalCents > 0
                 ? 'Proceed to Payment'
                 : 'Confirm Booking'}
-          </button>
+          </VercoButton>
         </div>
       )}
     </div>

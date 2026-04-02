@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { updateMudAllocation } from './actions'
+import { VercoButton } from '@/components/ui/verco-button'
 
 interface MudAllocationFormProps {
   bookingRef: string
@@ -147,14 +148,15 @@ export function MudAllocationForm({
         )}
 
         {/* Submit */}
-        <button
+        <VercoButton
+          variant="accent"
+          className="w-full"
           type="button"
           onClick={handleSubmit}
           disabled={isSubmitting}
-          className="flex w-full items-center justify-center rounded-xl bg-[var(--brand-accent)] px-3.5 py-3.5 text-sm font-semibold text-[var(--brand)] disabled:opacity-50"
         >
           {isSubmitting ? 'Submitting...' : 'Confirm Allocation & Complete'}
-        </button>
+        </VercoButton>
       </div>
     </>
   )

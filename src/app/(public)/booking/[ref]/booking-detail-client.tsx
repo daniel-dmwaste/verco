@@ -12,6 +12,7 @@ import {
   setMinutes,
 } from 'date-fns'
 import { BookingStatusBadge } from '@/components/booking/booking-status-badge'
+import { VercoButton } from '@/components/ui/verco-button'
 import { createClient } from '@/lib/supabase/client'
 import { cancelBooking, disputeNcn, disputeNp } from './actions'
 import type { Database } from '@/lib/supabase/types'
@@ -795,16 +796,18 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np, pay
                 This action cannot be undone. Any payment will be refunded to the original payment method.
               </p>
               <div className="mt-5 flex gap-2.5">
-                <Dialog.Close className="flex-1 rounded-xl border-[1.5px] border-gray-100 bg-white px-3.5 py-3 font-[family-name:var(--font-heading)] text-[14px] font-semibold text-[var(--brand)]">
+                <Dialog.Close className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border-[1.5px] border-gray-100 bg-white px-3.5 py-2.5 font-[family-name:var(--font-heading)] text-sm font-semibold text-[var(--brand)] transition-opacity hover:opacity-90">
                   Keep Booking
                 </Dialog.Close>
-                <button
+                <VercoButton
+                  variant="destructive"
+                  size="sm"
                   type="button"
                   onClick={handleCancel}
-                  className="flex-1 rounded-xl bg-[#E53E3E] px-3.5 py-3 font-[family-name:var(--font-heading)] text-[14px] font-semibold text-white"
+                  className="flex-1"
                 >
                   Cancel Booking
-                </button>
+                </VercoButton>
               </div>
             </div>
           </Dialog.Popup>

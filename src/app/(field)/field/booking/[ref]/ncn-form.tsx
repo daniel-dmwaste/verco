@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { raiseNcn } from './actions'
 import { cn } from '@/lib/utils'
+import { VercoButton } from '@/components/ui/verco-button'
 import type { Database } from '@/lib/supabase/types'
 
 type NcnReason = Database['public']['Enums']['ncn_reason']
@@ -206,14 +207,15 @@ export function NcnForm({ bookingId, bookingRef, address }: NcnFormProps) {
         )}
 
         {/* Submit */}
-        <button
+        <VercoButton
+          variant="destructive"
+          className="w-full"
           type="button"
           onClick={handleSubmit}
           disabled={isSubmitting || !reason}
-          className="flex w-full items-center justify-center rounded-xl border-[1.5px] border-[#E53E3E] bg-[#FFF0F0] px-3.5 py-3.5 text-sm font-semibold text-[#E53E3E] disabled:opacity-50"
         >
           {isSubmitting ? 'Submitting...' : 'Submit Non-Conformance Notice'}
-        </button>
+        </VercoButton>
       </div>
     </>
   )

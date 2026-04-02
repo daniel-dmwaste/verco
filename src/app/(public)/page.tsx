@@ -7,6 +7,9 @@ interface ClientBranding {
   name: string
   service_name: string | null
   show_powered_by: boolean
+  landing_headline: string | null
+  landing_subheading: string | null
+  logo_light_url: string | null
 }
 
 async function getBranding(): Promise<ClientBranding> {
@@ -14,17 +17,17 @@ async function getBranding(): Promise<ClientBranding> {
   const clientId = headerStore.get('x-client-id')
 
   if (!clientId) {
-    return { name: 'Verge Collection', service_name: 'Verge Collection Bookings', show_powered_by: true }
+    return { name: 'Verge Collection', service_name: 'Verge Collection Bookings', show_powered_by: true, landing_headline: null, landing_subheading: null, logo_light_url: null }
   }
 
   const supabase = await createClient()
   const { data } = await supabase
     .from('client')
-    .select('name, service_name, show_powered_by')
+    .select('name, service_name, show_powered_by, landing_headline, landing_subheading, logo_light_url')
     .eq('id', clientId)
     .single()
 
-  return data ?? { name: 'Verge Collection', service_name: 'Verge Collection Bookings', show_powered_by: true }
+  return data ?? { name: 'Verge Collection', service_name: 'Verge Collection Bookings', show_powered_by: true, landing_headline: null, landing_subheading: null, logo_light_url: null }
 }
 
 const FEATURES = [
@@ -73,14 +76,16 @@ const SERVICES = [
 export default async function LandingPage() {
   const branding = await getBranding()
   const serviceName = branding.service_name ?? 'Verge Collection'
+  const headline = branding.landing_headline ?? `Book Your\nVerge Collection\nin Minutes`
+  const subheading = branding.landing_subheading ?? 'Simple online booking for bulk verge collection. Check your property eligibility, choose your services, and pick a date.'
 
   return (
     <div className="flex min-h-screen flex-col">
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-hover)] via-[var(--brand)] to-[#3A5A73] px-8 py-20 lg:px-20 lg:py-24">
-        {/* Decorative radials */}
-        <div className="absolute -right-32 -top-32 size-[500px] rounded-full bg-[radial-gradient(circle,rgba(0,228,124,0.12)_0%,transparent_70%)]" />
-        <div className="absolute -bottom-20 -left-20 size-[400px] rounded-full bg-[radial-gradient(circle,rgba(0,228,124,0.06)_0%,transparent_70%)]" />
+      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-hover)] via-[var(--brand)] to-[color-mix(in_srgb,var(--brand)_60%,white)] px-8 py-20 lg:px-20 lg:py-24">
+        {/* Decorative radials — use accent colour */}
+        <div className="absolute -right-32 -top-32 size-[500px] rounded-full" style={{ background: 'radial-gradient(circle, color-mix(in srgb, var(--brand-accent) 12%, transparent) 0%, transparent 70%)' }} />
+        <div className="absolute -bottom-20 -left-20 size-[400px] rounded-full" style={{ background: 'radial-gradient(circle, color-mix(in srgb, var(--brand-accent) 6%, transparent) 0%, transparent 70%)' }} />
 
         <div className="relative z-10 max-w-[640px]">
           {/* Tenant tag */}
@@ -90,16 +95,16 @@ export default async function LandingPage() {
           </div>
 
           <h1 className="mb-5 font-[family-name:var(--font-heading)] text-4xl md:text-5xl font-bold leading-[1.1] text-white lg:text-[52px]">
-            Book Your
-            <br />
-            <span className="text-[var(--brand-accent)]">Verge Collection</span>
-            <br />
-            in Minutes
+            {headline.split('\n').map((line, i) => (
+              <span key={i}>
+                {i > 0 && <br />}
+                {i === 1 ? <span className="text-[var(--brand-accent)]">{line}</span> : line}
+              </span>
+            ))}
           </h1>
 
           <p className="mb-10 max-w-[520px] text-base md:text-lg leading-relaxed text-[#C7D3DD] lg:text-lg">
-            Simple online booking for bulk verge collection. Check your property
-            eligibility, choose your services, and pick a date.
+            {subheading}
           </p>
 
           {/* Search box */}
@@ -226,7 +231,7 @@ export default async function LandingPage() {
 
       {/* CTA band */}
       <section className="relative overflow-hidden bg-[var(--brand)] px-8 py-[72px] lg:px-20">
-        <div className="absolute -right-24 -top-24 size-[400px] rounded-full bg-[radial-gradient(circle,rgba(0,228,124,0.10)_0%,transparent_70%)]" />
+        <div className="absolute -right-24 -top-24 size-[400px] rounded-full" style={{ background: 'radial-gradient(circle, color-mix(in srgb, var(--brand-accent) 10%, transparent) 0%, transparent 70%)' }} />
         <div className="relative z-10 flex flex-col items-start justify-between gap-8 lg:flex-row lg:items-center">
           <div>
             <h2 className="mb-3 font-[family-name:var(--font-heading)] text-3xl md:text-4xl font-bold leading-tight text-white lg:text-4xl">
@@ -264,9 +269,13 @@ export default async function LandingPage() {
       {/* Footer */}
       <footer className="flex flex-col items-center justify-between gap-4 bg-[var(--brand-hover)] px-8 py-8 sm:flex-row lg:px-20">
         <div className="flex items-center gap-3">
-          <div className="flex size-6 items-center justify-center rounded-md bg-[var(--brand-accent)] font-[family-name:var(--font-heading)] text-[13px] md:text-[15px] font-bold text-[var(--brand)]">
-            V
-          </div>
+          {branding.logo_light_url ? (
+            <img src={branding.logo_light_url} alt={branding.name} className="h-6 w-auto" />
+          ) : (
+            <div className="flex size-6 items-center justify-center rounded-md bg-[var(--brand-accent)] font-[family-name:var(--font-heading)] text-[13px] md:text-[15px] font-bold text-[var(--brand)]">
+              V
+            </div>
+          )}
           <span className="text-[13px] md:text-[15px] text-[#8FA5B8]">
             &copy; {new Date().getFullYear()} {branding.name} &middot;{' '}
             <a href="#" className="text-[#8FA5B8] underline">
