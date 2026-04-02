@@ -407,17 +407,16 @@ export function PropertiesClient() {
               <th className="px-4 py-3">Address</th>
               <th className="px-4 py-3">Area</th>
               <th className="px-4 py-3 text-center">Type</th>
-              <th className="px-4 py-3 text-center">Geocoded</th>
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <>{Array.from({ length: 5 }).map((_, i) => (
-                <SkeletonRow key={i} columns={5} />
+                <SkeletonRow key={i} columns={4} />
               ))}</>
             ) : properties.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">No properties found</td></tr>
+              <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400">No properties found</td></tr>
             ) : (
               properties.map((p, rowIndex) => {
                 const area = p.collection_area as { name: string; code: string }
@@ -431,9 +430,6 @@ export function PropertiesClient() {
                           <span className="rounded-full bg-[#FFF0F0] px-2 py-0.5 text-2xs font-semibold text-[#E53E3E]">Ineligible</span>
                         )}
                       </div>
-                      {p.formatted_address && p.formatted_address !== p.address && (
-                        <div className="text-[11px] text-gray-400">{p.address}</div>
-                      )}
                     </td>
                     <td className="px-4 py-2.5 text-gray-600">{area.code}</td>
                     <td className="px-4 py-2.5 text-center">
@@ -441,17 +437,6 @@ export function PropertiesClient() {
                         <span className="rounded-full bg-[#F3EEFF] px-2 py-0.5 text-2xs font-semibold text-[#805AD5]">MUD</span>
                       ) : (
                         <span className="text-[11px] text-gray-400">Residential</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5 text-center">
-                      {p.has_geocode ? (
-                        <span className="text-emerald-500" title="Geocoded">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                        </span>
-                      ) : (
-                        <span className="text-amber-400" title="Pending geocode">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                        </span>
                       )}
                     </td>
                     <td className="px-4 py-2.5 text-right">
