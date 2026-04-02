@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { SkeletonRow } from '@/components/ui/skeleton'
@@ -29,6 +29,15 @@ export function PropertiesClient() {
   const [overridePropertyId, setOverridePropertyId] = useState<string | null>(null)
   const [overridePropertyAddress, setOverridePropertyAddress] = useState('')
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+
+  // Close menu on click outside
+  const closeMenu = useCallback(() => setOpenMenuId(null), [])
+  useEffect(() => {
+    if (!openMenuId) return
+    const handler = () => closeMenu()
+    document.addEventListener('click', handler)
+    return () => document.removeEventListener('click', handler)
+  }, [openMenuId, closeMenu])
 
   // CSV import state
   const [csvRows, setCsvRows] = useState<ParsedRow[]>([])
@@ -447,7 +456,7 @@ export function PropertiesClient() {
                       <div className="relative inline-block">
                         <button
                           type="button"
-                          onClick={() => setOpenMenuId(openMenuId === p.id ? null : p.id)}
+                          onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === p.id ? null : p.id) }}
                           className="inline-flex items-center justify-center rounded-md border-[1.5px] border-gray-100 bg-white px-2 py-1 text-gray-500 hover:bg-gray-50"
                           aria-label="Property actions"
                         >
@@ -468,14 +477,14 @@ export function PropertiesClient() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => { handleToggleMud(p.id, p.is_mud); setOpenMenuId(null) }}
+                              onClick={() => { void handleToggleMud(p.id, p.is_mud); setOpenMenuId(null) }}
                               className="flex w-full items-center gap-2 px-3 py-2 text-left text-body-sm text-gray-700 hover:bg-gray-50"
                             >
                               {p.is_mud ? 'Set Residential' : 'Set MUD'}
                             </button>
                             <button
                               type="button"
-                              onClick={() => { handleToggleEligible(p.id, p.is_eligible); setOpenMenuId(null) }}
+                              onClick={() => { void handleToggleEligible(p.id, p.is_eligible); setOpenMenuId(null) }}
                               className={`flex w-full items-center gap-2 px-3 py-2 text-left text-body-sm hover:bg-gray-50 ${p.is_eligible ? 'text-[#E53E3E]' : 'text-emerald-600'}`}
                             >
                               {p.is_eligible ? 'Mark Ineligible' : 'Mark Eligible'}
