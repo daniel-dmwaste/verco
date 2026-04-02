@@ -965,6 +965,7 @@ export type Database = {
           google_place_id: string | null
           has_geocode: boolean
           id: string
+          is_eligible: boolean
           is_mud: boolean
           latitude: number | null
           longitude: number | null
@@ -978,6 +979,7 @@ export type Database = {
           google_place_id?: string | null
           has_geocode?: boolean
           id?: string
+          is_eligible?: boolean
           is_mud?: boolean
           latitude?: number | null
           longitude?: number | null
@@ -991,6 +993,7 @@ export type Database = {
           google_place_id?: string | null
           has_geocode?: boolean
           id?: string
+          is_eligible?: boolean
           is_mud?: boolean
           latitude?: number | null
           longitude?: number | null

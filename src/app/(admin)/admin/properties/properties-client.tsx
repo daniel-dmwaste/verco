@@ -28,6 +28,7 @@ export function PropertiesClient() {
   const [geocodeResult, setGeocodeResult] = useState<string | null>(null)
   const [overridePropertyId, setOverridePropertyId] = useState<string | null>(null)
   const [overridePropertyAddress, setOverridePropertyAddress] = useState('')
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
 
   // CSV import state
   const [csvRows, setCsvRows] = useState<ParsedRow[]>([])
@@ -67,7 +68,7 @@ export function PropertiesClient() {
       let query = supabase
         .from('eligible_properties')
         .select(
-          'id, address, formatted_address, collection_area_id, is_mud, has_geocode, latitude, longitude, collection_area!inner(name, code)',
+          'id, address, formatted_address, collection_area_id, is_mud, is_eligible, has_geocode, latitude, longitude, collection_area!inner(name, code)',
           { count: 'exact' }
         )
         .order('formatted_address', { ascending: true, nullsFirst: false })
@@ -109,6 +110,14 @@ export function PropertiesClient() {
     await supabase
       .from('eligible_properties')
       .update({ is_mud: !currentValue })
+      .eq('id', id)
+    void queryClient.invalidateQueries({ queryKey: ['admin-properties'] })
+  }
+
+  async function handleToggleEligible(id: string, currentValue: boolean) {
+    await supabase
+      .from('eligible_properties')
+      .update({ is_eligible: !currentValue })
       .eq('id', id)
     void queryClient.invalidateQueries({ queryKey: ['admin-properties'] })
   }
@@ -402,9 +411,14 @@ export function PropertiesClient() {
               properties.map((p) => {
                 const area = p.collection_area as { name: string; code: string }
                 return (
-                  <tr key={p.id} className="border-b border-gray-50">
+                  <tr key={p.id} className={`border-b border-gray-50 ${!p.is_eligible ? 'opacity-60' : ''}`}>
                     <td className="px-4 py-2.5">
-                      <div className="font-medium text-[#293F52]">{p.formatted_address ?? p.address}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-[#293F52]">{p.formatted_address ?? p.address}</span>
+                        {!p.is_eligible && (
+                          <span className="rounded-full bg-[#FFF0F0] px-2 py-0.5 text-2xs font-semibold text-[#E53E3E]">Ineligible</span>
+                        )}
+                      </div>
                       {p.formatted_address && p.formatted_address !== p.address && (
                         <div className="text-[11px] text-gray-400">{p.address}</div>
                       )}
@@ -429,23 +443,45 @@ export function PropertiesClient() {
                       )}
                     </td>
                     <td className="px-4 py-2.5 text-right">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setOverridePropertyId(p.id)
-                          setOverridePropertyAddress(p.formatted_address ?? p.address)
-                        }}
-                        className="mr-2 text-xs font-medium text-[#293F52] hover:underline"
-                      >
-                        Allocations
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleMud(p.id, p.is_mud)}
-                        className="mr-2 text-xs font-medium text-[#293F52] hover:underline"
-                      >
-                        {p.is_mud ? 'Set Residential' : 'Set MUD'}
-                      </button>
+                      <div className="relative inline-block">
+                        <button
+                          type="button"
+                          onClick={() => setOpenMenuId(openMenuId === p.id ? null : p.id)}
+                          className="inline-flex items-center justify-center rounded-md border-[1.5px] border-gray-100 bg-white px-2 py-1 text-gray-500 hover:bg-gray-50"
+                          aria-label="Property actions"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                        </button>
+                        {openMenuId === p.id && (
+                          <div className="absolute bottom-full right-0 z-10 mb-1 w-44 rounded-lg border border-gray-100 bg-white py-1 shadow-lg">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOverridePropertyId(p.id)
+                                setOverridePropertyAddress(p.formatted_address ?? p.address)
+                                setOpenMenuId(null)
+                              }}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-body-sm text-gray-700 hover:bg-gray-50"
+                            >
+                              Add Allocations
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { handleToggleMud(p.id, p.is_mud); setOpenMenuId(null) }}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-body-sm text-gray-700 hover:bg-gray-50"
+                            >
+                              {p.is_mud ? 'Set Residential' : 'Set MUD'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { handleToggleEligible(p.id, p.is_eligible); setOpenMenuId(null) }}
+                              className={`flex w-full items-center gap-2 px-3 py-2 text-left text-body-sm hover:bg-gray-50 ${p.is_eligible ? 'text-[#E53E3E]' : 'text-emerald-600'}`}
+                            >
+                              {p.is_eligible ? 'Mark Ineligible' : 'Mark Eligible'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )
