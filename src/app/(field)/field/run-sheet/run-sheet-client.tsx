@@ -91,22 +91,22 @@ export function RunSheetClient({ bookings }: RunSheetClientProps) {
       {/* Summary strip */}
       <div className="grid grid-cols-3 gap-2">
         <div className="rounded-[10px] bg-white p-2.5 text-center shadow-sm">
-          <div className="font-[family-name:var(--font-heading)] text-[22px] font-bold text-[var(--brand)]">
+          <div className="font-[family-name:var(--font-heading)] text-title font-bold text-[var(--brand)]">
             {total}
           </div>
-          <div className="text-[10px] text-gray-500">Total</div>
+          <div className="text-2xs text-gray-500">Total</div>
         </div>
         <div className="rounded-[10px] bg-white p-2.5 text-center shadow-sm">
-          <div className="font-[family-name:var(--font-heading)] text-[22px] font-bold text-[var(--brand-accent-dark)]">
+          <div className="font-[family-name:var(--font-heading)] text-title font-bold text-[var(--brand-accent-dark)]">
             {completedCount}
           </div>
-          <div className="text-[10px] text-gray-500">Completed</div>
+          <div className="text-2xs text-gray-500">Completed</div>
         </div>
         <div className="rounded-[10px] bg-white p-2.5 text-center shadow-sm">
-          <div className="font-[family-name:var(--font-heading)] text-[22px] font-bold text-[#FF8C42]">
+          <div className="font-[family-name:var(--font-heading)] text-title font-bold text-[#FF8C42]">
             {remainingCount}
           </div>
-          <div className="text-[10px] text-gray-500">Remaining</div>
+          <div className="text-2xs text-gray-500">Remaining</div>
         </div>
       </div>
 
@@ -122,7 +122,7 @@ export function RunSheetClient({ bookings }: RunSheetClientProps) {
       {remaining.length > 0 && (
         <>
           <div className="flex items-center justify-between px-0 py-1">
-            <span className="font-[family-name:var(--font-heading)] text-[13px] font-semibold text-[var(--brand)]">
+            <span className="font-[family-name:var(--font-heading)] text-body-sm font-semibold text-[var(--brand)]">
               Remaining
             </span>
             <span className="text-[11px] text-gray-500">
@@ -154,7 +154,7 @@ export function RunSheetClient({ bookings }: RunSheetClientProps) {
                     )}
                   </div>
                   {isMud ? (
-                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-700">
+                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-2xs font-semibold text-gray-700">
                       MUD
                     </span>
                   ) : (
@@ -252,7 +252,7 @@ export function RunSheetClient({ bookings }: RunSheetClientProps) {
       {completed.length > 0 && (
         <>
           <div className="mt-1 flex items-center justify-between px-0 py-1">
-            <span className="font-[family-name:var(--font-heading)] text-[13px] font-semibold text-[var(--brand)]">
+            <span className="font-[family-name:var(--font-heading)] text-body-sm font-semibold text-[var(--brand)]">
               Completed
             </span>
             <span className="text-[11px] text-gray-500">

@@ -319,7 +319,7 @@ export function ServicesForm() {
     return (
       <div>
         <div className="mb-2.5 flex items-center justify-between">
-          <span className="font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[var(--brand)]">
+          <span className="font-[family-name:var(--font-heading)] text-body font-semibold text-[var(--brand)]">
             {title}
           </span>
           <span
@@ -341,7 +341,7 @@ export function ServicesForm() {
                     className={`h-10 w-1 rounded-sm ${accentBg}`}
                   />
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-[15px] font-semibold text-gray-900">
+                    <span className="text-body font-semibold text-gray-900">
                       {rule.service.name}
                     </span>
                     <span className="text-xs text-gray-500">
@@ -357,7 +357,7 @@ export function ServicesForm() {
                   >
                     &minus;
                   </button>
-                  <span className="min-w-[16px] text-center text-[15px] font-semibold text-[var(--brand)]">
+                  <span className="min-w-[16px] text-center text-body font-semibold text-[var(--brand)]">
                     {qty}
                   </span>
                   <button
@@ -376,7 +376,7 @@ export function ServicesForm() {
           {extraRows.map((item) => (
             <div
               key={`extra-${item.service_id}`}
-              className="flex items-center justify-between rounded-lg border border-[var(--brand-accent-dark)] bg-[#F0FBF5] px-3.5 py-2.5 text-[13px]"
+              className="flex items-center justify-between rounded-lg border border-[var(--brand-accent-dark)] bg-[#F0FBF5] px-3.5 py-2.5 text-body-sm"
             >
               <div className="flex items-center gap-2 text-gray-700">
                 <span className="font-semibold text-[var(--brand-accent-dark)]">$</span>
@@ -400,10 +400,10 @@ export function ServicesForm() {
       {/* Content */}
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto pb-24 pt-6">
         <div>
-          <h1 className="font-[family-name:var(--font-heading)] text-[22px] font-bold leading-tight text-[var(--brand)]">
+          <h1 className="font-[family-name:var(--font-heading)] text-title font-bold leading-tight text-[var(--brand)]">
             Select Services
           </h1>
-          <p className="mt-1 text-[13px] leading-relaxed text-gray-500">
+          <p className="mt-1 text-body-sm leading-relaxed text-gray-500">
             Choose items for collection. Combine multiple service types.
           </p>
         </div>

@@ -160,10 +160,10 @@ export function AddressForm() {
       {/* Content */}
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto pb-24 pt-6">
         <div>
-          <h1 className="font-[family-name:var(--font-heading)] text-[22px] font-bold leading-tight text-[var(--brand)]">
+          <h1 className="font-[family-name:var(--font-heading)] text-title font-bold leading-tight text-[var(--brand)]">
             Book a Collection
           </h1>
-          <p className="mt-1 text-[13px] leading-relaxed text-gray-500">
+          <p className="mt-1 text-body-sm leading-relaxed text-gray-500">
             Enter your property address to check eligibility and view
             allocations.
           </p>
@@ -184,7 +184,7 @@ export function AddressForm() {
 
           {/* Property found banner */}
           {selectedProperty && (
-            <div className="mt-3 flex items-center gap-2.5 rounded-[10px] border border-[var(--brand-accent-dark)] bg-[var(--brand-accent-light)] px-4 py-3 text-[13px] font-medium text-[#006A38]">
+            <div className="mt-3 flex items-center gap-2.5 rounded-[10px] border border-[var(--brand-accent-dark)] bg-[var(--brand-accent-light)] px-4 py-3 text-body-sm font-medium text-[#006A38]">
               <span className="shrink-0 text-base">&#10003;</span>
               <div>
                 <div className="font-semibold">Property found!</div>
@@ -197,7 +197,7 @@ export function AddressForm() {
 
           {/* Not found */}
           {notFound && (
-            <div className="mt-3 flex items-center gap-2.5 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] font-medium text-red-700">
+            <div className="mt-3 flex items-center gap-2.5 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-body-sm font-medium text-red-700">
               <span className="shrink-0 text-base">&#10007;</span>
               <div>
                 <div className="font-semibold">Address not eligible</div>
@@ -225,7 +225,7 @@ export function AddressForm() {
               <div className="flex items-center gap-2.5 px-4 py-3.5">
                 <span className="text-base text-[var(--brand-accent-dark)]">&#x1F4CD;</span>
                 <div>
-                  <div className="text-[13px] font-semibold text-[var(--brand)]">
+                  <div className="text-body-sm font-semibold text-[var(--brand)]">
                     Property Location
                   </div>
                   <div className="mt-px text-xs text-[var(--brand-accent-dark)]">
@@ -327,7 +327,7 @@ export function AddressForm() {
             {allocationData.bookings.length === 0 ? (
               <div className="flex items-center gap-2.5">
                 <span className="text-base text-[var(--brand-accent-dark)]">&#10003;</span>
-                <span className="text-[13px] text-gray-500">
+                <span className="text-body-sm text-gray-500">
                   No bookings yet for this financial year.
                 </span>
               </div>
@@ -339,7 +339,7 @@ export function AddressForm() {
                     className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2.5"
                   >
                     <div>
-                      <div className="text-[13px] font-medium text-gray-900">
+                      <div className="text-body-sm font-medium text-gray-900">
                         {booking.ref}
                       </div>
                       <div className="text-[11px] text-gray-500">

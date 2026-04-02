@@ -177,7 +177,7 @@ export function OtpVerifyForm() {
       <button
         type="button"
         onClick={() => router.push('/auth')}
-        className="flex items-center gap-1.5 text-[13px] font-medium text-[#8FA5B8]"
+        className="flex items-center gap-1.5 text-body-sm font-medium text-[#8FA5B8]"
       >
         <svg
           width="14"
@@ -214,7 +214,7 @@ export function OtpVerifyForm() {
           <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[var(--brand)]">
             You&apos;re signed in
           </h1>
-          <p className="mt-1.5 text-[13px] text-gray-500">
+          <p className="mt-1.5 text-body-sm text-gray-500">
             Taking you to your dashboard now.
           </p>
         </div>
@@ -223,7 +223,7 @@ export function OtpVerifyForm() {
           <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[var(--brand)]">
             Check your email
           </h1>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-gray-500">
+          <p className="mt-1.5 text-body-sm leading-relaxed text-gray-500">
             We sent a 6-digit code to
             <br />
             <strong className="text-[var(--brand)]">{email}</strong>
@@ -279,7 +279,7 @@ export function OtpVerifyForm() {
         )}
 
         {state !== 'error' && state !== 'success' && (
-          <p className="text-center text-[13px] text-gray-500">
+          <p className="text-center text-body-sm text-gray-500">
             Enter the 6-digit code from your email
           </p>
         )}
@@ -290,7 +290,7 @@ export function OtpVerifyForm() {
         <button
           type="submit"
           disabled={state === 'verifying' || digits.join('').length < OTP_LENGTH}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand)] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-white transition-opacity hover:opacity-90 active:opacity-85 disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand)] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-body font-semibold text-white transition-opacity hover:opacity-90 active:opacity-85 disabled:opacity-50"
         >
           {state === 'verifying' ? (
             'Verifying...'
@@ -318,7 +318,7 @@ export function OtpVerifyForm() {
 
       {/* Countdown / resend */}
       {state !== 'success' && (
-        <div className="text-center text-[13px] text-gray-500">
+        <div className="text-center text-body-sm text-gray-500">
           {resendCooldown > 0 ? (
             <>
               Code expires in{' '}

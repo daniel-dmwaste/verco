@@ -202,7 +202,7 @@ export function AdminTicketDetailClient({
       {/* Back link */}
       <Link
         href="/admin/service-tickets"
-        className="mb-4 flex items-center gap-1.5 text-[13px] font-medium text-[#8FA5B8]"
+        className="mb-4 flex items-center gap-1.5 text-body-sm font-medium text-[#8FA5B8]"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="15 18 9 12 15 6" />
@@ -216,7 +216,7 @@ export function AdminTicketDetailClient({
           {/* Ticket header */}
           <div className="rounded-xl bg-white p-5 shadow-sm">
             <div className="mb-2 flex items-center justify-between">
-              <span className="font-mono text-[13px] text-gray-400">{ticket.displayId}</span>
+              <span className="font-mono text-body-sm text-gray-400">{ticket.displayId}</span>
               <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${statusStyle.bg} ${statusStyle.text}`}>
                 {statusStyle.label}
               </span>
@@ -241,7 +241,7 @@ export function AdminTicketDetailClient({
 
           {/* Conversation thread */}
           <div className="rounded-xl bg-white p-5 shadow-sm">
-            <div className="mb-4 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+            <div className="mb-4 text-2xs font-semibold uppercase tracking-wide text-gray-500">
               Conversation
             </div>
             <div className="flex flex-col gap-3">
@@ -254,7 +254,7 @@ export function AdminTicketDetailClient({
                     </div>
                   )}
                   <div className="rounded-2xl rounded-br-md bg-[#E8FDF0] px-4 py-3">
-                    <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-[#293F52]">
+                    <p className="whitespace-pre-wrap text-body-sm leading-relaxed text-[#293F52]">
                       {ticket.message}
                     </p>
                   </div>
@@ -274,7 +274,7 @@ export function AdminTicketDetailClient({
                         {resp.authorName}
                       </div>
                       <div className={`px-4 py-3 ${isResident ? 'rounded-2xl rounded-br-md bg-[#E8FDF0]' : 'rounded-2xl rounded-bl-md bg-[#F5F5F5]'}`}>
-                        <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-[#293F52]">{resp.message}</p>
+                        <p className="whitespace-pre-wrap text-body-sm leading-relaxed text-[#293F52]">{resp.message}</p>
                       </div>
                       <div className={`mt-1 text-[11px] text-gray-400 ${isResident ? 'text-right' : 'text-left'}`}>
                         {format(new Date(resp.createdAt), "d MMM yyyy, h:mmaaa")}
@@ -290,7 +290,7 @@ export function AdminTicketDetailClient({
           {/* Internal notes */}
           {internalNotes.length > 0 && (
             <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-5">
-              <div className="mb-4 text-[10px] font-semibold uppercase tracking-wide text-amber-600">
+              <div className="mb-4 text-2xs font-semibold uppercase tracking-wide text-amber-600">
                 Internal Notes
               </div>
               <div className="flex flex-col gap-3">
@@ -301,7 +301,7 @@ export function AdminTicketDetailClient({
                         {note.authorName} &middot; Internal note
                       </div>
                       <div className="rounded-2xl rounded-bl-md border border-amber-200 bg-white px-4 py-3">
-                        <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-[#293F52]">{note.message}</p>
+                        <p className="whitespace-pre-wrap text-body-sm leading-relaxed text-[#293F52]">{note.message}</p>
                       </div>
                       <div className="mt-1 text-[11px] text-amber-500">
                         {format(new Date(note.createdAt), "d MMM yyyy, h:mmaaa")}
@@ -319,7 +319,7 @@ export function AdminTicketDetailClient({
               <button
                 type="button"
                 onClick={() => setReplyMode('reply')}
-                className={`rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors ${
+                className={`rounded-lg px-3 py-1.5 text-body-sm font-medium transition-colors ${
                   replyMode === 'reply'
                     ? 'bg-[#293F52] text-white'
                     : 'text-gray-500 hover:bg-gray-100'
@@ -330,7 +330,7 @@ export function AdminTicketDetailClient({
               <button
                 type="button"
                 onClick={() => setReplyMode('internal')}
-                className={`rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors ${
+                className={`rounded-lg px-3 py-1.5 text-body-sm font-medium transition-colors ${
                   replyMode === 'internal'
                     ? 'bg-amber-500 text-white'
                     : 'text-gray-500 hover:bg-gray-100'
@@ -351,13 +351,13 @@ export function AdminTicketDetailClient({
               }`}
             />
             {sendError && (
-              <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-700">{sendError}</div>
+              <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-body-sm text-red-700">{sendError}</div>
             )}
             <button
               type="button"
               onClick={handleSendReply}
               disabled={isSending || !replyText.trim()}
-              className={`mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-3.5 py-3 font-[family-name:var(--font-heading)] text-[15px] font-semibold transition-opacity hover:opacity-90 disabled:opacity-50 ${
+              className={`mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-3.5 py-3 font-[family-name:var(--font-heading)] text-body font-semibold transition-opacity hover:opacity-90 disabled:opacity-50 ${
                 replyMode === 'internal'
                   ? 'bg-amber-500 text-white'
                   : 'bg-[#00E47C] text-[#293F52]'
@@ -372,7 +372,7 @@ export function AdminTicketDetailClient({
         <div className="flex flex-col gap-4 lg:w-1/3">
           {/* Status & Priority controls */}
           <div className="rounded-xl bg-white p-4 shadow-sm">
-            <div className="mb-3 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+            <div className="mb-3 text-2xs font-semibold uppercase tracking-wide text-gray-500">
               Manage
             </div>
             <div className="flex flex-col gap-3">
@@ -421,27 +421,27 @@ export function AdminTicketDetailClient({
 
           {/* Ticket metadata */}
           <div className="rounded-xl bg-white p-4 shadow-sm">
-            <div className="mb-3 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+            <div className="mb-3 text-2xs font-semibold uppercase tracking-wide text-gray-500">
               Details
             </div>
             <div className="flex flex-col gap-2">
-              <div className="flex justify-between text-[13px]">
+              <div className="flex justify-between text-body-sm">
                 <span className="text-gray-400">Ticket</span>
                 <span className="font-mono text-gray-600">{ticket.displayId}</span>
               </div>
-              <div className="flex justify-between text-[13px]">
+              <div className="flex justify-between text-body-sm">
                 <span className="text-gray-400">Category</span>
                 <span className="text-gray-600">{CATEGORY_LABELS[ticket.category]}</span>
               </div>
-              <div className="flex justify-between text-[13px]">
+              <div className="flex justify-between text-body-sm">
                 <span className="text-gray-400">Channel</span>
                 <span className="capitalize text-gray-600">{ticket.channel}</span>
               </div>
-              <div className="flex justify-between text-[13px]">
+              <div className="flex justify-between text-body-sm">
                 <span className="text-gray-400">Opened</span>
                 <span className="text-gray-600">{format(new Date(ticket.createdAt), 'd MMM yyyy')}</span>
               </div>
-              <div className="flex justify-between text-[13px]">
+              <div className="flex justify-between text-body-sm">
                 <span className="text-gray-400">Updated</span>
                 <span className="text-gray-600">{format(new Date(ticket.updatedAt), 'd MMM yyyy')}</span>
               </div>
@@ -451,7 +451,7 @@ export function AdminTicketDetailClient({
           {/* Resident card */}
           {contact && (
             <div className="rounded-xl bg-white p-4 shadow-sm">
-              <div className="mb-3 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+              <div className="mb-3 text-2xs font-semibold uppercase tracking-wide text-gray-500">
                 Resident
               </div>
               <div className="flex flex-col gap-2">
@@ -460,11 +460,11 @@ export function AdminTicketDetailClient({
                   <button
                     type="button"
                     onClick={() => copyToClipboard(contact.full_name, 'name')}
-                    className="mt-0.5 text-[13px] font-medium text-[#293F52] hover:underline"
+                    className="mt-0.5 text-body-sm font-medium text-[#293F52] hover:underline"
                     title="Click to copy"
                   >
                     {contact.full_name}
-                    {copied === 'name' && <span className="ml-1 text-[10px] text-emerald-500">Copied</span>}
+                    {copied === 'name' && <span className="ml-1 text-2xs text-emerald-500">Copied</span>}
                   </button>
                 </div>
                 <div>
@@ -472,11 +472,11 @@ export function AdminTicketDetailClient({
                   <button
                     type="button"
                     onClick={() => copyToClipboard(contact.email, 'email')}
-                    className="mt-0.5 text-[13px] font-medium text-[#293F52] hover:underline"
+                    className="mt-0.5 text-body-sm font-medium text-[#293F52] hover:underline"
                     title="Click to copy"
                   >
                     {contact.email}
-                    {copied === 'email' && <span className="ml-1 text-[10px] text-emerald-500">Copied</span>}
+                    {copied === 'email' && <span className="ml-1 text-2xs text-emerald-500">Copied</span>}
                   </button>
                 </div>
                 {contact.mobile_e164 && (
@@ -485,11 +485,11 @@ export function AdminTicketDetailClient({
                     <button
                       type="button"
                       onClick={() => copyToClipboard(contact.mobile_e164!, 'mobile')}
-                      className="mt-0.5 text-[13px] font-medium text-[#293F52] hover:underline"
+                      className="mt-0.5 text-body-sm font-medium text-[#293F52] hover:underline"
                       title="Click to copy"
                     >
                       {contact.mobile_e164}
-                      {copied === 'mobile' && <span className="ml-1 text-[10px] text-emerald-500">Copied</span>}
+                      {copied === 'mobile' && <span className="ml-1 text-2xs text-emerald-500">Copied</span>}
                     </button>
                   </div>
                 )}
@@ -500,7 +500,7 @@ export function AdminTicketDetailClient({
           {/* Linked booking */}
           {linkedBooking && (
             <div className="rounded-xl bg-white p-4 shadow-sm">
-              <div className="mb-3 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+              <div className="mb-3 text-2xs font-semibold uppercase tracking-wide text-gray-500">
                 Linked Booking
               </div>
               <Link
@@ -511,7 +511,7 @@ export function AdminTicketDetailClient({
                   {linkedBooking.ref}
                 </div>
                 {linkedBooking.address && (
-                  <div className="mt-1 text-[13px] text-[#293F52]">{linkedBooking.address}</div>
+                  <div className="mt-1 text-body-sm text-[#293F52]">{linkedBooking.address}</div>
                 )}
                 {linkedBooking.collectionDate && (
                   <div className="mt-0.5 text-[12px] text-gray-500">
@@ -521,7 +521,7 @@ export function AdminTicketDetailClient({
                 {linkedBooking.services.length > 0 && (
                   <div className="mt-1.5 flex flex-wrap gap-1">
                     {linkedBooking.services.map((svc) => (
-                      <span key={svc} className="rounded-full bg-[#E8EEF2] px-2 py-0.5 text-[10px] font-medium text-[#293F52]">{svc}</span>
+                      <span key={svc} className="rounded-full bg-[#E8EEF2] px-2 py-0.5 text-2xs font-medium text-[#293F52]">{svc}</span>
                     ))}
                   </div>
                 )}

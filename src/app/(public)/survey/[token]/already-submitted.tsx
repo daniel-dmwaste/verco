@@ -19,7 +19,7 @@ export function AlreadySubmitted({
           <div className="flex size-[26px] items-center justify-center rounded-[6px] bg-[var(--brand-accent)] font-[family-name:var(--font-heading)] text-sm font-bold text-[var(--brand)]">
             V
           </div>
-          <span className="font-[family-name:var(--font-heading)] text-[15px] font-bold text-white">
+          <span className="font-[family-name:var(--font-heading)] text-body font-bold text-white">
             Verge Collection
           </span>
         </div>
@@ -54,14 +54,14 @@ export function AlreadySubmitted({
 
         <Link
           href="/dashboard"
-          className="mt-8 flex w-full max-w-[280px] items-center justify-center rounded-xl bg-[var(--brand)] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-white"
+          className="mt-8 flex w-full max-w-[280px] items-center justify-center rounded-xl bg-[var(--brand)] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-body font-semibold text-white"
         >
           Back to Dashboard
         </Link>
 
         <div className="mt-6 flex items-center justify-center gap-1.5 text-[11px] text-gray-300">
           Powered by
-          <span className="rounded bg-gray-100 px-1.5 py-px font-[family-name:var(--font-heading)] text-[10px] font-bold text-gray-500">
+          <span className="rounded bg-gray-100 px-1.5 py-px font-[family-name:var(--font-heading)] text-2xs font-bold text-gray-500">
             VERCO
           </span>
         </div>

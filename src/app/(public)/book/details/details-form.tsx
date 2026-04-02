@@ -73,25 +73,25 @@ export function DetailsForm() {
       {/* Content */}
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto pb-24 pt-6">
         <div>
-          <h1 className="font-[family-name:var(--font-heading)] text-[22px] font-bold leading-tight text-[var(--brand)]">
+          <h1 className="font-[family-name:var(--font-heading)] text-title font-bold leading-tight text-[var(--brand)]">
             Collection Details
           </h1>
-          <p className="mt-1 text-[13px] leading-relaxed text-gray-500">
+          <p className="mt-1 text-body-sm leading-relaxed text-gray-500">
             Confirm where we should collect from on your property.
           </p>
         </div>
 
         <div className="rounded-xl bg-white p-6 shadow-sm">
           {/* Address */}
-          <div className="mb-1 text-[13px] font-semibold text-[var(--brand)]">
+          <div className="mb-1 text-body-sm font-semibold text-[var(--brand)]">
             Address
           </div>
-          <div className="mb-4 text-[13px] text-gray-700">{address}</div>
+          <div className="mb-4 text-body-sm text-gray-700">{address}</div>
 
           <div className="mb-4 h-px bg-gray-100" />
 
           {/* Location on property */}
-          <div className="mb-3 text-[13px] font-semibold text-[var(--brand)]">
+          <div className="mb-3 text-body-sm font-semibold text-[var(--brand)]">
             Location on Property
           </div>
           <div className="mb-4 flex flex-wrap gap-2">
@@ -101,7 +101,7 @@ export function DetailsForm() {
                 type="button"
                 onClick={() => setLocation(opt)}
                 className={cn(
-                  'rounded-full border-[1.5px] px-4 py-2 text-[13px] font-medium transition-colors',
+                  'rounded-full border-[1.5px] px-4 py-2 text-body-sm font-medium transition-colors',
                   location === opt
                     ? 'border-[var(--brand)] bg-[var(--brand)] text-white'
                     : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'

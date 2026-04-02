@@ -173,21 +173,21 @@ export function BookingsListClient() {
           <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
             Bookings
           </h1>
-          <p className="mt-0.5 text-[13px] text-gray-500">
+          <p className="mt-0.5 text-body-sm text-gray-500">
             {total} bookings
           </p>
         </div>
         <div className="flex items-center gap-2.5">
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-1.5 text-[13px] font-semibold text-gray-700"
+            className="inline-flex items-center gap-1.5 rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-1.5 text-body-sm font-semibold text-gray-700"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Export CSV
           </button>
           <Link
             href="/book"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#293F52] px-4 py-2 text-[13px] font-semibold text-white"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#293F52] px-4 py-2 text-body-sm font-semibold text-white"
           >
             + New Booking
           </Link>
@@ -203,14 +203,14 @@ export function BookingsListClient() {
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(0) }}
             placeholder="Search ref, address, name..."
-            className="w-full border-none bg-transparent text-[13px] text-gray-900 outline-none placeholder:text-gray-300"
+            className="w-full border-none bg-transparent text-body-sm text-gray-900 outline-none placeholder:text-gray-300"
           />
         </div>
 
         <select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(0) }}
-          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-[13px] text-gray-700"
+          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-body-sm text-gray-700"
         >
           <option value="">All Statuses</option>
           {STATUS_OPTIONS.map((s) => (
@@ -221,7 +221,7 @@ export function BookingsListClient() {
         <select
           value={areaFilter}
           onChange={(e) => { setAreaFilter(e.target.value); setPage(0) }}
-          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-[13px] text-gray-700"
+          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-body-sm text-gray-700"
         >
           <option value="">All Areas</option>
           {(areas ?? []).map((a) => (
@@ -232,7 +232,7 @@ export function BookingsListClient() {
         <select
           value={typeFilter}
           onChange={(e) => { setTypeFilter(e.target.value); setPage(0) }}
-          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-[13px] text-gray-700"
+          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-body-sm text-gray-700"
         >
           <option value="">All Types</option>
           {TYPE_OPTIONS.map((t) => (
@@ -283,10 +283,10 @@ export function BookingsListClient() {
                     key={booking.id}
                     className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50"
                   >
-                    <td className="px-4 py-3 font-[family-name:var(--font-heading)] text-[13px] font-semibold text-[#293F52]">
+                    <td className="px-4 py-3 font-[family-name:var(--font-heading)] text-body-sm font-semibold text-[#293F52]">
                       {booking.ref}
                     </td>
-                    <td className="max-w-[180px] truncate px-4 py-3 text-[13px]">
+                    <td className="max-w-[180px] truncate px-4 py-3 text-body-sm">
                       {getAddress(booking)}
                     </td>
                     <td className="px-4 py-3">
@@ -298,7 +298,7 @@ export function BookingsListClient() {
                     <td className="max-w-[160px] truncate px-4 py-3 text-xs">
                       {getServicesSummary(booking)}
                     </td>
-                    <td className="px-4 py-3 text-[13px]">
+                    <td className="px-4 py-3 text-body-sm">
                       {collDate ? format(new Date(collDate + 'T00:00:00'), 'EEE d MMM yyyy') : '—'}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500">

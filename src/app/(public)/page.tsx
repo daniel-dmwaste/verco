@@ -163,7 +163,7 @@ export default async function LandingPage() {
               <div className="relative z-10 flex size-10 items-center justify-center rounded-full bg-[var(--brand-accent)] font-[family-name:var(--font-heading)] text-base md:text-lg font-bold text-[var(--brand)] shadow-[0_0_0_6px_#F5F5F5]">
                 {i + 1}
               </div>
-              <h3 className="text-center text-[13px] md:text-[15px] font-semibold text-[var(--brand)]">
+              <h3 className="text-center text-body-sm md:text-body font-semibold text-[var(--brand)]">
                 {step.title}
               </h3>
               <p className="text-center text-xs md:text-sm leading-relaxed text-gray-500">
@@ -189,12 +189,12 @@ export default async function LandingPage() {
               key={svc.name}
               className="flex flex-col gap-2 rounded-xl border-[1.5px] border-gray-100 bg-gray-50 px-5 py-5"
             >
-              <h3 className="font-[family-name:var(--font-heading)] text-[15px] md:text-[17px] font-semibold text-[var(--brand)]">
+              <h3 className="font-[family-name:var(--font-heading)] text-body md:text-subtitle font-semibold text-[var(--brand)]">
                 {svc.name}
               </h3>
-              <p className="text-[13px] md:text-[15px] text-gray-500">{svc.desc}</p>
+              <p className="text-body-sm md:text-body text-gray-500">{svc.desc}</p>
               <span
-                className={`inline-flex w-fit rounded-full px-2.5 py-0.5 text-[11px] md:text-[13px] font-medium ${svc.tagClass}`}
+                className={`inline-flex w-fit rounded-full px-2.5 py-0.5 text-[11px] md:text-body-sm font-medium ${svc.tagClass}`}
               >
                 {svc.tag}
               </span>
@@ -218,7 +218,7 @@ export default async function LandingPage() {
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
             <div>
-              <h3 className="font-[family-name:var(--font-heading)] text-[15px] md:text-[17px] font-semibold text-[var(--brand)]">
+              <h3 className="font-[family-name:var(--font-heading)] text-body md:text-subtitle font-semibold text-[var(--brand)]">
                 Not sure what&apos;s eligible?
               </h3>
               <p className="text-xs md:text-sm text-gray-500">
@@ -272,11 +272,11 @@ export default async function LandingPage() {
           {branding.logo_light_url ? (
             <img src={branding.logo_light_url} alt={branding.name} className="h-6 w-auto" />
           ) : (
-            <div className="flex size-6 items-center justify-center rounded-md bg-[var(--brand-accent)] font-[family-name:var(--font-heading)] text-[13px] md:text-[15px] font-bold text-[var(--brand)]">
+            <div className="flex size-6 items-center justify-center rounded-md bg-[var(--brand-accent)] font-[family-name:var(--font-heading)] text-body-sm md:text-body font-bold text-[var(--brand)]">
               V
             </div>
           )}
-          <span className="text-[13px] md:text-[15px] text-[#8FA5B8]">
+          <span className="text-body-sm md:text-body text-[#8FA5B8]">
             &copy; {new Date().getFullYear()} {branding.name} &middot;{' '}
             <a href="#" className="text-[#8FA5B8] underline">
               Privacy Policy
@@ -286,7 +286,7 @@ export default async function LandingPage() {
         {branding.show_powered_by && (
           <div className="flex items-center gap-1.5 text-xs md:text-sm text-[#8FA5B8]">
             Booking platform powered by
-            <span className="rounded border border-white/[0.12] bg-white/[0.08] px-2 py-0.5 font-[family-name:var(--font-heading)] text-[11px] md:text-[13px] font-semibold text-white">
+            <span className="rounded border border-white/[0.12] bg-white/[0.08] px-2 py-0.5 font-[family-name:var(--font-heading)] text-[11px] md:text-body-sm font-semibold text-white">
               VERCO
             </span>
           </div>

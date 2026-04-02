@@ -151,7 +151,7 @@ export function AdminSidebar({ counts }: AdminSidebarProps) {
     <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-gray-100 bg-white py-4">
       {sections.map((section) => (
         <div key={section.title} className="mb-1">
-          <div className="px-5 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.8px] text-gray-300">
+          <div className="px-5 pb-1 pt-2 text-2xs font-semibold uppercase tracking-[0.8px] text-gray-300">
             {section.title}
           </div>
           {section.items.map((item) => {
@@ -161,7 +161,7 @@ export function AdminSidebar({ counts }: AdminSidebarProps) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'relative flex items-center gap-2.5 px-5 py-2.5 text-[13px] font-medium text-gray-700 transition-colors hover:bg-gray-50',
+                  'relative flex items-center gap-2.5 px-5 py-2.5 text-body-sm font-medium text-gray-700 transition-colors hover:bg-gray-50',
                   active &&
                     'bg-[#E8FDF0] font-semibold text-[#293F52] before:absolute before:bottom-1 before:left-0 before:top-1 before:w-[3px] before:rounded-r before:bg-[#00E47C]'
                 )}
@@ -173,7 +173,7 @@ export function AdminSidebar({ counts }: AdminSidebarProps) {
                 {item.badge && (
                   <span
                     className={cn(
-                      'ml-auto min-w-[18px] rounded-full px-1.5 py-px text-center text-[10px] font-semibold text-white',
+                      'ml-auto min-w-[18px] rounded-full px-1.5 py-px text-center text-2xs font-semibold text-white',
                       BADGE_COLORS[item.badge.color ?? 'red']
                     )}
                   >

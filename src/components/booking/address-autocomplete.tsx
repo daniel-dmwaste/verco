@@ -165,7 +165,7 @@ export function AddressAutocomplete({
             onKeyDown={handleKeyDown}
             onFocus={() => suggestions.length > 0 && setIsOpen(true)}
             placeholder={placeholder}
-            className="flex-1 border-none bg-transparent text-[15px] text-gray-900 outline-none placeholder:text-gray-300"
+            className="flex-1 border-none bg-transparent text-body text-gray-900 outline-none placeholder:text-gray-300"
           />
           {isSearching && (
             <div className="size-5 shrink-0 animate-spin rounded-full border-2 border-gray-200 border-t-[var(--brand)]" />
@@ -181,7 +181,7 @@ export function AddressAutocomplete({
                 type="button"
                 onClick={() => handleSelect(s)}
                 className={cn(
-                  'flex w-full items-center gap-2.5 px-5 py-3 text-left text-[13px] transition-colors',
+                  'flex w-full items-center gap-2.5 px-5 py-3 text-left text-body-sm transition-colors',
                   i === selectedIndex
                     ? 'bg-[var(--brand-accent-light)] font-medium text-[var(--brand)]'
                     : 'text-gray-700 hover:bg-gray-50'
@@ -241,7 +241,7 @@ export function AddressAutocomplete({
               type="button"
               onClick={() => handleSelect(s)}
               className={cn(
-                'rounded-lg px-3.5 py-3 text-left text-[13px] transition-colors',
+                'rounded-lg px-3.5 py-3 text-left text-body-sm transition-colors',
                 i === selectedIndex || i === 0
                   ? 'border border-[var(--brand-accent-dark)] bg-[var(--brand-accent-light)] font-medium text-[var(--brand)]'
                   : 'bg-white text-gray-700 hover:bg-gray-50'

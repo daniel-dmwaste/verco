@@ -188,7 +188,7 @@ export function TicketDetailClient({
       {/* Back link */}
       <Link
         href="/dashboard"
-        className="mb-4 flex items-center gap-1.5 text-[13px] font-medium text-[#8FA5B8]"
+        className="mb-4 flex items-center gap-1.5 text-body-sm font-medium text-[#8FA5B8]"
       >
         <svg
           width="14"
@@ -212,7 +212,7 @@ export function TicketDetailClient({
           {/* Ticket header card */}
           <div className="rounded-xl bg-white p-5 shadow-sm">
             <div className="mb-2 flex items-center justify-between">
-              <span className="font-mono text-[13px] text-gray-400">
+              <span className="font-mono text-body-sm text-gray-400">
                 {ticket.displayId}
               </span>
               <span
@@ -240,7 +240,7 @@ export function TicketDetailClient({
 
           {/* Message thread */}
           <div className="rounded-xl bg-white p-5 shadow-sm">
-            <div className="mb-4 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+            <div className="mb-4 text-2xs font-semibold uppercase tracking-wide text-gray-500">
               Conversation
             </div>
 
@@ -249,7 +249,7 @@ export function TicketDetailClient({
               <div className="flex justify-end">
                 <div className="max-w-[85%]">
                   <div className="rounded-2xl rounded-br-md bg-[var(--brand-accent-light)] px-4 py-3">
-                    <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-[var(--brand)]">
+                    <p className="whitespace-pre-wrap text-body-sm leading-relaxed text-[var(--brand)]">
                       {ticket.message}
                     </p>
                   </div>
@@ -284,7 +284,7 @@ export function TicketDetailClient({
                             : 'rounded-2xl rounded-bl-md bg-[#F5F5F5]'
                         }`}
                       >
-                        <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-[var(--brand)]">
+                        <p className="whitespace-pre-wrap text-body-sm leading-relaxed text-[var(--brand)]">
                           {resp.message}
                         </p>
                       </div>
@@ -318,7 +318,7 @@ export function TicketDetailClient({
                 className="w-full resize-none rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-300 focus:border-[var(--brand)] focus:bg-white"
               />
               {sendError && (
-                <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-700">
+                <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-body-sm text-red-700">
                   {sendError}
                 </div>
               )}
@@ -326,7 +326,7 @@ export function TicketDetailClient({
                 type="button"
                 onClick={handleSendReply}
                 disabled={isSending || !replyText.trim()}
-                className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-accent)] px-3.5 py-3 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[var(--brand)] transition-opacity hover:opacity-90 disabled:opacity-50"
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-accent)] px-3.5 py-3 font-[family-name:var(--font-heading)] text-body font-semibold text-[var(--brand)] transition-opacity hover:opacity-90 disabled:opacity-50"
               >
                 <svg
                   width="16"
@@ -364,7 +364,7 @@ export function TicketDetailClient({
           {/* Linked booking card */}
           {linkedBooking && (
             <div className="rounded-xl bg-white p-4 shadow-sm">
-              <div className="mb-3 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+              <div className="mb-3 text-2xs font-semibold uppercase tracking-wide text-gray-500">
                 Linked Booking
               </div>
               <Link
@@ -375,7 +375,7 @@ export function TicketDetailClient({
                   {linkedBooking.ref}
                 </div>
                 {linkedBooking.address && (
-                  <div className="mt-1 text-[13px] text-[var(--brand)]">
+                  <div className="mt-1 text-body-sm text-[var(--brand)]">
                     {linkedBooking.address}
                   </div>
                 )}
@@ -392,7 +392,7 @@ export function TicketDetailClient({
                     {linkedBooking.services.map((svc) => (
                       <span
                         key={svc}
-                        className="rounded-full bg-[#E8EEF2] px-2 py-0.5 text-[10px] font-medium text-[var(--brand)]"
+                        className="rounded-full bg-[#E8EEF2] px-2 py-0.5 text-2xs font-medium text-[var(--brand)]"
                       >
                         {svc}
                       </span>

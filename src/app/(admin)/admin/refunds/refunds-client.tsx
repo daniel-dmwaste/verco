@@ -124,7 +124,7 @@ export function RefundsClient() {
           <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
             Refund Requests
           </h1>
-          <p className="mt-0.5 text-[13px] text-gray-500">
+          <p className="mt-0.5 text-body-sm text-gray-500">
             {total} requests
           </p>
         </div>
@@ -139,14 +139,14 @@ export function RefundsClient() {
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(0) }}
             placeholder="Search reason..."
-            className="w-full border-none bg-transparent text-[13px] text-gray-900 outline-none placeholder:text-gray-300"
+            className="w-full border-none bg-transparent text-body-sm text-gray-900 outline-none placeholder:text-gray-300"
           />
         </div>
 
         <select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(0) }}
-          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-[13px] text-gray-700"
+          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-body-sm text-gray-700"
         >
           <option value="">All Statuses</option>
           {STATUS_OPTIONS.map((s) => (
@@ -162,7 +162,7 @@ export function RefundsClient() {
 
       {/* Error banner */}
       {actionError && (
-        <div className="mx-7 mb-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
+        <div className="mx-7 mb-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-body-sm text-red-700">
           {actionError}
           <button type="button" onClick={() => setActionError(null)} className="ml-2 font-semibold underline">Dismiss</button>
         </div>
@@ -203,16 +203,16 @@ export function RefundsClient() {
                       {booking ? (
                         <Link
                           href={`/admin/bookings/${booking.id}`}
-                          className="font-[family-name:var(--font-heading)] text-[13px] font-semibold text-[#293F52] hover:underline"
+                          className="font-[family-name:var(--font-heading)] text-body-sm font-semibold text-[#293F52] hover:underline"
                         >
                           {booking.ref}
                         </Link>
                       ) : '—'}
                     </td>
-                    <td className="px-4 py-3 text-[13px] text-gray-600">
+                    <td className="px-4 py-3 text-body-sm text-gray-600">
                       {contact?.full_name ?? '—'}
                     </td>
-                    <td className="px-4 py-3 font-[family-name:var(--font-heading)] text-[13px] font-semibold text-[#293F52]">
+                    <td className="px-4 py-3 font-[family-name:var(--font-heading)] text-body-sm font-semibold text-[#293F52]">
                       ${(refund.amount_cents / 100).toFixed(2)}
                     </td>
                     <td className="max-w-[200px] truncate px-4 py-3 text-xs">
@@ -250,8 +250,8 @@ export function RefundsClient() {
                               </button>
                               {actionMenuId === refund.id && (
                                 <div className="absolute right-4 bottom-full z-10 w-36 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
-                                  <button type="button" onClick={() => handleAction(refund.id, 'approve')} className="block w-full px-4 py-2 text-left text-[13px] text-gray-700 hover:bg-gray-50">Approve &amp; Refund</button>
-                                  <button type="button" onClick={() => handleAction(refund.id, 'reject')} className="block w-full px-4 py-2 text-left text-[13px] text-red-600 hover:bg-gray-50">Reject</button>
+                                  <button type="button" onClick={() => handleAction(refund.id, 'approve')} className="block w-full px-4 py-2 text-left text-body-sm text-gray-700 hover:bg-gray-50">Approve &amp; Refund</button>
+                                  <button type="button" onClick={() => handleAction(refund.id, 'reject')} className="block w-full px-4 py-2 text-left text-body-sm text-red-600 hover:bg-gray-50">Reject</button>
                                 </div>
                               )}
                             </>

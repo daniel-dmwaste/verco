@@ -405,7 +405,7 @@ export function ServiceTicketForm({
           <h3 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[var(--brand)]">
             Verify Email
           </h3>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-gray-500">
+          <p className="mt-1.5 text-body-sm leading-relaxed text-gray-500">
             We sent a 6-digit code to
             <br />
             <strong className="text-[var(--brand)]">{otpEmail}</strong>
@@ -455,7 +455,7 @@ export function ServiceTicketForm({
           )}
 
           {otpState !== 'error' && (
-            <p className="text-center text-[13px] text-gray-500">
+            <p className="text-center text-body-sm text-gray-500">
               Enter the 6-digit code from your email
             </p>
           )}
@@ -471,7 +471,7 @@ export function ServiceTicketForm({
             const code = otpDigits.join('')
             if (code.length === OTP_LENGTH) void verifyOtp(code)
           }}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand)] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand)] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-body font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           {otpState === 'verifying'
             ? 'Verifying...'
@@ -480,7 +480,7 @@ export function ServiceTicketForm({
               : 'Verify Code'}
         </button>
 
-        <div className="text-center text-[13px] text-gray-500">
+        <div className="text-center text-body-sm text-gray-500">
           {resendCooldown > 0 ? (
             <>
               Code expires in{' '}
@@ -510,7 +510,7 @@ export function ServiceTicketForm({
 
   return (
     <div className="rounded-xl bg-white p-6 shadow-sm">
-      <h3 className="mb-4 font-[family-name:var(--font-heading)] text-[17px] font-bold text-[var(--brand)]">
+      <h3 className="mb-4 font-[family-name:var(--font-heading)] text-subtitle font-bold text-[var(--brand)]">
         Submit an Enquiry
       </h3>
 
@@ -609,7 +609,7 @@ export function ServiceTicketForm({
         </div>
 
         {submitError && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-body-sm text-red-700">
             {submitError}
           </div>
         )}
@@ -617,7 +617,7 @@ export function ServiceTicketForm({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand)] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand)] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-body font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           {isSubmitting ? 'Submitting...' : 'Submit Enquiry'}
         </button>

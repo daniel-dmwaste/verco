@@ -73,7 +73,7 @@ export function FieldLayoutClient({
           </span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-[13px] text-[#C7D3DD]">{today}</span>
+          <span className="text-body-sm text-[#C7D3DD]">{today}</span>
           {areaCodes && (
             <span className="rounded-full bg-[var(--brand-accent)]/15 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--brand-accent)]">
               {areaCodes}
@@ -100,7 +100,7 @@ export function FieldLayoutClient({
               key={tab.href}
               href={tab.href}
               className={cn(
-                'flex flex-1 flex-col items-center gap-1 pb-3.5 pt-2.5 text-[10px] font-medium',
+                'flex flex-1 flex-col items-center gap-1 pb-3.5 pt-2.5 text-2xs font-medium',
                 isActive
                   ? 'text-[var(--brand)] [&_svg]:stroke-[var(--brand)]'
                   : 'text-gray-500 [&_svg]:stroke-gray-300'

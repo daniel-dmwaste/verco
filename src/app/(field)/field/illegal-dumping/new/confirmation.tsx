@@ -43,36 +43,36 @@ export function Confirmation({
       <h1 className="mt-5 font-[family-name:var(--font-heading)] text-xl font-bold text-[var(--brand)]">
         ID Collection Logged
       </h1>
-      <p className="mt-1.5 text-center text-[13px] leading-relaxed text-gray-500">
+      <p className="mt-1.5 text-center text-body-sm leading-relaxed text-gray-500">
         The booking has been submitted and will appear on the run sheet for{' '}
         {formattedDate}.
       </p>
 
       {/* Summary card */}
       <div className="mt-6 flex w-full flex-col gap-2 rounded-xl bg-gray-50 px-4 py-3.5">
-        <div className="flex items-center justify-between border-b border-gray-100 py-1.5 text-[13px]">
+        <div className="flex items-center justify-between border-b border-gray-100 py-1.5 text-body-sm">
           <span className="text-xs text-gray-500">Booking ref</span>
           <span className="font-[family-name:var(--font-heading)] font-semibold text-[var(--brand)]">
             {bookingRef}
           </span>
         </div>
-        <div className="flex items-center justify-between border-b border-gray-100 py-1.5 text-[13px]">
+        <div className="flex items-center justify-between border-b border-gray-100 py-1.5 text-body-sm">
           <span className="text-xs text-gray-500">Location</span>
           <span className="max-w-[200px] text-right font-medium text-gray-900">
             {geoAddress}
           </span>
         </div>
-        <div className="flex items-center justify-between border-b border-gray-100 py-1.5 text-[13px]">
+        <div className="flex items-center justify-between border-b border-gray-100 py-1.5 text-body-sm">
           <span className="text-xs text-gray-500">Waste type</span>
           <span className="font-medium text-gray-900">
             {wasteTypes.join(', ')}
           </span>
         </div>
-        <div className="flex items-center justify-between border-b border-gray-100 py-1.5 text-[13px]">
+        <div className="flex items-center justify-between border-b border-gray-100 py-1.5 text-body-sm">
           <span className="text-xs text-gray-500">Volume</span>
           <span className="font-medium text-gray-900">{volume}</span>
         </div>
-        <div className="flex items-center justify-between py-1.5 text-[13px]">
+        <div className="flex items-center justify-between py-1.5 text-body-sm">
           <span className="text-xs text-gray-500">Collection date</span>
           <span className="font-medium text-[var(--brand)]">{formattedDate}</span>
         </div>

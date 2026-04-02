@@ -75,7 +75,7 @@ export function MobileBottomNav({ showAdminLink }: MobileBottomNavProps) {
           <Link
             key={tab.href}
             href={tab.href}
-            className={`flex flex-1 flex-col items-center gap-1 pb-4 pt-2.5 text-[10px] font-medium ${
+            className={`flex flex-1 flex-col items-center gap-1 pb-4 pt-2.5 text-2xs font-medium ${
               active ? 'text-[var(--brand)]' : 'text-gray-500'
             }`}
           >

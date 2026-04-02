@@ -311,7 +311,7 @@ export function BookingDetailPanel({
       {/* Property + Collection Details */}
       <div className="border-b border-gray-100 px-5 py-4">
         <div className="mb-3 flex items-center justify-between">
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+          <span className="text-2xs font-semibold uppercase tracking-wide text-gray-500">
             Collection Details
           </span>
           {canEdit && !editingDetails && (
@@ -325,15 +325,15 @@ export function BookingDetailPanel({
           <div className="flex flex-col gap-2.5">
             <div className="flex justify-between">
               <span className="w-[120px] shrink-0 text-xs font-medium text-gray-500">Address</span>
-              <span className="text-right text-[13px] text-gray-900">{address}</span>
+              <span className="text-right text-body-sm text-gray-900">{address}</span>
             </div>
             <div className="flex justify-between">
               <span className="w-[120px] shrink-0 text-xs font-medium text-gray-500">Location</span>
-              <span className="text-right text-[13px] text-gray-900">{booking.location ?? '—'}</span>
+              <span className="text-right text-body-sm text-gray-900">{booking.location ?? '—'}</span>
             </div>
             <div className="flex justify-between">
               <span className="w-[120px] shrink-0 text-xs font-medium text-gray-500">Collection Date</span>
-              <span className="text-right text-[13px] text-gray-900">
+              <span className="text-right text-body-sm text-gray-900">
                 {collectionDateStr
                   ? format(new Date(collectionDateStr + 'T00:00:00'), 'EEEE, d MMMM yyyy')
                   : '—'}
@@ -341,7 +341,7 @@ export function BookingDetailPanel({
             </div>
             <div className="flex justify-between">
               <span className="w-[120px] shrink-0 text-xs font-medium text-gray-500">Notes</span>
-              <span className="text-right text-[13px] italic text-gray-500">{booking.notes || '—'}</span>
+              <span className="text-right text-body-sm italic text-gray-500">{booking.notes || '—'}</span>
             </div>
           </div>
         ) : (
@@ -371,7 +371,7 @@ export function BookingDetailPanel({
               <select
                 value={editDateId}
                 onChange={(e) => setEditDateId(e.target.value)}
-                className="w-full rounded-lg border-[1.5px] border-gray-100 bg-gray-50 px-3 py-2 text-[13px] text-gray-900 outline-none focus:border-[#293F52] focus:bg-white"
+                className="w-full rounded-lg border-[1.5px] border-gray-100 bg-gray-50 px-3 py-2 text-body-sm text-gray-900 outline-none focus:border-[#293F52] focus:bg-white"
               >
                 <option value="">Select date...</option>
                 {(availableDates ?? []).map((d) => (
@@ -388,7 +388,7 @@ export function BookingDetailPanel({
                 onChange={(e) => setEditNotesText(e.target.value)}
                 maxLength={500}
                 placeholder="Notes for driver..."
-                className="h-16 w-full resize-none rounded-lg border-[1.5px] border-gray-100 bg-gray-50 px-3 py-2 text-[13px] text-gray-900 outline-none focus:border-[#293F52] focus:bg-white"
+                className="h-16 w-full resize-none rounded-lg border-[1.5px] border-gray-100 bg-gray-50 px-3 py-2 text-body-sm text-gray-900 outline-none focus:border-[#293F52] focus:bg-white"
               />
             </div>
             <div className="flex gap-2">
@@ -396,7 +396,7 @@ export function BookingDetailPanel({
                 type="button"
                 onClick={handleSaveDetails}
                 disabled={isPending}
-                className="flex-1 rounded-lg bg-[#293F52] px-3 py-2 text-[13px] font-semibold text-white disabled:opacity-50"
+                className="flex-1 rounded-lg bg-[#293F52] px-3 py-2 text-body-sm font-semibold text-white disabled:opacity-50"
               >
                 {isPending ? 'Saving...' : 'Save'}
               </button>
@@ -408,7 +408,7 @@ export function BookingDetailPanel({
                   setEditDateId(booking.booking_item[0]?.collection_date_id ?? '')
                   setEditNotesText(booking.notes ?? '')
                 }}
-                className="flex-1 rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-2 text-[13px] font-semibold text-gray-700"
+                className="flex-1 rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-2 text-body-sm font-semibold text-gray-700"
               >
                 Cancel
               </button>
@@ -421,7 +421,7 @@ export function BookingDetailPanel({
       {(contact || canEdit) && (
         <div className="border-b border-gray-100 px-5 py-4">
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+            <span className="text-2xs font-semibold uppercase tracking-wide text-gray-500">
               Contact
             </span>
             {canEdit && !editingContact && contact && (
@@ -436,19 +436,19 @@ export function BookingDetailPanel({
               <div className="flex flex-col gap-2.5">
                 <div className="flex justify-between">
                   <span className="w-[120px] shrink-0 text-xs font-medium text-gray-500">Name</span>
-                  <span className="text-right text-[13px] font-medium text-[#293F52]">{contact.full_name}</span>
+                  <span className="text-right text-body-sm font-medium text-[#293F52]">{contact.full_name}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="w-[120px] shrink-0 text-xs font-medium text-gray-500">Mobile</span>
-                  <span className="text-right text-[13px] font-medium text-[#293F52]">{contact.mobile_e164 ?? '—'}</span>
+                  <span className="text-right text-body-sm font-medium text-[#293F52]">{contact.mobile_e164 ?? '—'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="w-[120px] shrink-0 text-xs font-medium text-gray-500">Email</span>
-                  <span className="text-right text-[13px] font-medium text-[#293F52]">{contact.email}</span>
+                  <span className="text-right text-body-sm font-medium text-[#293F52]">{contact.email}</span>
                 </div>
               </div>
             ) : (
-              <p className="text-[13px] italic text-gray-400">No contact linked</p>
+              <p className="text-body-sm italic text-gray-400">No contact linked</p>
             )
           ) : (
             <div className="flex flex-col gap-2.5">
@@ -458,7 +458,7 @@ export function BookingDetailPanel({
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="w-full rounded-lg border-[1.5px] border-gray-100 bg-gray-50 px-3 py-2 text-[13px] text-gray-900 outline-none focus:border-[#293F52] focus:bg-white"
+                  className="w-full rounded-lg border-[1.5px] border-gray-100 bg-gray-50 px-3 py-2 text-body-sm text-gray-900 outline-none focus:border-[#293F52] focus:bg-white"
                 />
               </div>
               <div>
@@ -467,7 +467,7 @@ export function BookingDetailPanel({
                   type="email"
                   value={editEmail}
                   onChange={(e) => setEditEmail(e.target.value)}
-                  className="w-full rounded-lg border-[1.5px] border-gray-100 bg-gray-50 px-3 py-2 text-[13px] text-gray-900 outline-none focus:border-[#293F52] focus:bg-white"
+                  className="w-full rounded-lg border-[1.5px] border-gray-100 bg-gray-50 px-3 py-2 text-body-sm text-gray-900 outline-none focus:border-[#293F52] focus:bg-white"
                 />
               </div>
               <div>
@@ -477,7 +477,7 @@ export function BookingDetailPanel({
                   value={editMobile}
                   onChange={(e) => setEditMobile(e.target.value)}
                   placeholder="+614XXXXXXXX"
-                  className="w-full rounded-lg border-[1.5px] border-gray-100 bg-gray-50 px-3 py-2 text-[13px] text-gray-900 outline-none focus:border-[#293F52] focus:bg-white"
+                  className="w-full rounded-lg border-[1.5px] border-gray-100 bg-gray-50 px-3 py-2 text-body-sm text-gray-900 outline-none focus:border-[#293F52] focus:bg-white"
                 />
               </div>
               <div className="flex gap-2">
@@ -485,7 +485,7 @@ export function BookingDetailPanel({
                   type="button"
                   onClick={handleSaveContact}
                   disabled={isPending || !editName || !editEmail}
-                  className="flex-1 rounded-lg bg-[#293F52] px-3 py-2 text-[13px] font-semibold text-white disabled:opacity-50"
+                  className="flex-1 rounded-lg bg-[#293F52] px-3 py-2 text-body-sm font-semibold text-white disabled:opacity-50"
                 >
                   {isPending ? 'Saving...' : 'Save'}
                 </button>
@@ -497,7 +497,7 @@ export function BookingDetailPanel({
                     setEditEmail(contact?.email ?? '')
                     setEditMobile(contact?.mobile_e164 ?? '')
                   }}
-                  className="flex-1 rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-2 text-[13px] font-semibold text-gray-700"
+                  className="flex-1 rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-2 text-body-sm font-semibold text-gray-700"
                 >
                   Cancel
                 </button>
@@ -510,7 +510,7 @@ export function BookingDetailPanel({
       {/* Services — edit via wizard (pricing/capacity) */}
       <div className="border-b border-gray-100 px-5 py-4">
         <div className="mb-3 flex items-center justify-between">
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+          <span className="text-2xs font-semibold uppercase tracking-wide text-gray-500">
             Services
           </span>
           {editServicesUrl && (
@@ -523,7 +523,7 @@ export function BookingDetailPanel({
           {includedItems.map((item) => (
             <div
               key={item.id}
-              className="flex items-center justify-between rounded-lg bg-[#E8FDF0] px-2.5 py-2 text-[13px]"
+              className="flex items-center justify-between rounded-lg bg-[#E8FDF0] px-2.5 py-2 text-body-sm"
             >
               <span className="text-gray-900">
                 {(item.service as { name: string }).name} &times; {item.no_services}
@@ -534,7 +534,7 @@ export function BookingDetailPanel({
           {extraItems.map((item) => (
             <div
               key={item.id}
-              className="flex items-center justify-between rounded-lg bg-[#E8EEF2] px-2.5 py-2 text-[13px]"
+              className="flex items-center justify-between rounded-lg bg-[#E8EEF2] px-2.5 py-2 text-body-sm"
             >
               <span className="text-gray-900">
                 {(item.service as { name: string }).name} &times; {item.no_services} (extra)
@@ -545,9 +545,9 @@ export function BookingDetailPanel({
             </div>
           ))}
           {totalChargeCents > 0 && (
-            <div className="flex items-center justify-between rounded-lg bg-[#293F52] px-2.5 py-2.5 text-[13px]">
+            <div className="flex items-center justify-between rounded-lg bg-[#293F52] px-2.5 py-2.5 text-body-sm">
               <span className="font-semibold text-white">Total charged</span>
-              <span className="font-[family-name:var(--font-heading)] text-[15px] font-bold text-[#00E47C]">
+              <span className="font-[family-name:var(--font-heading)] text-body font-bold text-[#00E47C]">
                 ${(totalChargeCents / 100).toFixed(2)}
               </span>
             </div>
@@ -558,7 +558,7 @@ export function BookingDetailPanel({
       {/* Audit trail */}
       {auditLogs.length > 0 && (
         <div className="border-b border-gray-100 px-5 py-4">
-          <div className="mb-3 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+          <div className="mb-3 text-2xs font-semibold uppercase tracking-wide text-gray-500">
             Audit Trail
           </div>
           <div className="flex flex-col gap-2">
@@ -581,7 +581,7 @@ export function BookingDetailPanel({
 
       {/* Error */}
       {error && (
-        <div className="mx-5 mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
+        <div className="mx-5 mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-body-sm text-red-700">
           {error}
         </div>
       )}
@@ -594,7 +594,7 @@ export function BookingDetailPanel({
               type="button"
               onClick={handlePayNow}
               disabled={isPaying}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border-[1.5px] border-[#00B864] bg-[#E8FDF0] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#006A38] disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-xl border-[1.5px] border-[#00B864] bg-[#E8FDF0] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-body font-semibold text-[#006A38] disabled:opacity-50"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
@@ -608,7 +608,7 @@ export function BookingDetailPanel({
               type="button"
               onClick={handleConfirm}
               disabled={isPending}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#00E47C] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52] disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#00E47C] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-body font-semibold text-[#293F52] disabled:opacity-50"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               {isPending ? 'Confirming...' : 'Confirm Booking'}
@@ -619,7 +619,7 @@ export function BookingDetailPanel({
               type="button"
               onClick={() => setShowCancelDialog(true)}
               disabled={isPending}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border-[1.5px] border-[#E53E3E] bg-[#FFF0F0] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#E53E3E] disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-xl border-[1.5px] border-[#E53E3E] bg-[#FFF0F0] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-body font-semibold text-[#E53E3E] disabled:opacity-50"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
               {isPending ? 'Cancelling...' : 'Cancel Booking'}
@@ -644,7 +644,7 @@ export function BookingDetailPanel({
               <Dialog.Title className="font-[family-name:var(--font-heading)] text-lg font-bold text-[#293F52]">
                 Cancel this booking?
               </Dialog.Title>
-              <p className="mt-1.5 text-[13px] leading-relaxed text-gray-500">
+              <p className="mt-1.5 text-body-sm leading-relaxed text-gray-500">
                 This action cannot be undone.{totalChargeCents > 0 ? ' A refund will be initiated for any paid services.' : ''}
               </p>
               <div className="mt-5 flex gap-2.5">

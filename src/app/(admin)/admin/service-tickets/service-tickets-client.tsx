@@ -232,10 +232,10 @@ export function ServiceTicketsClient() {
                         {ss.label}
                       </span>
                     </td>
-                    <td className="px-4 py-2.5 text-[13px] text-gray-500">
+                    <td className="px-4 py-2.5 text-body-sm text-gray-500">
                       {assignedProfile?.display_name ?? '—'}
                     </td>
-                    <td className="px-4 py-2.5 text-[13px] text-gray-500">
+                    <td className="px-4 py-2.5 text-body-sm text-gray-500">
                       {formatDistanceToNow(new Date(t.created_at), { addSuffix: true })}
                     </td>
                     <td className="relative px-4 py-2.5 text-right">
@@ -250,9 +250,9 @@ export function ServiceTicketsClient() {
                       </button>
                       {actionMenuId === t.id && (
                         <div className="absolute right-4 top-10 z-10 w-44 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
-                          <button type="button" onClick={() => handleQuickAction(t.id, 'assign')} className="block w-full px-4 py-2 text-left text-[13px] text-gray-700 hover:bg-gray-50">Assign to me</button>
-                          <button type="button" onClick={() => handleQuickAction(t.id, 'resolve')} className="block w-full px-4 py-2 text-left text-[13px] text-gray-700 hover:bg-gray-50">Mark resolved</button>
-                          <button type="button" onClick={() => handleQuickAction(t.id, 'close')} className="block w-full px-4 py-2 text-left text-[13px] text-gray-700 hover:bg-gray-50">Mark closed</button>
+                          <button type="button" onClick={() => handleQuickAction(t.id, 'assign')} className="block w-full px-4 py-2 text-left text-body-sm text-gray-700 hover:bg-gray-50">Assign to me</button>
+                          <button type="button" onClick={() => handleQuickAction(t.id, 'resolve')} className="block w-full px-4 py-2 text-left text-body-sm text-gray-700 hover:bg-gray-50">Mark resolved</button>
+                          <button type="button" onClick={() => handleQuickAction(t.id, 'close')} className="block w-full px-4 py-2 text-left text-body-sm text-gray-700 hover:bg-gray-50">Mark closed</button>
                         </div>
                       )}
                     </td>

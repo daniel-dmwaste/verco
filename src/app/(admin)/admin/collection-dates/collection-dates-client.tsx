@@ -228,7 +228,7 @@ export function CollectionDatesClient() {
           <button
             type="button"
             onClick={() => setShowPast((p) => !p)}
-            className={`rounded-lg border px-3 py-2 text-[13px] font-medium transition-colors ${
+            className={`rounded-lg border px-3 py-2 text-body-sm font-medium transition-colors ${
               showPast
                 ? 'border-[#293F52] bg-[#293F52] text-white'
                 : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
@@ -239,14 +239,14 @@ export function CollectionDatesClient() {
           <button
             type="button"
             onClick={() => { setShowBulkCreate((p) => !p); setShowCreate(false) }}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-[13px] font-medium text-gray-600 hover:bg-gray-50"
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-body-sm font-medium text-gray-600 hover:bg-gray-50"
           >
             Bulk Create
           </button>
           <button
             type="button"
             onClick={() => { setShowCreate((p) => !p); setShowBulkCreate(false) }}
-            className="rounded-lg bg-[#00E47C] px-4 py-2 text-[13px] font-semibold text-[#293F52]"
+            className="rounded-lg bg-[#00E47C] px-4 py-2 text-body-sm font-semibold text-[#293F52]"
           >
             + New Date
           </button>
@@ -410,7 +410,7 @@ export function CollectionDatesClient() {
                     <tr key={d.id} className="border-b border-gray-50 bg-blue-50/50">
                       <td className="px-4 py-2.5 font-medium text-[#293F52]">{format(new Date(d.date + 'T00:00:00'), 'EEE d MMM yyyy')}</td>
                       <td className="px-4 py-2.5 text-gray-600">{area.code}</td>
-                      <td className="px-4 py-2.5 text-center">{d.for_mud && <span className="rounded-full bg-[#F3EEFF] px-2 py-0.5 text-[10px] font-semibold text-[#805AD5]">MUD</span>}</td>
+                      <td className="px-4 py-2.5 text-center">{d.for_mud && <span className="rounded-full bg-[#F3EEFF] px-2 py-0.5 text-2xs font-semibold text-[#805AD5]">MUD</span>}</td>
                       <td className="px-4 py-2.5 text-center">
                         <input type="checkbox" checked={editIsOpen} onChange={(e) => setEditIsOpen(e.target.checked)} className="rounded" />
                       </td>
@@ -432,7 +432,7 @@ export function CollectionDatesClient() {
                     </td>
                     <td className="px-4 py-2.5 text-gray-600">{area.code}</td>
                     <td className="px-4 py-2.5 text-center">
-                      {d.for_mud && <span className="rounded-full bg-[#F3EEFF] px-2 py-0.5 text-[10px] font-semibold text-[#805AD5]">MUD</span>}
+                      {d.for_mud && <span className="rounded-full bg-[#F3EEFF] px-2 py-0.5 text-2xs font-semibold text-[#805AD5]">MUD</span>}
                     </td>
                     <td className="px-4 py-2.5 text-center">
                       {d.is_open ? (

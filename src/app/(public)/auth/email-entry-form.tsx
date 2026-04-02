@@ -38,7 +38,7 @@ export function EmailEntryForm() {
         <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[var(--brand)]">
           Sign in
         </h1>
-        <p className="mt-1.5 text-[13px] leading-relaxed text-gray-500">
+        <p className="mt-1.5 text-body-sm leading-relaxed text-gray-500">
           Enter your email address and we&apos;ll send you a one-time code to
           sign in.
         </p>
@@ -59,7 +59,7 @@ export function EmailEntryForm() {
           placeholder="you@example.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className={`w-full rounded-[10px] border-[1.5px] bg-gray-50 px-3.5 py-3 text-[15px] text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-[var(--brand)] focus:border-2 focus:bg-white ${
+          className={`w-full rounded-[10px] border-[1.5px] bg-gray-50 px-3.5 py-3 text-body text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-[var(--brand)] focus:border-2 focus:bg-white ${
             error ? 'border-red-500 bg-red-50' : 'border-gray-100'
           }`}
         />

@@ -152,7 +152,7 @@ function BookingCard({ booking }: { booking: Booking }) {
     <div className="mb-3">
       {showPlaceOut && collectionDateStr && (
         <div className="mb-2.5 rounded-[10px] border border-[var(--brand-accent-dark)] bg-gradient-to-br from-[var(--brand-accent-light)] to-[#d4f5e6] px-3.5 py-3">
-          <div className="mb-0.5 flex items-center gap-1.5 text-[13px] md:text-[15px] font-semibold text-[var(--brand)]">
+          <div className="mb-0.5 flex items-center gap-1.5 text-body-sm md:text-body font-semibold text-[var(--brand)]">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--brand-accent-dark)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
               <polyline points="12 6 12 12 16 14" />
@@ -216,7 +216,7 @@ function BookingCard({ booking }: { booking: Booking }) {
           {booking.booking_item.map((item) => (
             <span
               key={item.id}
-              className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] md:text-[13px] font-medium ${
+              className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] md:text-body-sm font-medium ${
                 item.is_extra ? 'bg-[#FFF3EA] text-[#8B4000]' : 'bg-[#E8EEF2] text-[var(--brand)]'
               }`}
             >
@@ -438,14 +438,14 @@ export function DashboardClient({
                       <div className="mb-1 font-[family-name:var(--font-heading)] text-xs md:text-sm font-semibold text-[#8FA5B8]">
                         {ticket.display_id}
                       </div>
-                      <div className="text-[13px] md:text-[15px] font-semibold text-[var(--brand)]">
+                      <div className="text-body-sm md:text-body font-semibold text-[var(--brand)]">
                         {ticket.subject}
                       </div>
                       <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                        <span className="inline-flex rounded-full bg-[#E8EEF2] px-2.5 py-0.5 text-[11px] md:text-[13px] font-medium text-[var(--brand)]">
+                        <span className="inline-flex rounded-full bg-[#E8EEF2] px-2.5 py-0.5 text-[11px] md:text-body-sm font-medium text-[var(--brand)]">
                           {CATEGORIES[ticket.category] ?? ticket.category}
                         </span>
-                        <span className="text-[11px] md:text-[13px] text-gray-500">
+                        <span className="text-[11px] md:text-body-sm text-gray-500">
                           {format(new Date(ticket.created_at), 'd MMM yyyy')}
                         </span>
                       </div>

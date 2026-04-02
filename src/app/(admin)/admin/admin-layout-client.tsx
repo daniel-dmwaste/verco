@@ -34,7 +34,7 @@ export function AdminLayoutClient({
         </div>
 
         {/* Tenant pill */}
-        <div className="flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-[13px] font-medium text-white">
+        <div className="flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-body-sm font-medium text-white">
           <div className="size-2 rounded-full bg-[#00E47C]" />
           {clientName}
         </div>
@@ -42,7 +42,7 @@ export function AdminLayoutClient({
         <div className="flex-1" />
 
         {/* Search */}
-        <div className="flex w-60 items-center gap-2 rounded-lg bg-white/10 px-3.5 py-1.5 text-[13px] text-white/60">
+        <div className="flex w-60 items-center gap-2 rounded-lg bg-white/10 px-3.5 py-1.5 text-body-sm text-white/60">
           <svg
             width="14"
             height="14"
@@ -61,7 +61,7 @@ export function AdminLayoutClient({
         </div>
 
         {/* Avatar */}
-        <div className="flex size-8 items-center justify-center rounded-full bg-[#3A5A73] text-[13px] font-semibold text-white">
+        <div className="flex size-8 items-center justify-center rounded-full bg-[#3A5A73] text-body-sm font-semibold text-white">
           {initials}
         </div>
       </div>

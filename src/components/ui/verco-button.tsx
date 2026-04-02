@@ -15,9 +15,9 @@ const variants = {
 } as const
 
 const sizes = {
-  default: 'h-[52px] px-3.5 text-[15px]',
+  default: 'h-[52px] px-3.5 text-body',
   sm: 'px-3.5 py-2.5 text-sm',
-  xs: 'px-3 py-2 text-[13px]',
+  xs: 'px-3 py-2 text-body-sm',
 } as const
 
 export interface VercoButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

@@ -176,7 +176,7 @@ export function SurveyForm({
           <div className="flex size-[26px] items-center justify-center rounded-[6px] bg-[var(--brand-accent)] font-[family-name:var(--font-heading)] text-sm font-bold text-[var(--brand)]">
             V
           </div>
-          <span className="font-[family-name:var(--font-heading)] text-[15px] font-bold text-white">
+          <span className="font-[family-name:var(--font-heading)] text-body font-bold text-white">
             Verge Collection
           </span>
         </div>
@@ -351,7 +351,7 @@ export function SurveyForm({
                   value={bookingComments}
                   onChange={(e) => setBookingComments(e.target.value)}
                   placeholder="Tell us about your booking experience — was it easy to use?"
-                  className="h-[76px] w-full resize-none rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-2.5 text-[13px] leading-relaxed text-gray-700 outline-none placeholder:text-gray-300 focus:border-[var(--brand)] focus:bg-white"
+                  className="h-[76px] w-full resize-none rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-2.5 text-body-sm leading-relaxed text-gray-700 outline-none placeholder:text-gray-300 focus:border-[var(--brand)] focus:bg-white"
                 />
               </div>
             </>
@@ -401,7 +401,7 @@ export function SurveyForm({
                   value={collectionComments}
                   onChange={(e) => setCollectionComments(e.target.value)}
                   placeholder="How was the collection itself? Was everything picked up as expected?"
-                  className="h-[76px] w-full resize-none rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-2.5 text-[13px] leading-relaxed text-gray-700 outline-none placeholder:text-gray-300 focus:border-[var(--brand)] focus:bg-white"
+                  className="h-[76px] w-full resize-none rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-2.5 text-body-sm leading-relaxed text-gray-700 outline-none placeholder:text-gray-300 focus:border-[var(--brand)] focus:bg-white"
                 />
               </div>
             </>
@@ -480,7 +480,7 @@ export function SurveyForm({
                   value={otherComments}
                   onChange={(e) => setOtherComments(e.target.value)}
                   placeholder="Anything else you'd like to share about your experience..."
-                  className="h-[76px] w-full resize-none rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-2.5 text-[13px] leading-relaxed text-gray-700 outline-none placeholder:text-gray-300 focus:border-[var(--brand)] focus:bg-white"
+                  className="h-[76px] w-full resize-none rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-2.5 text-body-sm leading-relaxed text-gray-700 outline-none placeholder:text-gray-300 focus:border-[var(--brand)] focus:bg-white"
                 />
               </div>
             </>
@@ -492,7 +492,7 @@ export function SurveyForm({
         </div>
 
         {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-body-sm text-red-700">
             {error}
           </div>
         )}
@@ -501,14 +501,14 @@ export function SurveyForm({
           type="button"
           onClick={handleSubmit}
           disabled={isSubmitting}
-          className="flex w-full items-center justify-center rounded-xl bg-[var(--brand)] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-white disabled:opacity-50"
+          className="flex w-full items-center justify-center rounded-xl bg-[var(--brand)] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-body font-semibold text-white disabled:opacity-50"
         >
           {isSubmitting ? 'Submitting...' : 'Submit Survey'}
         </button>
 
         <div className="flex items-center justify-center gap-1.5 pt-4 text-[11px] text-gray-300">
           Powered by
-          <span className="rounded bg-gray-100 px-1.5 py-px font-[family-name:var(--font-heading)] text-[10px] font-bold text-gray-500">
+          <span className="rounded bg-gray-100 px-1.5 py-px font-[family-name:var(--font-heading)] text-2xs font-bold text-gray-500">
             VERCO
           </span>
         </div>

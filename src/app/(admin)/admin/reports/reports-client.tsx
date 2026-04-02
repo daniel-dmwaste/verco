@@ -88,14 +88,14 @@ export function ReportsClient() {
           <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
             Reports
           </h1>
-          <p className="mt-0.5 text-[13px] text-gray-500">
+          <p className="mt-0.5 text-body-sm text-gray-500">
             Overview of booking and operational metrics
           </p>
         </div>
         <select
           value={selectedArea}
           onChange={(e) => setSelectedArea(e.target.value)}
-          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-[13px] text-gray-700"
+          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-body-sm text-gray-700"
         >
           <option value="">All Areas</option>
           {(areas ?? []).map((a) => (
@@ -148,7 +148,7 @@ export function ReportsClient() {
                           />
                         </div>
                       </div>
-                      <span className="w-12 text-right text-[13px] font-semibold text-gray-700">{count}</span>
+                      <span className="w-12 text-right text-body-sm font-semibold text-gray-700">{count}</span>
                     </div>
                   ))}
               </div>

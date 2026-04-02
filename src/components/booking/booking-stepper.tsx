@@ -41,7 +41,7 @@ export function BookingStepper({ currentStep }: BookingStepperProps) {
               {/* Circle */}
               <div
                 className={cn(
-                  'relative z-10 flex size-7 items-center justify-center rounded-full text-[13px] font-semibold',
+                  'relative z-10 flex size-7 items-center justify-center rounded-full text-body-sm font-semibold',
                   isActive &&
                     'border-[1.5px] border-[var(--brand)] bg-[var(--brand)] text-[var(--brand-accent)]',
                   isDone &&
@@ -71,7 +71,7 @@ export function BookingStepper({ currentStep }: BookingStepperProps) {
               {/* Label */}
               <span
                 className={cn(
-                  'text-center text-[10px] whitespace-nowrap',
+                  'text-center text-2xs whitespace-nowrap',
                   isActive || isDone ? 'text-[var(--brand)]' : 'text-gray-300'
                 )}
               >

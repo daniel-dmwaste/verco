@@ -143,14 +143,14 @@ export default async function AdminDashboardPage() {
           <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
             Dashboard
           </h1>
-          <p className="mt-0.5 text-[13px] text-gray-500">
+          <p className="mt-0.5 text-body-sm text-gray-500">
             {fy?.label ?? ''} &middot; {format(now, 'EEEE d MMMM yyyy')}
           </p>
         </div>
         <div className="flex items-center gap-2.5">
           <Link
             href="/book?on_behalf=true"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#293F52] px-4 py-2 text-[13px] font-semibold text-white"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#293F52] px-4 py-2 text-body-sm font-semibold text-white"
           >
             + New Booking
           </Link>
@@ -164,7 +164,7 @@ export default async function AdminDashboardPage() {
             <svg width="20" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
           </div>
           <div className="mb-2 text-xs font-medium text-gray-500">Bookings This Week</div>
-          <div className="font-[family-name:var(--font-heading)] text-[28px] font-bold text-[#293F52]">
+          <div className="font-[family-name:var(--font-heading)] text-display font-bold text-[#293F52]">
             {weekBookingsResult.count ?? 0}
           </div>
         </div>
@@ -174,7 +174,7 @@ export default async function AdminDashboardPage() {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
           <div className="mb-2 text-xs font-medium text-gray-500">Collections Completed</div>
-          <div className="font-[family-name:var(--font-heading)] text-[28px] font-bold text-[#293F52]">
+          <div className="font-[family-name:var(--font-heading)] text-display font-bold text-[#293F52]">
             {completedResult.count ?? 0}
           </div>
           <div className="mt-1 text-xs text-gray-500">FY total to date</div>
@@ -185,7 +185,7 @@ export default async function AdminDashboardPage() {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
           </div>
           <div className="mb-2 text-xs font-medium text-gray-500">Open Incidents</div>
-          <div className="font-[family-name:var(--font-heading)] text-[28px] font-bold text-[#293F52]">
+          <div className="font-[family-name:var(--font-heading)] text-display font-bold text-[#293F52]">
             {openExceptions}
           </div>
           <div className="mt-1 text-xs text-[#E53E3E]">
@@ -198,7 +198,7 @@ export default async function AdminDashboardPage() {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           </div>
           <div className="mb-2 text-xs font-medium text-gray-500">Open Tickets</div>
-          <div className="font-[family-name:var(--font-heading)] text-[28px] font-bold text-[#293F52]">
+          <div className="font-[family-name:var(--font-heading)] text-display font-bold text-[#293F52]">
             {ticketsResult.count ?? 0}
           </div>
         </div>
@@ -218,7 +218,7 @@ export default async function AdminDashboardPage() {
             return (
               <div key={d.id} className="flex items-center justify-between border-b border-gray-100 py-2.5 last:border-b-0 last:pb-0">
                 <div>
-                  <div className="text-[13px] font-medium text-[#293F52]">
+                  <div className="text-body-sm font-medium text-[#293F52]">
                     {format(new Date(d.date + 'T00:00:00'), 'EEE d MMMM yyyy')}
                   </div>
                   <div className="text-[11px] text-gray-500">{area.name}</div>
@@ -286,7 +286,7 @@ export default async function AdminDashboardPage() {
                   {initials}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[13px] font-medium text-gray-900">{contact.full_name}</div>
+                  <div className="text-body-sm font-medium text-gray-900">{contact.full_name}</div>
                   <div className="truncate text-xs text-gray-500">{ticket.subject}</div>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
@@ -319,7 +319,7 @@ export default async function AdminDashboardPage() {
             {/* Bulk */}
             <div>
               <div className="mb-2 flex items-baseline justify-between">
-                <span className="text-[13px] font-semibold text-[#293F52]">Bulk</span>
+                <span className="text-body-sm font-semibold text-[#293F52]">Bulk</span>
                 <span className="text-[11px] text-gray-500">{bulkTotal} / {bulkMax} used</span>
               </div>
               <div className="flex h-3.5 overflow-hidden rounded-full bg-gray-100">
@@ -346,7 +346,7 @@ export default async function AdminDashboardPage() {
             {/* Ancillary */}
             <div>
               <div className="mb-2 flex items-baseline justify-between">
-                <span className="text-[13px] font-semibold text-[#293F52]">Ancillary</span>
+                <span className="text-body-sm font-semibold text-[#293F52]">Ancillary</span>
                 <span className="text-[11px] text-gray-500">{ancTotal} / {ancMax} used</span>
               </div>
               <div className="flex h-3.5 overflow-hidden rounded-full bg-gray-100">

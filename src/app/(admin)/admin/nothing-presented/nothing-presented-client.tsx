@@ -91,7 +91,7 @@ export function NothingPresentedClient() {
           <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
             Nothing Presented
           </h1>
-          <p className="mt-0.5 text-[13px] text-gray-500">
+          <p className="mt-0.5 text-body-sm text-gray-500">
             {total} records
           </p>
         </div>
@@ -106,14 +106,14 @@ export function NothingPresentedClient() {
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(0) }}
             placeholder="Search notes..."
-            className="w-full border-none bg-transparent text-[13px] text-gray-900 outline-none placeholder:text-gray-300"
+            className="w-full border-none bg-transparent text-body-sm text-gray-900 outline-none placeholder:text-gray-300"
           />
         </div>
 
         <select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(0) }}
-          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-[13px] text-gray-700"
+          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-body-sm text-gray-700"
         >
           <option value="">All Statuses</option>
           {STATUS_OPTIONS.map((s) => (
@@ -124,7 +124,7 @@ export function NothingPresentedClient() {
         <select
           value={faultFilter}
           onChange={(e) => { setFaultFilter(e.target.value); setPage(0) }}
-          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-[13px] text-gray-700"
+          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-body-sm text-gray-700"
         >
           <option value="">All Fault Types</option>
           <option value="dm">Contractor Fault</option>
@@ -171,13 +171,13 @@ export function NothingPresentedClient() {
                       {bookingInfo ? (
                         <Link
                           href={`/admin/bookings/${bookingInfo.id}`}
-                          className="font-[family-name:var(--font-heading)] text-[13px] font-semibold text-[#293F52] hover:underline"
+                          className="font-[family-name:var(--font-heading)] text-body-sm font-semibold text-[#293F52] hover:underline"
                         >
                           {bookingInfo.ref}
                         </Link>
                       ) : '—'}
                     </td>
-                    <td className="max-w-[180px] truncate px-4 py-3 text-[13px]">
+                    <td className="max-w-[180px] truncate px-4 py-3 text-body-sm">
                       {getAddress(np)}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500">

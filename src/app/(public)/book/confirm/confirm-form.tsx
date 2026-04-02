@@ -572,10 +572,10 @@ export function ConfirmForm() {
       {/* Content */}
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto pb-24 pt-6">
         <div>
-          <h1 className="font-[family-name:var(--font-heading)] text-[22px] font-bold leading-tight text-[var(--brand)]">
+          <h1 className="font-[family-name:var(--font-heading)] text-title font-bold leading-tight text-[var(--brand)]">
             Confirm Your Booking
           </h1>
-          <p className="mt-1 text-[13px] leading-relaxed text-gray-500">
+          <p className="mt-1 text-body-sm leading-relaxed text-gray-500">
             Review your booking details and provide contact information.
           </p>
         </div>
@@ -586,7 +586,7 @@ export function ConfirmForm() {
           onSubmit={handleSubmit(onSubmit)}
           className="rounded-xl bg-white p-6 shadow-sm"
         >
-          <h2 className="mb-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[var(--brand)]">
+          <h2 className="mb-3.5 font-[family-name:var(--font-heading)] text-body font-semibold text-[var(--brand)]">
             Contact Information
           </h2>
           <div className="flex flex-col gap-2.5">
@@ -646,7 +646,7 @@ export function ConfirmForm() {
 
         {/* Booking Summary */}
         <div className="rounded-xl bg-white p-6 shadow-sm">
-          <h2 className="mb-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[var(--brand)]">
+          <h2 className="mb-3.5 font-[family-name:var(--font-heading)] text-body font-semibold text-[var(--brand)]">
             Booking Summary
           </h2>
           <div className="flex flex-col">
@@ -654,13 +654,13 @@ export function ConfirmForm() {
               <span className="w-[90px] shrink-0 text-xs font-medium text-gray-500">
                 Address
               </span>
-              <span className="text-[13px] text-gray-900">{address}</span>
+              <span className="text-body-sm text-gray-900">{address}</span>
             </div>
             <div className="flex border-b border-gray-100 py-3">
               <span className="w-[90px] shrink-0 text-xs font-medium text-gray-500">
                 Date
               </span>
-              <span className="text-[13px] text-gray-900">
+              <span className="text-body-sm text-gray-900">
                 {collectionDateFormatted}
               </span>
             </div>
@@ -668,7 +668,7 @@ export function ConfirmForm() {
               <span className="w-[90px] shrink-0 text-xs font-medium text-gray-500">
                 Location
               </span>
-              <span className="text-[13px] text-gray-900">{location}</span>
+              <span className="text-body-sm text-gray-900">{location}</span>
             </div>
           </div>
         </div>
@@ -676,19 +676,19 @@ export function ConfirmForm() {
         {/* Services breakdown */}
         {summaryData && (
           <div className="rounded-xl bg-white p-6 shadow-sm">
-            <h2 className="mb-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[var(--brand)]">
+            <h2 className="mb-3.5 font-[family-name:var(--font-heading)] text-body font-semibold text-[var(--brand)]">
               Services
             </h2>
 
             {summaryData.included.length > 0 && (
               <>
-                <div className="mb-2 text-[10px] font-medium uppercase tracking-wide text-gray-500">
+                <div className="mb-2 text-2xs font-medium uppercase tracking-wide text-gray-500">
                   Included in Allocation
                 </div>
                 {summaryData.included.map((item) => (
                   <div
                     key={item.name}
-                    className="flex items-center justify-between py-1.5 text-[13px]"
+                    className="flex items-center justify-between py-1.5 text-body-sm"
                   >
                     <span className="text-gray-900">
                       {item.name} &times; {item.qty}
@@ -706,13 +706,13 @@ export function ConfirmForm() {
                 {summaryData.included.length > 0 && (
                   <div className="my-2.5 h-px bg-gray-100" />
                 )}
-                <div className="mb-2 text-[10px] font-medium uppercase tracking-wide text-gray-500">
+                <div className="mb-2 text-2xs font-medium uppercase tracking-wide text-gray-500">
                   Extra Services
                 </div>
                 {summaryData.extras.map((item) => (
                   <div
                     key={item.name}
-                    className="flex items-center justify-between py-1.5 text-[13px]"
+                    className="flex items-center justify-between py-1.5 text-body-sm"
                   >
                     <span className="text-gray-900">
                       {item.name} &times; {item.qty} @ $
@@ -748,7 +748,7 @@ export function ConfirmForm() {
         )}
 
         {submitError && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-body-sm text-red-700">
             {submitError}
           </div>
         )}
@@ -760,7 +760,7 @@ export function ConfirmForm() {
               <h2 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[var(--brand)]">
                 Verify Email
               </h2>
-              <p className="mt-1.5 text-[13px] leading-relaxed text-gray-500">
+              <p className="mt-1.5 text-body-sm leading-relaxed text-gray-500">
                 We sent a 6-digit code to
                 <br />
                 <strong className="text-[var(--brand)]">{otpEmail}</strong>
@@ -800,7 +800,7 @@ export function ConfirmForm() {
               )}
 
               {otpState !== 'error' && (
-                <p className="text-center text-[13px] text-gray-500">
+                <p className="text-center text-body-sm text-gray-500">
                   Enter the 6-digit code from your email
                 </p>
               )}
@@ -819,7 +819,7 @@ export function ConfirmForm() {
             </VercoButton>
 
             {/* Resend */}
-            <div className="text-center text-[13px] text-gray-500">
+            <div className="text-center text-body-sm text-gray-500">
               {resendCooldown > 0 ? (
                 <>
                   Code expires in{' '}

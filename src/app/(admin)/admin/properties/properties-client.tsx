@@ -257,14 +257,14 @@ export function PropertiesClient() {
             type="button"
             onClick={handleGeocodeAll}
             disabled={isGeocoding || (ungeocodedCount ?? 0) === 0}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-[13px] font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-body-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
           >
             {isGeocoding ? 'Geocoding...' : `Geocode All (${ungeocodedCount ?? 0} pending)`}
           </button>
           <button
             type="button"
             onClick={() => setShowImport((p) => !p)}
-            className="rounded-lg bg-[#00E47C] px-4 py-2 text-[13px] font-semibold text-[#293F52]"
+            className="rounded-lg bg-[#00E47C] px-4 py-2 text-body-sm font-semibold text-[#293F52]"
           >
             Import Properties
           </button>
@@ -406,7 +406,7 @@ export function PropertiesClient() {
                     <td className="px-4 py-2.5 text-gray-600">{area.code}</td>
                     <td className="px-4 py-2.5 text-center">
                       {p.is_mud ? (
-                        <span className="rounded-full bg-[#F3EEFF] px-2 py-0.5 text-[10px] font-semibold text-[#805AD5]">MUD</span>
+                        <span className="rounded-full bg-[#F3EEFF] px-2 py-0.5 text-2xs font-semibold text-[#805AD5]">MUD</span>
                       ) : (
                         <span className="text-[11px] text-gray-400">Residential</span>
                       )}

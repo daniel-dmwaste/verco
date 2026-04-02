@@ -229,14 +229,14 @@ export function IdBookingForm({ collectionDates }: IdBookingFormProps) {
         <h1 className="font-[family-name:var(--font-heading)] text-lg font-bold text-[var(--brand)]">
           New ID Collection
         </h1>
-        <p className="mt-0.5 text-[13px] text-gray-500">
+        <p className="mt-0.5 text-body-sm text-gray-500">
           Illegal dumping &mdash; log location and schedule collection
         </p>
       </div>
 
       {/* Location card */}
       <div className="flex flex-col gap-3 rounded-xl bg-white p-3.5 shadow-sm">
-        <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+        <div className="text-2xs font-semibold uppercase tracking-wide text-gray-500">
           Location
         </div>
 
@@ -264,7 +264,7 @@ export function IdBookingForm({ collectionDates }: IdBookingFormProps) {
             {gpsState === 'acquiring' && (
               <>
                 <div className="size-12 animate-spin rounded-full border-[3px] border-gray-100 border-t-[var(--brand)]" />
-                <span className="text-[13px] font-medium text-gray-700">
+                <span className="text-body-sm font-medium text-gray-700">
                   Acquiring GPS location...
                 </span>
                 <span className="text-[11px] text-gray-500">
@@ -279,7 +279,7 @@ export function IdBookingForm({ collectionDates }: IdBookingFormProps) {
                   <line x1="12" y1="8" x2="12" y2="12" />
                   <line x1="12" y1="16" x2="12.01" y2="16" />
                 </svg>
-                <span className="text-[13px] font-medium text-gray-700">
+                <span className="text-body-sm font-medium text-gray-700">
                   {gpsError}
                 </span>
               </>
@@ -334,7 +334,7 @@ export function IdBookingForm({ collectionDates }: IdBookingFormProps) {
           !isLocked && 'pointer-events-none opacity-40'
         )}
       >
-        <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+        <div className="text-2xs font-semibold uppercase tracking-wide text-gray-500">
           Waste Description
         </div>
 
@@ -382,7 +382,7 @@ export function IdBookingForm({ collectionDates }: IdBookingFormProps) {
                     )}
                   >
                     {v.label}
-                    <span className="text-[10px] font-normal text-gray-500">
+                    <span className="text-2xs font-normal text-gray-500">
                       {v.sub}
                     </span>
                   </button>
@@ -398,7 +398,7 @@ export function IdBookingForm({ collectionDates }: IdBookingFormProps) {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Describe the waste found..."
-                className="h-[72px] w-full resize-none rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-2.5 text-[13px] text-gray-900 outline-none placeholder:text-gray-300 focus:border-[var(--brand)] focus:bg-white"
+                className="h-[72px] w-full resize-none rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-2.5 text-body-sm text-gray-900 outline-none placeholder:text-gray-300 focus:border-[var(--brand)] focus:bg-white"
               />
             </div>
           </>
@@ -416,9 +416,9 @@ export function IdBookingForm({ collectionDates }: IdBookingFormProps) {
           !isLocked && 'pointer-events-none opacity-40'
         )}
       >
-        <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+        <div className="text-2xs font-semibold uppercase tracking-wide text-gray-500">
           Photos{' '}
-          <span className="text-[10px] font-normal normal-case tracking-normal text-gray-400">
+          <span className="text-2xs font-normal normal-case tracking-normal text-gray-400">
             (min. 1 required)
           </span>
         </div>
@@ -445,7 +445,7 @@ export function IdBookingForm({ collectionDates }: IdBookingFormProps) {
               className="flex size-[76px] flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-gray-300"
             >
               {isUploading ? (
-                <span className="text-[10px] text-gray-400">...</span>
+                <span className="text-2xs text-gray-400">...</span>
               ) : (
                 <>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#B0B0B0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -455,7 +455,7 @@ export function IdBookingForm({ collectionDates }: IdBookingFormProps) {
                     <line x1="18" y1="2" x2="18" y2="6" />
                     <line x1="16" y1="4" x2="20" y2="4" />
                   </svg>
-                  <span className="text-[10px] text-gray-500">Add photo</span>
+                  <span className="text-2xs text-gray-500">Add photo</span>
                 </>
               )}
             </button>
@@ -479,7 +479,7 @@ export function IdBookingForm({ collectionDates }: IdBookingFormProps) {
       {/* Collection Date — only show when GPS locked */}
       {isLocked && collectionDates.length > 0 && (
         <div className="flex flex-col gap-3 rounded-xl bg-white p-3.5 shadow-sm">
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+          <div className="text-2xs font-semibold uppercase tracking-wide text-gray-500">
             Collection Date
           </div>
           <div className="grid grid-cols-3 gap-2">
@@ -512,14 +512,14 @@ export function IdBookingForm({ collectionDates }: IdBookingFormProps) {
                   </span>
                   <span
                     className={cn(
-                      'text-[10px]',
+                      'text-2xs',
                       isSelected ? 'text-green-200/80' : 'text-gray-500'
                     )}
                   >
                     {spotsRemaining} ID spots
                   </span>
                   {isSelected && (
-                    <span className="text-[10px] font-medium text-[var(--brand-accent)]">
+                    <span className="text-2xs font-medium text-[var(--brand-accent)]">
                       Selected &#10003;
                     </span>
                   )}
@@ -536,20 +536,20 @@ export function IdBookingForm({ collectionDates }: IdBookingFormProps) {
       {/* Additional Notes */}
       {isLocked && (
         <div className="flex flex-col gap-3 rounded-xl bg-white p-3.5 shadow-sm">
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+          <div className="text-2xs font-semibold uppercase tracking-wide text-gray-500">
             Additional Notes
           </div>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Access notes, hazards, special instructions for field crew..."
-            className="h-[72px] w-full resize-none rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-2.5 text-[13px] text-gray-900 outline-none placeholder:text-gray-300 focus:border-[var(--brand)] focus:bg-white"
+            className="h-[72px] w-full resize-none rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-2.5 text-body-sm text-gray-900 outline-none placeholder:text-gray-300 focus:border-[var(--brand)] focus:bg-white"
           />
         </div>
       )}
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-body-sm text-red-700">
           {error}
         </div>
       )}
@@ -560,7 +560,7 @@ export function IdBookingForm({ collectionDates }: IdBookingFormProps) {
           type="button"
           onClick={handleSubmit}
           disabled={isSubmitting}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand)] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-white disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand)] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-body font-semibold text-white disabled:opacity-50"
         >
           {isSubmitting ? (
             'Submitting...'

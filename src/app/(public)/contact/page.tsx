@@ -51,7 +51,7 @@ export default async function ContactPage() {
 
       {/* Contact details card */}
       <div className="mb-6 rounded-xl bg-white p-5 shadow-sm">
-        <div className="mb-3 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+        <div className="mb-3 text-2xs font-semibold uppercase tracking-wide text-gray-500">
           Contact Details
         </div>
         <div className="flex flex-col gap-3">

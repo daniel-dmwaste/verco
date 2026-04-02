@@ -99,7 +99,7 @@ export function NcnForm({ bookingId, bookingRef, address }: NcnFormProps) {
       <div className="shrink-0 border-b border-gray-100 bg-white px-5 py-4">
         <Link
           href={`/field/booking/${bookingRef}`}
-          className="mb-2.5 flex items-center gap-1.5 text-[13px] font-medium text-[#8FA5B8]"
+          className="mb-2.5 flex items-center gap-1.5 text-body-sm font-medium text-[#8FA5B8]"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6"/>
@@ -109,14 +109,14 @@ export function NcnForm({ bookingId, bookingRef, address }: NcnFormProps) {
         <div className="font-[family-name:var(--font-heading)] text-base font-bold text-[#E53E3E]">
           Non-Conformance Notice
         </div>
-        <div className="mt-0.5 text-[13px] text-gray-500">{address}</div>
+        <div className="mt-0.5 text-body-sm text-gray-500">{address}</div>
       </div>
 
       {/* Content */}
       <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-5 pb-24 pt-4">
         {/* Reason grid */}
         <div className="flex flex-col gap-2 rounded-xl bg-white p-3.5 shadow-sm">
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+          <div className="text-2xs font-semibold uppercase tracking-wide text-gray-500">
             Reason
           </div>
           <div className="grid grid-cols-2 gap-1.5">
@@ -140,7 +140,7 @@ export function NcnForm({ bookingId, bookingRef, address }: NcnFormProps) {
 
         {/* Photos */}
         <div className="flex flex-col gap-2 rounded-xl bg-white p-3.5 shadow-sm">
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+          <div className="text-2xs font-semibold uppercase tracking-wide text-gray-500">
             Photos
           </div>
           <div className="flex flex-wrap gap-2">
@@ -164,7 +164,7 @@ export function NcnForm({ bookingId, bookingRef, address }: NcnFormProps) {
               className="flex size-[72px] items-center justify-center rounded-lg border-2 border-dashed border-gray-300"
             >
               {isUploading ? (
-                <span className="text-[10px] text-gray-400">...</span>
+                <span className="text-2xs text-gray-400">...</span>
               ) : (
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#B0B0B0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="2" y="5" width="20" height="15" rx="2"/>
@@ -189,19 +189,19 @@ export function NcnForm({ bookingId, bookingRef, address }: NcnFormProps) {
 
         {/* Notes */}
         <div className="flex flex-col gap-2 rounded-xl bg-white p-3.5 shadow-sm">
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+          <div className="text-2xs font-semibold uppercase tracking-wide text-gray-500">
             Notes
           </div>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Add details about the non-conformance..."
-            className="h-[72px] w-full resize-none rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-[13px] text-gray-900 outline-none placeholder:text-gray-400 focus:border-[var(--brand)] focus:bg-white"
+            className="h-[72px] w-full resize-none rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-body-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-[var(--brand)] focus:bg-white"
           />
         </div>
 
         {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-body-sm text-red-700">
             {error}
           </div>
         )}

@@ -50,7 +50,7 @@ export function MudAllocationForm({
       <div className="shrink-0 border-b border-gray-100 bg-white px-5 py-4">
         <Link
           href="/field/run-sheet"
-          className="mb-2.5 flex items-center gap-1.5 text-[13px] font-medium text-[#8FA5B8]"
+          className="mb-2.5 flex items-center gap-1.5 text-body-sm font-medium text-[#8FA5B8]"
         >
           <svg
             width="14"
@@ -73,7 +73,7 @@ export function MudAllocationForm({
               &middot; MUD
             </span>
           </div>
-          <div className="mt-0.5 text-[13px] text-gray-500">{address}</div>
+          <div className="mt-0.5 text-body-sm text-gray-500">{address}</div>
         </div>
       </div>
 
@@ -81,7 +81,7 @@ export function MudAllocationForm({
       <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-5 pb-24 pt-4">
         {/* Info banner */}
         <div className="rounded-[10px] border border-[#FF8C42] bg-[#FFF3EA] px-3.5 py-3">
-          <div className="mb-1 text-[13px] font-semibold text-[#8B4000]">
+          <div className="mb-1 text-body-sm font-semibold text-[#8B4000]">
             MUD Collection &mdash; Allocation Entry
           </div>
           <div className="text-xs text-[#8B4000]">
@@ -92,7 +92,7 @@ export function MudAllocationForm({
 
         {/* Allocation counter */}
         <div className="flex flex-col gap-2 rounded-xl bg-white p-3.5 shadow-sm">
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+          <div className="text-2xs font-semibold uppercase tracking-wide text-gray-500">
             Actual Allocations Collected
           </div>
           <div className="flex flex-col items-center gap-4 py-6">
@@ -108,15 +108,15 @@ export function MudAllocationForm({
               <button
                 type="button"
                 onClick={() => setCount((c) => Math.max(0, c - 1))}
-                className="flex size-[52px] items-center justify-center rounded-full border-2 border-gray-100 bg-white text-[28px] font-bold text-[var(--brand)] shadow-sm"
+                className="flex size-[52px] items-center justify-center rounded-full border-2 border-gray-100 bg-white text-display font-bold text-[var(--brand)] shadow-sm"
               >
                 &minus;
               </button>
-              <span className="text-[13px] text-gray-500">allocations</span>
+              <span className="text-body-sm text-gray-500">allocations</span>
               <button
                 type="button"
                 onClick={() => setCount((c) => c + 1)}
-                className="flex size-[52px] items-center justify-center rounded-full border-2 border-[var(--brand)] bg-[var(--brand)] text-[28px] font-bold text-[var(--brand-accent)] shadow-[0_4px_12px_rgba(41,63,82,0.3)]"
+                className="flex size-[52px] items-center justify-center rounded-full border-2 border-[var(--brand)] bg-[var(--brand)] text-display font-bold text-[var(--brand-accent)] shadow-[0_4px_12px_rgba(41,63,82,0.3)]"
               >
                 +
               </button>
@@ -130,19 +130,19 @@ export function MudAllocationForm({
 
         {/* Notes */}
         <div className="flex flex-col gap-2 rounded-xl bg-white p-3.5 shadow-sm">
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+          <div className="text-2xs font-semibold uppercase tracking-wide text-gray-500">
             Notes (Optional)
           </div>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="e.g. large volume, overflow from adjacent unit..."
-            className="h-[72px] w-full resize-none rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-[13px] text-gray-900 outline-none placeholder:text-gray-400 focus:border-[var(--brand)] focus:bg-white"
+            className="h-[72px] w-full resize-none rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-body-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-[var(--brand)] focus:bg-white"
           />
         </div>
 
         {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-body-sm text-red-700">
             {error}
           </div>
         )}

@@ -142,7 +142,7 @@ export function UsersClient() {
           <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
             Users
           </h1>
-          <p className="mt-0.5 text-[13px] text-gray-500">
+          <p className="mt-0.5 text-body-sm text-gray-500">
             {total} user roles
           </p>
         </div>
@@ -150,7 +150,7 @@ export function UsersClient() {
           <button
             type="button"
             onClick={openAddDialog}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#293F52] px-4 py-2 text-[13px] font-semibold text-white"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#293F52] px-4 py-2 text-body-sm font-semibold text-white"
           >
             + Add User
           </button>
@@ -166,14 +166,14 @@ export function UsersClient() {
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search email, name..."
-            className="w-full border-none bg-transparent text-[13px] text-gray-900 outline-none placeholder:text-gray-300"
+            className="w-full border-none bg-transparent text-body-sm text-gray-900 outline-none placeholder:text-gray-300"
           />
         </div>
 
         <select
           value={roleFilter}
           onChange={(e) => { setRoleFilter(e.target.value); setPage(0) }}
-          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-[13px] text-gray-700"
+          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-body-sm text-gray-700"
         >
           <option value="">All Roles</option>
           {ROLE_OPTIONS.map((r) => (
@@ -184,7 +184,7 @@ export function UsersClient() {
         <select
           value={activeFilter}
           onChange={(e) => { setActiveFilter(e.target.value); setPage(0) }}
-          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-[13px] text-gray-700"
+          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-body-sm text-gray-700"
         >
           <option value="">All Status</option>
           <option value="active">Active</option>
@@ -226,10 +226,10 @@ export function UsersClient() {
 
                 return (
                   <tr key={ur.id} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
-                    <td className="px-4 py-3 text-[13px] font-semibold text-[#293F52]">
+                    <td className="px-4 py-3 text-body-sm font-semibold text-[#293F52]">
                       {name}
                     </td>
-                    <td className="px-4 py-3 text-[13px] text-gray-600">
+                    <td className="px-4 py-3 text-body-sm text-gray-600">
                       {profile?.email ?? '—'}
                     </td>
                     <td className="px-4 py-3">
@@ -262,14 +262,14 @@ export function UsersClient() {
                             <button
                               type="button"
                               onClick={() => { setActionMenuId(null); openEditDialog(ur) }}
-                              className="block w-full px-4 py-2 text-left text-[13px] text-gray-700 hover:bg-gray-50"
+                              className="block w-full px-4 py-2 text-left text-body-sm text-gray-700 hover:bg-gray-50"
                             >
                               Edit user
                             </button>
                             <button
                               type="button"
                               onClick={() => handleRevokeAccess(ur.id, ur.is_active)}
-                              className="block w-full px-4 py-2 text-left text-[13px] text-red-600 hover:bg-gray-50"
+                              className="block w-full px-4 py-2 text-left text-body-sm text-red-600 hover:bg-gray-50"
                             >
                               {ur.is_active ? 'Revoke access' : 'Restore access'}
                             </button>

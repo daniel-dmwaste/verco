@@ -133,10 +133,10 @@ export function DateForm() {
       {/* Content */}
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto pb-24 pt-6">
         <div>
-          <h1 className="font-[family-name:var(--font-heading)] text-[22px] font-bold leading-tight text-[var(--brand)]">
+          <h1 className="font-[family-name:var(--font-heading)] text-title font-bold leading-tight text-[var(--brand)]">
             Select Collection Date
           </h1>
-          <p className="mt-1 text-[13px] leading-relaxed text-gray-500">
+          <p className="mt-1 text-body-sm leading-relaxed text-gray-500">
             Choose a date for your collection at{' '}
             {address.split(',')[0] ?? address}.
           </p>
@@ -216,12 +216,12 @@ export function DateForm() {
                       {spotsRemaining} spots
                     </span>
                     {isSelected && (
-                      <span className="text-[10px] font-medium text-[var(--brand-accent)]">
+                      <span className="text-2xs font-medium text-[var(--brand-accent)]">
                         Selected &#10003;
                       </span>
                     )}
                     {!isSelected && isAlmostFull && (
-                      <span className="text-[10px] font-medium text-[#FF8C42]">
+                      <span className="text-2xs font-medium text-[#FF8C42]">
                         Almost full
                       </span>
                     )}
