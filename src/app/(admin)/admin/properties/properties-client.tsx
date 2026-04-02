@@ -408,8 +408,9 @@ export function PropertiesClient() {
             ) : properties.length === 0 ? (
               <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">No properties found</td></tr>
             ) : (
-              properties.map((p) => {
+              properties.map((p, rowIndex) => {
                 const area = p.collection_area as { name: string; code: string }
+                const menuAbove = rowIndex >= 3
                 return (
                   <tr key={p.id} className={`border-b border-gray-50 ${!p.is_eligible ? 'opacity-60' : ''}`}>
                     <td className="px-4 py-2.5">
@@ -453,7 +454,7 @@ export function PropertiesClient() {
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
                         </button>
                         {openMenuId === p.id && (
-                          <div className="absolute bottom-full right-0 z-10 mb-1 w-44 rounded-lg border border-gray-100 bg-white py-1 shadow-lg">
+                          <div className={`absolute right-0 z-10 w-44 rounded-lg border border-gray-100 bg-white py-1 shadow-lg ${menuAbove ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
                             <button
                               type="button"
                               onClick={() => {
