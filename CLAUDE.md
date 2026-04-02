@@ -390,9 +390,11 @@ Public pages: `<main className="mx-auto w-full max-w-5xl px-6 py-8">` at server 
 ### Turbopack root for special-character paths
 `next.config.ts` sets `turbopack: { root: process.cwd() }` to fix workspace root detection when the project path contains `&` (OneDrive).
 
+### White-label colours — use `var(--brand)` not hardcoded hex
+Public/field pages use CSS variables (`--brand`, `--brand-accent` + derived `-light`/`-hover`/`-dark`). Never hardcode `#293F52`/`#00E47C` in public/field — admin pages are exempt.
+
+### Typography — use semantic tokens, not arbitrary px
+`text-2xs`(10), `text-body-sm`(13), `text-body`(15), `text-subtitle`(17), `text-title`(22), `text-display`(28). Exception: `text-[11px]` has no token.
+
 ### Booking wizard state — URL params are the source of truth
-Every wizard step must carry ALL accumulated params through both forward and back navigation. When adding a new param, update `carryParams` in every step (services, date, details, confirm). Common params: `property_id`, `collection_area_id`, `address`, `items`, `total_cents`, `collection_date_id`, `location`, `notes`, `contact_name`, `contact_email`, `contact_mobile`, `on_behalf`, `return_url`.
-
----
-
-*Keep this file current. If a decision changes in the PRD or TECH_SPEC, update CLAUDE.md in the same PR.*
+Every wizard step carries ALL params through back/forward nav via `carryParams`. When adding a param, update all steps.
