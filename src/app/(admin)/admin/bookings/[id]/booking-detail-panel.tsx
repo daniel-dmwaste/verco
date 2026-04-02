@@ -129,6 +129,9 @@ export function BookingDetailPanel({
           .map((i) => `${i.service_id}:${i.no_services}`)
           .join(','),
         total_cents: totalChargeCents.toString(),
+        ...(booking.booking_item[0]?.collection_date_id ? { collection_date_id: booking.booking_item[0].collection_date_id } : {}),
+        ...(booking.location ? { location: booking.location } : {}),
+        ...(booking.notes ? { notes: booking.notes } : {}),
         ...(contact?.full_name ? { contact_name: contact.full_name } : {}),
         ...(contact?.email ? { contact_email: contact.email } : {}),
         ...(contact?.mobile_e164 ? { contact_mobile: contact.mobile_e164 } : {}),
