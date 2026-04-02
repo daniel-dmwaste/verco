@@ -998,4 +998,110 @@ The `accessible_client_ids()` function uses `SELECT ... FROM client WHERE contra
 
 ---
 
+## 27. Session Decisions — 1 April 2026
+
+### NCN/NP workflow — Issued + Dispute + Auto-close
+
+Field records NCN/NP → status defaults to `Issued` (not `Open`). Resident can click "Dispute" on the booking detail card within 14 days → status changes to `Disputed`. Staff can only investigate/resolve/rebook `Disputed` or `Under Review` notices. Undisputed notices auto-close after 14 days via `auto-close-notices` Edge Function (cron).
+
+**Status flow:** `Issued → Disputed → Under Review → Resolved / Rescheduled (NCN) / Rebooked (NP)`
+**Auto-close:** `Issued → Closed` (14 days, no dispute)
+
+The `Open` enum value is kept but unused — removing Postgres enum values is destructive.
+
+### `contractor_fault` — unified naming
+
+Both `non_conformance_notice` and `nothing_presented` use `contractor_fault` (boolean). The NP table's original `dm_fault` column was renamed in migration `20260401120000`. When `contractor_fault = true`:
+- Original booking items excluded from allocation counting (future: modify pricing queries)
+- If resolved without rebook and booking has paid items → auto-refund via `process-refund` Edge Function
+- If rebooked → paid items on the new booking are set to `unit_price_cents: 0`
+
+### Resident dispute — RLS-enforced status transition
+
+RLS policies `ncn_resident_update_dispute` and `np_resident_update_dispute` constrain residents to only change status from `Issued` to `Disputed` on their own bookings. Server actions call `.update({ status: 'Disputed' })` — the RLS policy enforces both ownership and valid transition.
+
+### Admin link on public nav
+
+Staff-tier users (`contractor-admin`, `contractor-staff`, `client-admin`, `client-staff`) see an "Admin" link in the public desktop nav and a 4th "Admin" tab in mobile bottom nav. Checked server-side in `app/(public)/layout.tsx` via `user_roles` query. Runs in parallel with branding query (`Promise.all`). Defaults to `false` on any error — never blocks rendering.
+
+### Booking detail desktop layout
+
+Resident booking detail (`/booking/[ref]`) uses a 2-col `md:grid-cols-2` layout:
+- Row 1: Contact details (left) + Collection details (right)
+- Row 2: Included services (left) + Extra services (right)
+- Enquiries card at half-width (left column only)
+- Action buttons in `flex-row` on desktop, `flex-col` on mobile
+- Header shows formatted address from `property:property_id(formatted_address, address)` — not area/type
+
+### Receipt URL from Stripe
+
+`booking_payment.receipt_url` (text, nullable) stores the Stripe-hosted receipt URL. Populated in `stripe-webhook` by expanding the `latest_charge` on the PaymentIntent. Displayed as "View receipt" link in the extra services card on booking detail.
+
+### Dashboard enquiries — show all statuses
+
+Resident dashboard enquiries tab shows all ticket statuses (including resolved/closed), not just active ones. The stat card counts only active tickets (`open`, `in_progress`, `waiting_on_customer`).
+
+### Cancelled booking badge — red
+
+`BookingStatusBadge` uses `bg-[#FFF0F0] text-[#E53E3E]` for Cancelled status (was grey). Consistent with Non-conformance and Missed Collection.
+
+### Place-out/countdown — active bookings only
+
+The place-out reminder and countdown/cancellation warning on dashboard booking cards are gated behind `UPCOMING_STATUSES` (Submitted, Confirmed, Scheduled). They don't show on cancelled or completed cards.
+
+### Rebook button for terminal statuses
+
+Booking detail shows a green "Rebook" button for terminal statuses (Completed, Cancelled, Non-conformance, Nothing Presented, Rebooked, Missed Collection). Links to `/book?address={formatted_address}` — the address form auto-resolves from the `?address=` param.
+
+### Edge Functions built
+
+| Function | Auth | Deploy flag | Notes |
+|---|---|---|---|
+| `auto-close-notices` | Service role (cron) | `--no-verify-jwt` | Closes NCN/NP in `Issued` status older than 14 days. Schedule: `0 2 * * *` (10:00 AWST). |
+
+### Admin pages built — NCN + NP detail
+
+| Page | Route | Key features |
+|---|---|---|
+| NCN Detail | `/admin/non-conformance/[id]` | Info cards (2-col), photos with lightbox, resolution form (contractor_fault checkbox, notes), rebook dialog (date picker), refund confirmation dialog |
+| NP Detail | `/admin/nothing-presented/[id]` | Same pattern as NCN. Fault type = contractor_fault (renamed from dm_fault) |
+
+Both use the same patterns: `verifyStaffRole()` helper, `Result<T>` return type, Base UI Dialog for rebook/refund confirmation. Resolution actions only available for `Disputed` + `Under Review` statuses. `Issued` shows "Awaiting resident response" message.
+
+### Multi-FK hint syntax reminder
+
+`non_conformance_notice` and `nothing_presented` both have two FKs to `booking` (`booking_id` and `rescheduled_booking_id`). Supabase select must use FK hints: `booking:booking!non_conformance_notice_booking_id_fkey(...)`. Same pattern as `bug_report` (§26).
+
+### Migrations applied
+
+| Migration | Contents |
+|---|---|
+| `booking_payment_receipt_url` | `receipt_url` text column on `booking_payment` |
+| `booking_payment_resident_select` | Resident + staff SELECT policies on `booking_payment` |
+| `ncn_contractor_fault` | `contractor_fault` boolean on NCN + staff UPDATE RLS policy |
+| `np_staff_update` | Rename `dm_fault` → `contractor_fault` on NP + staff UPDATE RLS policy |
+| `ncn_np_issued_disputed_closed` | Add `Issued`/`Disputed`/`Closed` to both enums, change defaults, migrate Open → Issued, resident dispute RLS policies |
+
+### Pending post-deployment steps
+
+1. `pnpm supabase db push` — apply all 5 migrations
+2. `pnpm supabase functions deploy stripe-webhook --no-verify-jwt`
+3. `pnpm supabase functions deploy auto-close-notices --no-verify-jwt`
+4. Schedule `auto-close-notices` cron via `pg_cron` (see Edge Function file for SQL)
+5. Regen types: `pnpm supabase gen types typescript --project-id tfddjmplcizfirxqhotv > src/lib/supabase/types.ts`
+6. Clean up `as never` / `as unknown` casts and `contractor_fault: false` defaults after type regen
+7. Replace remaining `dm_fault` references in NP list page with `contractor_fault` after type regen
+
+### Admin dashboard audit — Priority 1 remaining
+
+| # | Gap | Status |
+|---|---|---|
+| 1 | NCN detail + actions | **Done** |
+| 2 | NP detail + actions | **Done** |
+| 3 | Refund → Stripe wiring | Pending — connect admin refund approve button to `process-refund` Edge Function |
+| 4 | Bulk booking actions | Pending — confirm/cancel from list view (checkbox + action bar) |
+| 5 | Allocation override table | Separate feature — for new owner reinstatement, council credits |
+
+---
+
 *Keep this file current. If a decision changes in the PRD or TECH_SPEC, update CLAUDE.md in the same PR.*
