@@ -21,21 +21,34 @@ git push
 Run: git log --oneline --since="8 hours ago"
 Scan the modified files to understand what changed this session.
 
-### Step 3 — Update CLAUDE.md
-Add any new decisions, patterns, or conventions that aren't already documented. Look for:
+### Step 3 — Update CLAUDE.md (400-line hard cap)
+
+**Before adding anything, triage into three buckets:**
+- **A) Durable rules** that prevent recurring mistakes → add to CLAUDE.md §21
+- **B) Operational context** (what was built, how it works, implementation details) → add to memory files
+- **C) One-time fixes, inventories, code-level details → nowhere**
+
+**Removal check (do this FIRST):**
+Scan §21 Patterns & Gotchas for items that are now:
+- Obvious from the code (the fix landed, the pattern is established)
+- Duplicated in core sections (§6 pricing, §7 state machine, §12 RLS)
+- Implementation descriptions rather than rules to follow
+Remove those before adding new items.
+
+**Then add new items.** Look for:
 - Any pattern used more than once that should become a convention
 - Any fix that reveals a recurring mistake to avoid in future
-- Any new Edge Functions and their auth patterns
 - Any schema, naming, or RLS decisions made
-- Any UI or layout conventions established
-- Any bugs fixed that imply a rule to follow going forward
+
+**Hard cap: CLAUDE.md must stay under 400 lines.** If over after edits, compress or move items to memory until under.
 
 Do NOT add:
 - Anything already in CLAUDE.md
 - One-off fixes that aren't a general pattern
-- UI copy changes
+- UI copy changes or implementation descriptions
+- General programming knowledge (e.g. Postgres gotchas)
 
-One line per decision where possible. Add to the most relevant existing section, or create a new section only if nothing fits.
+One line per decision where possible.
 
 ### Step 4 — Commit CLAUDE.md
 git add CLAUDE.md

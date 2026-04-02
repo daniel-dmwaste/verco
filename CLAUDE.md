@@ -52,18 +52,9 @@ Category (Bulk / Ancillary / Illegal Dumping)
   └── Service (General, Green, Mattress, E-Waste, Whitegoods)
 ```
 
-**Schema naming:**
-- `category` table = capacity grouping: Bulk, Ancillary, Illegal Dumping (has `code` column: 'bulk', 'anc', 'id')
-- `service` table = individual service types: General, Green, Mattress, E-Waste, Whitegoods (FK `category_id` → category)
-- `allocation_rules` = per collection_area per category (max collections per FY)
-- `service_rules` = per collection_area per service (max collections + overage price)
-- `booking_item.service_id` → FK to `service` table (not `service_type`)
+**Schema naming:** `category` = capacity grouping (Bulk/Ancillary/ID, `code` column). `service` = individual types (FK → category). `allocation_rules` = per area per category. `service_rules` = per area per service. `booking_item.service_id` → FK to `service` (not `service_type`).
 
-**Key rules:**
-- A resident portal is branded at the **client** level (e.g. `kwn.verco.au`)
-- Address lookup resolves to a **collection area** — never ask the resident to select one
-- Sub-clients are optional — KWN has none, WMRC has nine
-- `dm_job_code` on `collection_area` is a metadata field for DM-Ops sync only — never use it for business logic
+**Key rules:** Portal is branded at **client** level. Address lookup resolves to a **collection area** — never ask resident to select one. Sub-clients are optional. `dm_job_code` on `collection_area` is DM-Ops sync metadata only.
 
 ---
 
@@ -96,8 +87,6 @@ Admin users pages filter out `resident` and `strata` roles from queries and drop
 
 ## 5. Supabase Client Usage
 
-**This is the most common source of bugs. Read carefully.**
-
 Two clients exist — `lib/supabase/server.ts` (server) and `lib/supabase/client.ts` (browser). Read the source files for implementation.
 
 - **Always use the anon key** in both clients — RLS does the access control
@@ -109,20 +98,13 @@ Two clients exist — `lib/supabase/server.ts` (server) and `lib/supabase/client
 
 ## 6. Pricing Engine — Hard Rules
 
-**The most security-critical part of the codebase.**
-
 ```
 NEVER accept unit_price_cents from the client.
 NEVER calculate price in a client component.
 NEVER skip the server-side price recalculation on booking creation.
 ```
 
-The pricing flow is always:
-1. Client calls `calculate-price` Edge Function with `{ property_id, fy_id, items }`
-2. Edge Function returns `PriceCalculationResult` — client displays this to the user
-3. On confirm, client calls `create-booking` Edge Function
-4. `create-booking` **re-runs** `calculatePrice` internally — it never trusts the client's displayed price
-5. If the recalculated price differs from what was shown, the booking is rejected
+**Flow:** Client calls `calculate-price` EF → displays result → on confirm, `create-booking` EF **re-runs** `calculatePrice` internally (never trusts client price) → rejects if price differs.
 
 ### Dual-limit free unit calculation
 
@@ -135,9 +117,9 @@ free_units         = MIN(requested_qty, category_remaining, service_remaining)
 paid_units         = requested_qty - free_units
 ```
 
-**Only free_units consume category budget** — paid units do not reduce the remaining count. When iterating multiple services in the same category, track cumulative free unit consumption with a `categoryFormUsed` map.
+**Only free_units consume category budget** — paid units do not reduce the remaining count.
 
-The authoritative implementation is in `supabase/functions/_shared/pricing.ts`. A Node-compatible extraction lives in `src/lib/pricing/calculate.ts` (tested with Vitest, keep in sync). The client-side preview in `services-form.tsx` mirrors the same logic for display purposes only.
+Authoritative implementation: `supabase/functions/_shared/pricing.ts`. Node extraction: `src/lib/pricing/calculate.ts` (tested with Vitest, keep in sync). Client preview in `services-form.tsx` mirrors for display only.
 
 ---
 
@@ -203,20 +185,7 @@ Under Review → Rebooked   (staff — NP)
 - **Utilities:** `camelCase` in `lib/utils/`
 
 ### Component co-location
-Keep components close to where they're used. Only promote to `components/` when used in 3+ places.
-
-```
-app/
-  (public)/
-    book/
-      services/
-        page.tsx
-        service-selector.tsx      ← co-located, used only here
-        use-service-rules.ts      ← co-located hook
-components/
-  booking/
-    booking-status-badge.tsx      ← shared, used in admin + resident views
-```
+Keep components close to where they're used. Only promote to `components/` when used in 3+ places. Co-locate single-use components and hooks in the same directory as their page.
 
 ### Server vs. client components
 Default to **server components**. Add `'use client'` only when you need `useState`/`useReducer`, `useEffect`, browser APIs, or event handlers that can't be server actions.
@@ -241,14 +210,7 @@ Each group has its own `layout.tsx` with appropriate auth + role guards.
 2. **Validate session** — refreshes Supabase auth token if needed
 3. **Route guards** — redirects unauthenticated or wrong-role users
 
-```typescript
-// Route guard rules (in order of specificity)
-// /field/*   → requires role IN ('field', 'ranger')
-// /admin/*   → requires role IN ('client-admin', 'client-staff', 'contractor-admin', 'contractor-staff')
-// /dashboard → requires authenticated session
-// /book/*    → public (guest booking allowed)
-// /survey/*  → public (token-based, no auth)
-```
+**Route guards:** `/field/*` → field/ranger. `/admin/*` → staff roles. `/dashboard` → authenticated. `/book/*` and `/survey/*` → public.
 
 The resolved `client_id`, `client_slug`, and `contractor_id` are set as **request** headers (`x-client-id`, `x-client-slug`, `x-contractor-id`) via `NextResponse.next({ request: { headers } })` — NOT response headers. Read via `headers()` in server components and actions. Never re-query for these in downstream code.
 
@@ -300,21 +262,9 @@ pnpm test:coverage # Coverage report
 ```
 
 ### Every new feature requires
-1. Unit tests for any business logic function
-2. E2E test for any user-facing flow
+1. Unit tests for business logic (`src/__tests__/`)
+2. E2E test for user-facing flows (`tests/e2e/`)
 3. RLS test if a new table or policy is added
-
-### Test file location
-```
-src/
-  __tests__/
-    pricing.test.ts
-    state-machine.test.ts
-tests/
-  e2e/
-    booking-flow.spec.ts
-    auth.spec.ts
-```
 
 ---
 
@@ -326,10 +276,8 @@ These are explicitly out of scope for v2. If a task seems to require one of thes
 |---|---|
 | OptimoRoute integration | Future — schema has nullable `optimo_stop_id` placeholder only |
 | Stripe Connect | Future — `client_id` on payments is prep only |
-| Native iOS/Android app | PWA only in v2 |
 | Cross-client benchmarking in reports | Explicitly excluded — tenant data only |
 | Email template management UI | Templates are code-defined in Edge Functions |
-| Offline mode | Not required |
 | Xero integration | Lives in DM-Ops only |
 | Any DM-Ops tables | `docket`, `timesheet`, `employee`, `crew`, `asset`, `tender`, `purchase_order`, `invoice` — not in this schema |
 | `dm-admin` / `dm-staff` / `dm-field` roles | These are DM-Ops roles — Verco v2 does not have them |
@@ -348,22 +296,9 @@ See `docs/VERCO_V2_TECH_SPEC.md` §16 for full list. Key rule:
 
 ## 17. Git Conventions
 
-```bash
-# Branch naming
-feature/booking-wizard
-fix/capacity-race-condition
-chore/update-supabase-types
-
-# Commit format (conventional commits)
-feat: add MUD booking flow
-fix: enforce PII suppression on ranger run sheet query
-chore: regenerate supabase types after migration 042
-test: add pricing engine edge cases for mixed cart
-
-# Never commit
-.env*
-supabase/.temp/
-```
+- **Branches:** `feature/`, `fix/`, `chore/` prefixes
+- **Commits:** Conventional commits (`feat:`, `fix:`, `chore:`, `test:`)
+- **Never commit:** `.env*`, `supabase/.temp/`
 
 ---
 
@@ -438,46 +373,25 @@ Fonts are configured in `@theme inline` block in `globals.css`, not `tailwind.co
 `app/(public)/book/layout.tsx` wraps all `/book/*` pages with max-width + padding via inline styles (Tailwind classes were not rendering reliably). Individual step forms use `flex flex-col` only — no `min-h-screen` or `bg-*` (layout handles those).
 
 ### Mobile number validation
-AU mobiles only. `normaliseAuMobile()` in `lib/booking/schemas.ts` handles `04XX`, `+614XX`, `614XX` → E.164 `+614XXXXXXXX`. The zod schema `.transform()` pipeline strips whitespace, validates, and normalises in one pass.
+AU mobiles only. `normaliseAuMobile()` in `lib/booking/schemas.ts` handles `04XX`/`+614XX`/`614XX` → E.164 `+614XXXXXXXX`.
 
 ### Edge Function tsconfig exclusion
-`supabase/functions/` is excluded from `tsconfig.json` — Deno Edge Functions use URL imports and `Deno.*` APIs that conflict with the Node/Next.js TypeScript config.
+`supabase/functions/` is excluded from `tsconfig.json` — Deno imports conflict with Node/Next.js config.
 
 ### Admin page pattern
-Admin list pages: `page.tsx` wraps a client component in `<Suspense>`. The client component uses `useQuery` from TanStack Query with the browser Supabase client for data fetching, filtering, and pagination. RLS handles tenant scoping — no manual `client_id` filtering needed.
+Admin list pages: `page.tsx` wraps client component in `<Suspense>`. Client component uses `useQuery` + browser Supabase client. RLS handles tenant scoping.
 
 ### Desktop layout conventions
-- Public pages use `<main className="mx-auto w-full max-w-5xl px-6 py-8">` at the **server page level**, not inside client components
-- Landing page (`/`) is full-width — manages its own sections internally
-- `bg-gray-50 min-h-screen` lives on `app/(public)/layout.tsx` — client components should not set their own background
-- Layout padding for mobile bottom nav: `app/(public)/layout.tsx` wraps `{children}` in `<div className="pb-16 tablet:pb-0">`
+Public pages: `<main className="mx-auto w-full max-w-5xl px-6 py-8">` at server page level. Landing page is full-width. `bg-gray-50 min-h-screen` lives on `app/(public)/layout.tsx`. Mobile bottom nav padding: `pb-16 tablet:pb-0`.
 
-### Tailwind v4 breakpoints — `tablet:` vs `md:`
-Custom breakpoints via `--breakpoint-*` in `@theme inline` block in `globals.css`. Use `tablet:` (1024px) for nav/layout switching only. Keep `md:` for text sizing and spacing. Desktop font sizes are +2 steps from mobile via `md:` responsive variants.
-
-### Action menu overflow
-Table action menus (three-dot dropdowns) must open **upward** (`bottom-full`). Table wrapper must not have `overflow-hidden` or `overflow-x-auto`, otherwise the menu is clipped.
+### Tailwind v4 breakpoints
+`tablet:` (1024px) for nav/layout switching only. `md:` for text sizing and spacing.
 
 ### Turbopack root for special-character paths
 `next.config.ts` sets `turbopack: { root: process.cwd() }` to fix workspace root detection when the project path contains `&` (OneDrive).
 
 ### Booking wizard state — URL params are the source of truth
 Every wizard step must carry ALL accumulated params through both forward and back navigation. When adding a new param, update `carryParams` in every step (services, date, details, confirm). Common params: `property_id`, `collection_area_id`, `address`, `items`, `total_cents`, `collection_date_id`, `location`, `notes`, `contact_name`, `contact_email`, `contact_mobile`, `on_behalf`, `return_url`.
-
-### Resident dashboard — always filter by contact_id
-The resident dashboard (`/dashboard`) must filter bookings by the user's `contact_id`, not rely on RLS alone. Staff roles (client-admin, contractor-admin) have RLS access to all client bookings — correct for admin pages, wrong for the personal dashboard. Use `profile.contact_id` with email fallback.
-
-### Refund flow — create refund_request first, then call Edge Function
-Never call `process-refund` directly with `booking_id`. Always: (1) create a `refund_request` record with status `Pending`, (2) pass `refund_request_id` to the Edge Function. Status casing: `Pending`, `Approved`, `Rejected` (capitalised, matching Edge Function).
-
-### Cancellation includes Pending Payment
-`Pending Payment → Cancelled` is a valid state transition. All three cancellable status lists must include it: admin action (`actions.ts`), admin panel (`booking-detail-panel.tsx`), resident action (`booking/[ref]/actions.ts`), resident detail (`booking-detail-client.tsx`).
-
-### Postgres enum migrations — split ADD VALUE from DML
-`ALTER TYPE ... ADD VALUE` must be committed before the new values can be used in DML (`UPDATE`, `INSERT`, `DEFAULT`). Supabase wraps each migration in a transaction, so enum additions must be in their own migration file, separate from any queries that reference the new values.
-
-### Admin booking detail — hybrid inline edit
-Contact, collection details (date + location + notes) edit inline on the detail panel. Services edit links to the wizard (pricing/capacity implications). No full-wizard edit for simple field updates. Use Base UI Dialog for destructive confirmations (cancel booking), not `window.confirm()`.
 
 ---
 
