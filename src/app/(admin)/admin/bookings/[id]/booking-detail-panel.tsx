@@ -75,6 +75,7 @@ export function BookingDetailPanel({
   const router = useRouter()
   const supabase = createClient()
   const [isPending, setIsPending] = useState(false)
+  const [isPaying, setIsPaying] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Inline edit states
@@ -114,7 +115,7 @@ export function BookingDetailPanel({
   )
 
   const canConfirm = booking.status === 'Submitted'
-  const canCancel = ['Submitted', 'Confirmed'].includes(booking.status)
+  const canCancel = ['Pending Payment', 'Submitted', 'Confirmed'].includes(booking.status)
   const canEdit = ['Pending Payment', 'Submitted', 'Confirmed'].includes(booking.status)
 
   // Services edit URL — wizard handles pricing/capacity
@@ -180,6 +181,49 @@ export function BookingDetailPanel({
     router.refresh()
   }
 
+  async function handlePayNow() {
+    setIsPaying(true)
+    setError(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      const origin = window.location.origin
+
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-checkout`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            booking_id: booking.id,
+            success_url: `${origin}/admin/bookings/${booking.id}`,
+            cancel_url: `${origin}/admin/bookings/${booking.id}`,
+          }),
+        }
+      )
+
+      if (!res.ok) {
+        setError('Failed to create payment session')
+        setIsPaying(false)
+        return
+      }
+
+      const data = (await res.json()) as { checkout_url?: string }
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url
+      } else {
+        setError('Failed to create payment session')
+        setIsPaying(false)
+      }
+    } catch {
+      setError('An unexpected error occurred')
+      setIsPaying(false)
+    }
+  }
+
   async function handleSaveContact() {
     if (!booking.contact_id) return
     setIsPending(true)
@@ -202,6 +246,15 @@ export function BookingDetailPanel({
   async function handleSaveDetails() {
     setIsPending(true)
     setError(null)
+
+    // Save notes alongside collection details
+    const notesResult = await updateNotes(booking.id, editNotesText)
+    if (!notesResult.ok) {
+      setError(notesResult.error)
+      setIsPending(false)
+      return
+    }
+
     const result = await updateCollectionDetails(booking.id, {
       location: editLocation,
       collection_date_id: editDateId || null,
@@ -284,6 +337,10 @@ export function BookingDetailPanel({
                   : '—'}
               </span>
             </div>
+            <div className="flex justify-between">
+              <span className="w-[120px] shrink-0 text-xs font-medium text-gray-500">Notes</span>
+              <span className="text-right text-[13px] italic text-gray-500">{booking.notes || '—'}</span>
+            </div>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -322,6 +379,16 @@ export function BookingDetailPanel({
                 ))}
               </select>
             </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-500">Notes</label>
+              <textarea
+                value={editNotesText}
+                onChange={(e) => setEditNotesText(e.target.value)}
+                maxLength={500}
+                placeholder="Notes for driver..."
+                className="h-16 w-full resize-none rounded-lg border-[1.5px] border-gray-100 bg-gray-50 px-3 py-2 text-[13px] text-gray-900 outline-none focus:border-[#293F52] focus:bg-white"
+              />
+            </div>
             <div className="flex gap-2">
               <button
                 type="button"
@@ -337,6 +404,7 @@ export function BookingDetailPanel({
                   setEditingDetails(false)
                   setEditLocation((booking.location as LocationOption) ?? 'Front Verge')
                   setEditDateId(booking.booking_item[0]?.collection_date_id ?? '')
+                  setEditNotesText(booking.notes ?? '')
                 }}
                 className="flex-1 rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-2 text-[13px] font-semibold text-gray-700"
               >
@@ -485,54 +553,6 @@ export function BookingDetailPanel({
         </div>
       </div>
 
-      {/* Notes */}
-      <div className="border-b border-gray-100 px-5 py-4">
-        <div className="mb-3 flex items-center justify-between">
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-            Notes
-          </span>
-          {canEdit && !editingNotes && (
-            <button type="button" onClick={() => setEditingNotes(true)} className="text-gray-400 hover:text-[#293F52]">
-              <PencilIcon />
-            </button>
-          )}
-        </div>
-
-        {!editingNotes ? (
-          <p className="text-[13px] italic text-gray-700">{booking.notes || '—'}</p>
-        ) : (
-          <div className="flex flex-col gap-2.5">
-            <textarea
-              value={editNotesText}
-              onChange={(e) => setEditNotesText(e.target.value)}
-              maxLength={500}
-              placeholder="Notes for driver..."
-              className="h-20 w-full resize-none rounded-lg border-[1.5px] border-gray-100 bg-gray-50 px-3 py-2 text-[13px] text-gray-900 outline-none focus:border-[#293F52] focus:bg-white"
-            />
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handleSaveNotes}
-                disabled={isPending}
-                className="flex-1 rounded-lg bg-[#293F52] px-3 py-2 text-[13px] font-semibold text-white disabled:opacity-50"
-              >
-                {isPending ? 'Saving...' : 'Save'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingNotes(false)
-                  setEditNotesText(booking.notes ?? '')
-                }}
-                className="flex-1 rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-2 text-[13px] font-semibold text-gray-700"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
       {/* Audit trail */}
       {auditLogs.length > 0 && (
         <div className="border-b border-gray-100 px-5 py-4">
@@ -565,8 +585,22 @@ export function BookingDetailPanel({
       )}
 
       {/* Actions */}
-      {(canConfirm || canCancel) && (
+      {(canConfirm || canCancel || booking.status === 'Pending Payment') && (
         <div className="flex flex-col gap-2 px-5 py-4">
+          {booking.status === 'Pending Payment' && (
+            <button
+              type="button"
+              onClick={handlePayNow}
+              disabled={isPaying}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border-[1.5px] border-[#00B864] bg-[#E8FDF0] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#006A38] disabled:opacity-50"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+                <line x1="1" y1="10" x2="23" y2="10" />
+              </svg>
+              {isPaying ? 'Redirecting to payment...' : 'Pay Now'}
+            </button>
+          )}
           {canConfirm && (
             <button
               type="button"

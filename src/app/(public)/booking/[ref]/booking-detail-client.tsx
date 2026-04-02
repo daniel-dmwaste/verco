@@ -120,7 +120,7 @@ function formatMobile(e164: string): string {
   return e164
 }
 
-const CANCELLABLE_STATUSES: BookingStatus[] = ['Submitted', 'Confirmed']
+const CANCELLABLE_STATUSES: BookingStatus[] = ['Pending Payment', 'Submitted', 'Confirmed']
 const TERMINAL_STATUSES: BookingStatus[] = [
   'Completed', 'Cancelled', 'Non-conformance', 'Nothing Presented', 'Rebooked', 'Missed Collection',
 ]
