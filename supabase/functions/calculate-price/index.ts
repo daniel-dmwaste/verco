@@ -89,7 +89,12 @@ serve(async (req) => {
     }))
 
     return new Response(
-      JSON.stringify({ line_items: lineItemsWithDate, total_cents: result.total_cents }),
+      JSON.stringify({
+        line_items: lineItemsWithDate,
+        total_cents: result.total_cents,
+        override_applied: result.override_applied,
+        override_reason: result.override_reason,
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (err) {

@@ -20,11 +20,21 @@ export interface PricedLineItem {
   line_charge_cents: number
   is_extra: boolean
   category_code: string
+  was_overridden: boolean
 }
 
 export interface PriceCalculationResult {
   line_items: PricedLineItem[]
   total_cents: number
+  override_applied: boolean
+  override_reason?: string
+}
+
+export interface AllocationOverride {
+  category_code: string
+  set_remaining: number
+  reason: string
+  created_at: string
 }
 
 export interface ServiceRule {
@@ -41,6 +51,12 @@ export interface ServiceRule {
  *   free_units         = MIN(requested_qty, category_remaining, service_remaining)
  *
  * Only free_units consume category budget — paid units do not reduce the remaining count.
+ *
+ * When overrides are provided, the category_remaining calculation changes for
+ * overridden categories:
+ *   category_remaining = override.set_remaining - postOverrideUsage - categoryFormUsed
+ * Post-override usage = bookings created on or after override.created_at (passed via
+ * postOverrideCategoryUsageMap).
  */
 export function computeLineItems(
   items: PricingItem[],
@@ -49,23 +65,46 @@ export function computeLineItems(
   serviceCategoryMap: Map<string, string>,
   serviceUsageMap: Map<string, number>,
   categoryUsageMap: Map<string, number>,
+  overrides?: AllocationOverride[],
+  postOverrideCategoryUsageMap?: Map<string, number>,
 ): PriceCalculationResult {
+  // Build overrides map: most recent override per category code
+  const overridesByCode = new Map<string, AllocationOverride>()
+  if (overrides) {
+    for (const override of overrides) {
+      const existing = overridesByCode.get(override.category_code)
+      if (!existing || new Date(override.created_at) > new Date(existing.created_at)) {
+        overridesByCode.set(override.category_code, override)
+      }
+    }
+  }
+
   const categoryFormUsed = new Map<string, number>()
 
   const line_items: PricedLineItem[] = items.map((item) => {
     const rule = rulesMap.get(item.service_id)
     const catCode = serviceCategoryMap.get(item.service_id) ?? ''
 
-    // Service-level remaining
+    // Service-level remaining (unchanged by overrides)
     const serviceUsed = serviceUsageMap.get(item.service_id) ?? 0
     const serviceMax = rule?.max_collections ?? 0
     const serviceRemaining = Math.max(0, serviceMax - serviceUsed)
 
-    // Category-level remaining (minus what earlier items consumed)
-    const catMax = categoryMaxMap.get(catCode) ?? 0
-    const catFyUsed = categoryUsageMap.get(catCode) ?? 0
+    // Category-level remaining (with override support)
+    const override = overridesByCode.get(catCode)
     const catAlreadyConsumedByForm = categoryFormUsed.get(catCode) ?? 0
-    const categoryRemaining = Math.max(0, catMax - catFyUsed - catAlreadyConsumedByForm)
+    let categoryRemaining: number
+
+    if (override) {
+      // Override: use set_remaining minus only post-override usage
+      const postOverrideUsed = postOverrideCategoryUsageMap?.get(catCode) ?? 0
+      categoryRemaining = Math.max(0, override.set_remaining - postOverrideUsed - catAlreadyConsumedByForm)
+    } else {
+      // Standard: category max minus total FY usage
+      const catMax = categoryMaxMap.get(catCode) ?? 0
+      const catFyUsed = categoryUsageMap.get(catCode) ?? 0
+      categoryRemaining = Math.max(0, catMax - catFyUsed - catAlreadyConsumedByForm)
+    }
 
     // Dual-limit: free_units = MIN(quantity, category_remaining, service_remaining)
     const freeUnits = Math.min(item.quantity, categoryRemaining, serviceRemaining)
@@ -86,10 +125,21 @@ export function computeLineItems(
       line_charge_cents: lineChargeCents,
       is_extra: paidUnits > 0,
       category_code: catCode,
+      was_overridden: !!override,
     }
   })
 
   const total_cents = line_items.reduce((sum, l) => sum + l.line_charge_cents, 0)
 
-  return { line_items, total_cents }
+  const overrideApplied = line_items.some((l) => l.was_overridden)
+  const firstOverrideReason = overrideApplied
+    ? [...overridesByCode.values()][0]?.reason
+    : undefined
+
+  return {
+    line_items,
+    total_cents,
+    override_applied: overrideApplied,
+    override_reason: firstOverrideReason,
+  }
 }

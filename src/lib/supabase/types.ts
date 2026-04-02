@@ -14,6 +14,64 @@ export type Database = {
   }
   public: {
     Tables: {
+      allocation_override: {
+        Row: {
+          category_id: string
+          created_at: string
+          created_by: string
+          fy_id: string
+          id: string
+          property_id: string
+          reason: string
+          set_remaining: number
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          created_by: string
+          fy_id: string
+          id?: string
+          property_id: string
+          reason: string
+          set_remaining: number
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          created_by?: string
+          fy_id?: string
+          id?: string
+          property_id?: string
+          reason?: string
+          set_remaining?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "allocation_override_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "category"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "allocation_override_fy_id_fkey"
+            columns: ["fy_id"]
+            isOneToOne: false
+            referencedRelation: "financial_year"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "allocation_override_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "eligible_properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       allocation_rules: {
         Row: {
           category_id: string
