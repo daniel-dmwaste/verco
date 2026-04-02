@@ -1,23 +1,30 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { SkeletonRow } from '@/components/ui/skeleton'
-import { AllocationFormModal } from './allocation-form-modal'
-import type { Database } from '@/lib/supabase/types'
 
-type AllocationOverride = Database['public']['Tables']['allocation_override']['Row']
-
-interface AllocationOverrideWithRelations extends AllocationOverride {
+interface AllocationOverrideRow {
+  id: string
+  property_id: string
+  service_id: string
+  fy_id: string
+  extra_allocations: number
+  reason: string
+  created_by: string
+  created_at: string
+  updated_at: string
   eligible_properties: {
     address: string
     formatted_address: string | null
     collection_area_id: string
   }
-  category: {
+  service: {
     name: string
-    code: string
+    category: {
+      name: string
+    }
   }
   financial_year: {
     label: string
@@ -29,11 +36,8 @@ interface AllocationOverrideWithRelations extends AllocationOverride {
 
 export function AllocationsList() {
   const supabase = createClient()
-  const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [filterFyId, setFilterFyId] = useState<string>('')
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editingOverride, setEditingOverride] = useState<AllocationOverride | null>(null)
 
   const { data: overrides, isLoading } = useQuery({
     queryKey: ['allocation_overrides', filterFyId],
@@ -43,7 +47,7 @@ export function AllocationsList() {
         .select(
           `*,
           eligible_properties!inner(address, formatted_address, collection_area_id),
-          category(name, code),
+          service!inner(name, category!inner(name)),
           financial_year(label),
           profiles:created_by(email)`
         )
@@ -54,7 +58,7 @@ export function AllocationsList() {
 
       const { data, error } = await query.order('created_at', { ascending: false })
       if (error) throw error
-      return (data ?? []) as unknown as AllocationOverrideWithRelations[]
+      return (data ?? []) as unknown as AllocationOverrideRow[]
     },
   })
 
@@ -73,34 +77,10 @@ export function AllocationsList() {
     if (!search) return true
     const s = search.toLowerCase()
     const address = (o.eligible_properties.formatted_address || o.eligible_properties.address).toLowerCase()
-    return address.includes(s) || o.category?.name.toLowerCase().includes(s) || o.reason.toLowerCase().includes(s)
+    return address.includes(s) || o.service?.name.toLowerCase().includes(s) || o.reason.toLowerCase().includes(s)
   })
 
   const total = filtered?.length ?? 0
-
-  const handleNewOverride = useCallback(() => {
-    setEditingOverride(null)
-    setModalOpen(true)
-  }, [])
-
-  const handleEditOverride = useCallback((override: AllocationOverrideWithRelations) => {
-    setEditingOverride(override)
-    setModalOpen(true)
-  }, [])
-
-  const handleDeleteOverride = useCallback(async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this allocation override?')) return
-    const { error } = await supabase.from('allocation_override').delete().eq('id', id)
-    if (error) {
-      alert(`Failed to delete: ${error.message}`)
-      return
-    }
-    void queryClient.invalidateQueries({ queryKey: ['allocation_overrides'] })
-  }, [supabase, queryClient])
-
-  const handleSave = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ['allocation_overrides'] })
-  }, [queryClient])
 
   return (
     <>
@@ -114,13 +94,6 @@ export function AllocationsList() {
             {total} override{total !== 1 ? 's' : ''}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={handleNewOverride}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-[#293F52] px-4 py-2 text-body-sm font-semibold text-white"
-        >
-          + New Override
-        </button>
       </div>
 
       {/* Filters */}
@@ -131,7 +104,7 @@ export function AllocationsList() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search address, category, reason..."
+            placeholder="Search address, service, reason..."
             aria-label="Search allocation overrides"
             className="w-full border-none bg-transparent text-body-sm text-gray-900 outline-none placeholder:text-gray-300"
           />
@@ -162,21 +135,20 @@ export function AllocationsList() {
             <thead>
               <tr>
                 <th className="border-b border-gray-100 bg-gray-50 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">Property</th>
-                <th className="border-b border-gray-100 bg-gray-50 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">Category</th>
+                <th className="border-b border-gray-100 bg-gray-50 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">Service</th>
                 <th className="border-b border-gray-100 bg-gray-50 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">FY</th>
-                <th className="border-b border-gray-100 bg-gray-50 px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-500">Set Remaining</th>
+                <th className="border-b border-gray-100 bg-gray-50 px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-500">Extra</th>
                 <th className="border-b border-gray-100 bg-gray-50 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">Reason</th>
                 <th className="border-b border-gray-100 bg-gray-50 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">Created By</th>
                 <th className="border-b border-gray-100 bg-gray-50 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">Date</th>
-                <th className="border-b border-gray-100 bg-gray-50 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500"></th>
               </tr>
             </thead>
             <tbody>
               {isLoading && Array.from({ length: 5 }).map((_, i) => (
-                <SkeletonRow key={i} columns={8} />
+                <SkeletonRow key={i} columns={7} />
               ))}
               {!isLoading && total === 0 && (
-                <tr><td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-400">No allocation overrides found</td></tr>
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-400">No allocation overrides found</td></tr>
               )}
               {filtered?.map((override) => (
                 <tr key={override.id} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
@@ -184,14 +156,15 @@ export function AllocationsList() {
                     {override.eligible_properties.formatted_address || override.eligible_properties.address}
                   </td>
                   <td className="px-4 py-3 text-body-sm text-gray-700">
-                    {override.category?.name}
+                    {override.service?.name}
+                    <span className="ml-1 text-[11px] text-gray-400">({override.service?.category?.name})</span>
                   </td>
                   <td className="px-4 py-3 text-body-sm text-gray-700">
                     {override.financial_year?.label}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <span className="inline-flex items-center justify-center rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-semibold text-[#293F52]">
-                      {override.set_remaining}
+                      +{override.extra_allocations}
                     </span>
                   </td>
                   <td className="max-w-[180px] truncate px-4 py-3 text-body-sm text-gray-700">
@@ -203,36 +176,12 @@ export function AllocationsList() {
                   <td className="px-4 py-3 text-xs text-gray-500">
                     {new Date(override.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleEditOverride(override)}
-                        className="inline-flex items-center rounded-md border-[1.5px] border-gray-100 bg-white px-3 py-1 text-xs font-semibold text-[#293F52]"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => void handleDeleteOverride(override.id)}
-                        className="inline-flex items-center rounded-md border-[1.5px] border-gray-100 bg-white px-3 py-1 text-xs font-semibold text-[#E53E3E]"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
-
-      {/* Modal */}
-      <AllocationFormModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        onSave={handleSave}
-        override={editingOverride}
-      />
     </>
   )
 }

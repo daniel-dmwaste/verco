@@ -20,7 +20,6 @@ export interface PricedLineItem {
   line_charge_cents: number
   is_extra: boolean
   category_code: string
-  was_overridden: boolean
 }
 
 export interface PriceCalculationResult {
@@ -31,10 +30,9 @@ export interface PriceCalculationResult {
 }
 
 export interface AllocationOverride {
-  category_code: string
-  set_remaining: number
+  service_id: string
+  extra_allocations: number
   reason: string
-  created_at: string
 }
 
 export interface ServiceRule {
@@ -46,17 +44,15 @@ export interface ServiceRule {
  * Pure pricing calculation implementing the dual-limit free unit model.
  *
  * A unit becomes paid (extra) when EITHER limit is exhausted:
- *   category_remaining = categoryMaxMap[cat] - categoryUsageMap[cat] - categoryFormUsed[cat]
- *   service_remaining  = serviceRule.max_collections - serviceUsageMap[svc]
+ *   effective_service_max  = service_rules.max_collections + SUM(overrides.extra_allocations for this service)
+ *   effective_category_max = allocation_rules.max_collections + SUM(overrides.extra_allocations for all services in category)
+ *   service_remaining  = effective_service_max - serviceUsageMap[svc]
+ *   category_remaining = effective_category_max - categoryUsageMap[cat] - categoryFormUsed[cat]
  *   free_units         = MIN(requested_qty, category_remaining, service_remaining)
  *
  * Only free_units consume category budget — paid units do not reduce the remaining count.
  *
- * When overrides are provided, the category_remaining calculation changes for
- * overridden categories:
- *   category_remaining = override.set_remaining - postOverrideUsage - categoryFormUsed
- * Post-override usage = bookings created on or after override.created_at (passed via
- * postOverrideCategoryUsageMap).
+ * Overrides are purely additive — no date boundary logic needed.
  */
 export function computeLineItems(
   items: PricingItem[],
@@ -66,15 +62,26 @@ export function computeLineItems(
   serviceUsageMap: Map<string, number>,
   categoryUsageMap: Map<string, number>,
   overrides?: AllocationOverride[],
-  postOverrideCategoryUsageMap?: Map<string, number>,
 ): PriceCalculationResult {
-  // Build overrides map: most recent override per category code
-  const overridesByCode = new Map<string, AllocationOverride>()
+  // Build override maps: service_id → SUM(extra_allocations), category_code → SUM(extra_allocations)
+  const serviceExtraMap = new Map<string, number>()
+  const categoryExtraMap = new Map<string, number>()
+  let firstOverrideReason: string | undefined
   if (overrides) {
     for (const override of overrides) {
-      const existing = overridesByCode.get(override.category_code)
-      if (!existing || new Date(override.created_at) > new Date(existing.created_at)) {
-        overridesByCode.set(override.category_code, override)
+      serviceExtraMap.set(
+        override.service_id,
+        (serviceExtraMap.get(override.service_id) ?? 0) + override.extra_allocations,
+      )
+      const catCode = serviceCategoryMap.get(override.service_id)
+      if (catCode) {
+        categoryExtraMap.set(
+          catCode,
+          (categoryExtraMap.get(catCode) ?? 0) + override.extra_allocations,
+        )
+      }
+      if (!firstOverrideReason) {
+        firstOverrideReason = override.reason
       }
     }
   }
@@ -85,26 +92,16 @@ export function computeLineItems(
     const rule = rulesMap.get(item.service_id)
     const catCode = serviceCategoryMap.get(item.service_id) ?? ''
 
-    // Service-level remaining (unchanged by overrides)
+    // Service-level remaining (with additive extra allocations)
     const serviceUsed = serviceUsageMap.get(item.service_id) ?? 0
     const serviceMax = rule?.max_collections ?? 0
-    const serviceRemaining = Math.max(0, serviceMax - serviceUsed)
+    const serviceRemaining = Math.max(0, (serviceMax + (serviceExtraMap.get(item.service_id) ?? 0)) - serviceUsed)
 
-    // Category-level remaining (with override support)
-    const override = overridesByCode.get(catCode)
+    // Category-level remaining (with additive extra allocations)
+    const catMax = categoryMaxMap.get(catCode) ?? 0
+    const catFyUsed = categoryUsageMap.get(catCode) ?? 0
     const catAlreadyConsumedByForm = categoryFormUsed.get(catCode) ?? 0
-    let categoryRemaining: number
-
-    if (override) {
-      // Override: use set_remaining minus only post-override usage
-      const postOverrideUsed = postOverrideCategoryUsageMap?.get(catCode) ?? 0
-      categoryRemaining = Math.max(0, override.set_remaining - postOverrideUsed - catAlreadyConsumedByForm)
-    } else {
-      // Standard: category max minus total FY usage
-      const catMax = categoryMaxMap.get(catCode) ?? 0
-      const catFyUsed = categoryUsageMap.get(catCode) ?? 0
-      categoryRemaining = Math.max(0, catMax - catFyUsed - catAlreadyConsumedByForm)
-    }
+    const categoryRemaining = Math.max(0, (catMax + (categoryExtraMap.get(catCode) ?? 0)) - catFyUsed - catAlreadyConsumedByForm)
 
     // Dual-limit: free_units = MIN(quantity, category_remaining, service_remaining)
     const freeUnits = Math.min(item.quantity, categoryRemaining, serviceRemaining)
@@ -125,21 +122,17 @@ export function computeLineItems(
       line_charge_cents: lineChargeCents,
       is_extra: paidUnits > 0,
       category_code: catCode,
-      was_overridden: !!override,
     }
   })
 
   const total_cents = line_items.reduce((sum, l) => sum + l.line_charge_cents, 0)
 
-  const overrideApplied = line_items.some((l) => l.was_overridden)
-  const firstOverrideReason = overrideApplied
-    ? [...overridesByCode.values()][0]?.reason
-    : undefined
+  const overrideApplied = serviceExtraMap.size > 0
 
   return {
     line_items,
     total_cents,
     override_applied: overrideApplied,
-    override_reason: firstOverrideReason,
+    override_reason: overrideApplied ? firstOverrideReason : undefined,
   }
 }

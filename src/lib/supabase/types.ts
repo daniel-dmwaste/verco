@@ -16,46 +16,39 @@ export type Database = {
     Tables: {
       allocation_override: {
         Row: {
-          category_id: string
           created_at: string
           created_by: string
+          extra_allocations: number
           fy_id: string
           id: string
           property_id: string
           reason: string
-          set_remaining: number
+          service_id: string
           updated_at: string
         }
         Insert: {
-          category_id: string
           created_at?: string
           created_by: string
+          extra_allocations: number
           fy_id: string
           id?: string
           property_id: string
           reason: string
-          set_remaining: number
+          service_id: string
           updated_at?: string
         }
         Update: {
-          category_id?: string
           created_at?: string
           created_by?: string
+          extra_allocations?: number
           fy_id?: string
           id?: string
           property_id?: string
           reason?: string
-          set_remaining?: number
+          service_id?: string
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "allocation_override_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "category"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "allocation_override_fy_id_fkey"
             columns: ["fy_id"]
@@ -68,6 +61,13 @@ export type Database = {
             columns: ["property_id"]
             isOneToOne: false
             referencedRelation: "eligible_properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "allocation_override_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "service"
             referencedColumns: ["id"]
           },
         ]

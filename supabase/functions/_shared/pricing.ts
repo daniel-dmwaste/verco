@@ -15,7 +15,6 @@ export interface PricedLineItem {
   line_charge_cents: number
   is_extra: boolean
   category_code: string
-  was_overridden: boolean
 }
 
 export interface PriceCalculationResult {
@@ -65,10 +64,10 @@ export async function calculatePrice(
       .select('id, category!inner(code)')
       .in('id', serviceIds),
 
-    // FY usage per service for this property (includes created_at for override split)
+    // FY usage per service for this property
     supabase
       .from('booking_item')
-      .select('service_id, no_services, booking!inner(property_id, fy_id, status, created_at)')
+      .select('service_id, no_services, booking!inner(property_id, fy_id, status)')
       .eq('booking.property_id', propertyId)
       .eq('booking.fy_id', fyId)
       .not('booking.status', 'in', '("Cancelled","Pending Payment")'),
@@ -76,7 +75,7 @@ export async function calculatePrice(
     // Allocation overrides for this property and FY
     supabase
       .from('allocation_override')
-      .select('category_id, set_remaining, reason, created_at, category!inner(code)')
+      .select('service_id, extra_allocations, reason')
       .eq('property_id', propertyId)
       .eq('fy_id', fyId),
   ])
@@ -101,18 +100,25 @@ export async function calculatePrice(
     }
   }
 
-  // Build overrides map: most recent override per category code
-  const overridesByCode = new Map<string, { set_remaining: number; created_at: string; reason: string }>()
+  // Build override maps: service_id → SUM(extra_allocations), category_code → SUM(extra_allocations)
+  const serviceExtraMap = new Map<string, number>()
+  const categoryExtraMap = new Map<string, number>()
+  let firstOverrideReason: string | undefined
   if (overrideResult.data) {
     for (const override of overrideResult.data) {
-      const cat = override.category as unknown as { code: string }
-      const existing = overridesByCode.get(cat.code)
-      if (!existing || new Date(override.created_at) > new Date(existing.created_at)) {
-        overridesByCode.set(cat.code, {
-          set_remaining: override.set_remaining,
-          created_at: override.created_at,
-          reason: override.reason,
-        })
+      serviceExtraMap.set(
+        override.service_id,
+        (serviceExtraMap.get(override.service_id) ?? 0) + override.extra_allocations,
+      )
+      const catCode = serviceCategoryMap.get(override.service_id)
+      if (catCode) {
+        categoryExtraMap.set(
+          catCode,
+          (categoryExtraMap.get(catCode) ?? 0) + override.extra_allocations,
+        )
+      }
+      if (!firstOverrideReason) {
+        firstOverrideReason = override.reason
       }
     }
   }
@@ -121,13 +127,9 @@ export async function calculatePrice(
   const serviceUsageMap = new Map<string, number>()
   // Per-category usage (total)
   const categoryUsageMap = new Map<string, number>()
-  // Per-category post-override usage (bookings created on or after override.created_at)
-  const postOverrideUsageMap = new Map<string, number>()
 
   if (usageResult.data) {
     for (const item of usageResult.data) {
-      const booking = item.booking as unknown as { created_at: string }
-
       serviceUsageMap.set(
         item.service_id,
         (serviceUsageMap.get(item.service_id) ?? 0) + item.no_services
@@ -138,14 +140,6 @@ export async function calculatePrice(
           catCode,
           (categoryUsageMap.get(catCode) ?? 0) + item.no_services
         )
-
-        const override = overridesByCode.get(catCode)
-        if (override && new Date(booking.created_at) >= new Date(override.created_at)) {
-          postOverrideUsageMap.set(
-            catCode,
-            (postOverrideUsageMap.get(catCode) ?? 0) + item.no_services
-          )
-        }
       }
     }
   }
@@ -157,26 +151,16 @@ export async function calculatePrice(
     const rule = rulesMap.get(item.service_id)
     const catCode = serviceCategoryMap.get(item.service_id) ?? ''
 
-    // Service-level remaining (unchanged by overrides)
+    // Service-level remaining (with additive extra allocations)
     const serviceUsed = serviceUsageMap.get(item.service_id) ?? 0
     const serviceMax = rule?.max_collections ?? 0
-    const serviceRemaining = Math.max(0, serviceMax - serviceUsed)
+    const serviceRemaining = Math.max(0, (serviceMax + (serviceExtraMap.get(item.service_id) ?? 0)) - serviceUsed)
 
-    // Category-level remaining (with override support)
-    const override = overridesByCode.get(catCode)
+    // Category-level remaining (with additive extra allocations)
+    const catMax = categoryMaxMap.get(catCode) ?? 0
+    const catFyUsed = categoryUsageMap.get(catCode) ?? 0
     const catAlreadyConsumedByForm = categoryFormUsed.get(catCode) ?? 0
-    let categoryRemaining: number
-
-    if (override) {
-      // Override: use set_remaining minus only post-override usage
-      const postOverrideUsed = postOverrideUsageMap.get(catCode) ?? 0
-      categoryRemaining = Math.max(0, override.set_remaining - postOverrideUsed - catAlreadyConsumedByForm)
-    } else {
-      // Standard: category max minus total FY usage
-      const catMax = categoryMaxMap.get(catCode) ?? 0
-      const catFyUsed = categoryUsageMap.get(catCode) ?? 0
-      categoryRemaining = Math.max(0, catMax - catFyUsed - catAlreadyConsumedByForm)
-    }
+    const categoryRemaining = Math.max(0, (catMax + (categoryExtraMap.get(catCode) ?? 0)) - catFyUsed - catAlreadyConsumedByForm)
 
     // Dual-limit: free_units = MIN(quantity, category_remaining, service_remaining)
     const freeUnits = Math.min(item.quantity, categoryRemaining, serviceRemaining)
@@ -197,22 +181,17 @@ export async function calculatePrice(
       line_charge_cents: lineChargeCents,
       is_extra: paidUnits > 0,
       category_code: catCode,
-      was_overridden: !!override,
     }
   })
 
   const totalCents = lineItems.reduce((sum, l) => sum + l.line_charge_cents, 0)
 
-  const overrideApplied = lineItems.some((l) => l.was_overridden)
-  // Use the first override reason found (most relevant to caller)
-  const firstOverrideReason = overrideApplied
-    ? [...overridesByCode.values()][0]?.reason
-    : undefined
+  const overrideApplied = serviceExtraMap.size > 0
 
   return {
     line_items: lineItems,
     total_cents: totalCents,
     override_applied: overrideApplied,
-    override_reason: firstOverrideReason,
+    override_reason: overrideApplied ? firstOverrideReason : undefined,
   }
 }

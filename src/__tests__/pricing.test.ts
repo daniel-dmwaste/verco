@@ -464,63 +464,89 @@ describe('computeLineItems', () => {
     })
   })
 
-  // ── Allocation overrides ──────────────────────────────
+  // ── Allocation overrides (additive extra_allocations) ──
 
-  describe('allocation overrides', () => {
-    const OVERRIDE_TIME = '2026-03-15T10:00:00Z'
-
-    it('override resets category remaining to set_remaining', () => {
-      // Category max is 3, all 3 used. Override sets remaining to 2.
+  describe('allocation overrides (additive)', () => {
+    it('extra adds to both service and category limits', () => {
       const overrides: AllocationOverride[] = [
-        { category_code: CAT_BULK, set_remaining: 2, reason: 'Admin reset', created_at: OVERRIDE_TIME },
+        { service_id: SVC_GENERAL, extra_allocations: 2, reason: 'Admin granted extra' },
       ]
 
       const result = computeLineItems(
-        [{ service_id: SVC_GENERAL, quantity: 2 }],
-        rules([[SVC_GENERAL, { max_collections: 10, extra_unit_price: 50 }]]),
+        [{ service_id: SVC_GENERAL, quantity: 4 }],
+        rules([[SVC_GENERAL, { max_collections: 3, extra_unit_price: 50 }]]),
         catMax([[CAT_BULK, 3]]),
         svcCat([[SVC_GENERAL, CAT_BULK]]),
-        empty(), // no service usage
-        usage([[CAT_BULK, 3]]), // all 3 category used (pre-override)
+        usage([[SVC_GENERAL, 3]]),  // service fully used
+        usage([[CAT_BULK, 3]]),     // category fully used
         overrides,
-        empty(), // no post-override usage
       )
 
-      // Override gives 2 free, ignoring the exhausted category budget
+      // effective_service_max = 3 + 2 = 5, used = 3 → remaining = 2
+      // effective_category_max = 3 + 2 = 5, used = 3 → remaining = 2
+      // free = MIN(4, 2, 2) = 2, paid = 2
       expect(result.line_items[0]!.free_units).toBe(2)
-      expect(result.line_items[0]!.paid_units).toBe(0)
-      expect(result.line_items[0]!.was_overridden).toBe(true)
+      expect(result.line_items[0]!.paid_units).toBe(2)
       expect(result.override_applied).toBe(true)
-      expect(result.override_reason).toBe('Admin reset')
+      expect(result.override_reason).toBe('Admin granted extra')
+    })
+
+    it('no override = standard calculation (regression)', () => {
+      const result = computeLineItems(
+        [{ service_id: SVC_GENERAL, quantity: 3 }],
+        rules([[SVC_GENERAL, { max_collections: 5, extra_unit_price: 50 }]]),
+        catMax([[CAT_BULK, 5]]),
+        svcCat([[SVC_GENERAL, CAT_BULK]]),
+        usage([[SVC_GENERAL, 2]]),
+        usage([[CAT_BULK, 2]]),
+        undefined,
+      )
+
+      expect(result.line_items[0]!.free_units).toBe(3)
+      expect(result.line_items[0]!.paid_units).toBe(0)
+      expect(result.override_applied).toBe(false)
+      expect(result.override_reason).toBeUndefined()
       expect(result.total_cents).toBe(0)
     })
 
-    it('post-override usage reduces the overridden budget', () => {
+    it('override on one service rolls up to category but not other services', () => {
       const overrides: AllocationOverride[] = [
-        { category_code: CAT_BULK, set_remaining: 3, reason: 'Compassionate reset', created_at: OVERRIDE_TIME },
+        { service_id: SVC_GENERAL, extra_allocations: 3, reason: 'Bulk extra' },
       ]
 
       const result = computeLineItems(
-        [{ service_id: SVC_GENERAL, quantity: 3 }],
-        rules([[SVC_GENERAL, { max_collections: 10, extra_unit_price: 50 }]]),
-        catMax([[CAT_BULK, 5]]),
-        svcCat([[SVC_GENERAL, CAT_BULK]]),
+        [
+          { service_id: SVC_GENERAL, quantity: 3 },
+          { service_id: SVC_GREEN, quantity: 3 },
+        ],
+        rules([
+          [SVC_GENERAL, { max_collections: 2, extra_unit_price: 50 }],
+          [SVC_GREEN, { max_collections: 2, extra_unit_price: 40 }],
+        ]),
+        catMax([[CAT_BULK, 2]]),
+        svcCat([
+          [SVC_GENERAL, CAT_BULK],
+          [SVC_GREEN, CAT_BULK],
+        ]),
         empty(),
-        usage([[CAT_BULK, 6]]), // total usage (pre + post)
+        empty(),
         overrides,
-        usage([[CAT_BULK, 1]]), // 1 booking made after override
       )
 
-      // Override set_remaining = 3, post-override used = 1, so 2 free remaining
-      expect(result.line_items[0]!.free_units).toBe(2)
-      expect(result.line_items[0]!.paid_units).toBe(1)
-      expect(result.line_items[0]!.was_overridden).toBe(true)
-      expect(result.line_items[0]!.line_charge_cents).toBe(5000)
+      // General: effective_service = 2+3 = 5, remaining = 5. Cat = 2+3 = 5, remaining = 5.
+      // free = MIN(3, 5, 5) = 3
+      expect(result.line_items[0]!.free_units).toBe(3)
+      expect(result.line_items[0]!.paid_units).toBe(0)
+      // Green: effective_service = 2+0 = 2, remaining = 2. Cat = 5 - 3(form) = 2.
+      // free = MIN(3, 2, 2) = 2, paid = 1
+      expect(result.line_items[1]!.free_units).toBe(2)
+      expect(result.line_items[1]!.paid_units).toBe(1)
     })
 
-    it('override does not affect service-level limits', () => {
+    it('multiple overrides for same service sum their extras', () => {
       const overrides: AllocationOverride[] = [
-        { category_code: CAT_BULK, set_remaining: 10, reason: 'Big reset', created_at: OVERRIDE_TIME },
+        { service_id: SVC_GENERAL, extra_allocations: 1, reason: 'First' },
+        { service_id: SVC_GENERAL, extra_allocations: 2, reason: 'Second' },
       ]
 
       const result = computeLineItems(
@@ -531,95 +557,13 @@ describe('computeLineItems', () => {
         empty(),
         empty(),
         overrides,
-        empty(),
       )
 
-      // Override gives 10 category remaining, but service max is 2
-      // Dual-limit: min(5, 10, 2) = 2 free
-      expect(result.line_items[0]!.free_units).toBe(2)
-      expect(result.line_items[0]!.paid_units).toBe(3)
-      expect(result.line_items[0]!.was_overridden).toBe(true)
-    })
-
-    it('no override = standard calculation (regression)', () => {
-      // Same inputs, no overrides — should match standard behaviour
-      const result = computeLineItems(
-        [{ service_id: SVC_GENERAL, quantity: 3 }],
-        rules([[SVC_GENERAL, { max_collections: 5, extra_unit_price: 50 }]]),
-        catMax([[CAT_BULK, 5]]),
-        svcCat([[SVC_GENERAL, CAT_BULK]]),
-        usage([[SVC_GENERAL, 2]]),
-        usage([[CAT_BULK, 2]]),
-        undefined, // no overrides
-        undefined, // no post-override usage
-      )
-
-      // Standard: min(3, 5-2, 5-2) = min(3, 3, 3) = 3 free
-      expect(result.line_items[0]!.free_units).toBe(3)
+      // effective_service = 2 + 1 + 2 = 5, effective_category = 2 + 1 + 2 = 5
+      // free = MIN(5, 5, 5) = 5
+      expect(result.line_items[0]!.free_units).toBe(5)
       expect(result.line_items[0]!.paid_units).toBe(0)
-      expect(result.line_items[0]!.was_overridden).toBe(false)
-      expect(result.override_applied).toBe(false)
-      expect(result.override_reason).toBeUndefined()
-      expect(result.total_cents).toBe(0)
-    })
-
-    it('override on one category does not affect another category', () => {
-      const overrides: AllocationOverride[] = [
-        { category_code: CAT_BULK, set_remaining: 5, reason: 'Bulk reset', created_at: OVERRIDE_TIME },
-      ]
-
-      const result = computeLineItems(
-        [
-          { service_id: SVC_GENERAL, quantity: 3 },
-          { service_id: SVC_MATTRESS, quantity: 3 },
-        ],
-        rules([
-          [SVC_GENERAL, { max_collections: 10, extra_unit_price: 50 }],
-          [SVC_MATTRESS, { max_collections: 10, extra_unit_price: 60 }],
-        ]),
-        catMax([
-          [CAT_BULK, 2],
-          [CAT_ANC, 1],
-        ]),
-        svcCat([
-          [SVC_GENERAL, CAT_BULK],
-          [SVC_MATTRESS, CAT_ANC],
-        ]),
-        empty(),
-        empty(),
-        overrides,
-        empty(),
-      )
-
-      // Bulk: override gives 5 remaining → 3 free
-      expect(result.line_items[0]!.free_units).toBe(3)
-      expect(result.line_items[0]!.was_overridden).toBe(true)
-      // Ancillary: no override, standard max=1 → 1 free, 2 paid
-      expect(result.line_items[1]!.free_units).toBe(1)
-      expect(result.line_items[1]!.paid_units).toBe(2)
-      expect(result.line_items[1]!.was_overridden).toBe(false)
-    })
-
-    it('multiple overrides for same category uses most recent', () => {
-      const overrides: AllocationOverride[] = [
-        { category_code: CAT_BULK, set_remaining: 1, reason: 'First reset', created_at: '2026-03-10T10:00:00Z' },
-        { category_code: CAT_BULK, set_remaining: 4, reason: 'Second reset', created_at: '2026-03-15T10:00:00Z' },
-      ]
-
-      const result = computeLineItems(
-        [{ service_id: SVC_GENERAL, quantity: 3 }],
-        rules([[SVC_GENERAL, { max_collections: 10, extra_unit_price: 50 }]]),
-        catMax([[CAT_BULK, 2]]),
-        svcCat([[SVC_GENERAL, CAT_BULK]]),
-        empty(),
-        empty(),
-        overrides,
-        empty(),
-      )
-
-      // Most recent override has set_remaining=4 → 3 free
-      expect(result.line_items[0]!.free_units).toBe(3)
-      expect(result.line_items[0]!.paid_units).toBe(0)
+      expect(result.override_reason).toBe('First')
     })
   })
 })

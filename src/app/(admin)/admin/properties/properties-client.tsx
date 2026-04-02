@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { SkeletonRow } from '@/components/ui/skeleton'
+import { AllocationFormModal } from '@/app/(admin)/admin/allocations/allocation-form-modal'
 
 const PAGE_SIZE = 50
 
@@ -25,6 +26,8 @@ export function PropertiesClient() {
   const [showImport, setShowImport] = useState(false)
   const [isGeocoding, setIsGeocoding] = useState(false)
   const [geocodeResult, setGeocodeResult] = useState<string | null>(null)
+  const [overridePropertyId, setOverridePropertyId] = useState<string | null>(null)
+  const [overridePropertyAddress, setOverridePropertyAddress] = useState('')
 
   // CSV import state
   const [csvRows, setCsvRows] = useState<ParsedRow[]>([])
@@ -428,6 +431,16 @@ export function PropertiesClient() {
                     <td className="px-4 py-2.5 text-right">
                       <button
                         type="button"
+                        onClick={() => {
+                          setOverridePropertyId(p.id)
+                          setOverridePropertyAddress(p.formatted_address ?? p.address)
+                        }}
+                        className="mr-2 text-xs font-medium text-[#293F52] hover:underline"
+                      >
+                        Allocations
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => handleToggleMud(p.id, p.is_mud)}
                         className="mr-2 text-xs font-medium text-[#293F52] hover:underline"
                       >
@@ -457,6 +470,19 @@ export function PropertiesClient() {
             </button>
           </div>
         </div>
+      )}
+
+      {overridePropertyId && (
+        <AllocationFormModal
+          open={!!overridePropertyId}
+          onOpenChange={(open) => { if (!open) setOverridePropertyId(null) }}
+          onSave={() => {
+            void queryClient.invalidateQueries({ queryKey: ['allocation_overrides'] })
+            setOverridePropertyId(null)
+          }}
+          propertyId={overridePropertyId}
+          propertyAddress={overridePropertyAddress}
+        />
       )}
     </>
   )
