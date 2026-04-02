@@ -473,6 +473,9 @@ Never call `process-refund` directly with `booking_id`. Always: (1) create a `re
 ### Cancellation includes Pending Payment
 `Pending Payment → Cancelled` is a valid state transition. All three cancellable status lists must include it: admin action (`actions.ts`), admin panel (`booking-detail-panel.tsx`), resident action (`booking/[ref]/actions.ts`), resident detail (`booking-detail-client.tsx`).
 
+### Postgres enum migrations — split ADD VALUE from DML
+`ALTER TYPE ... ADD VALUE` must be committed before the new values can be used in DML (`UPDATE`, `INSERT`, `DEFAULT`). Supabase wraps each migration in a transaction, so enum additions must be in their own migration file, separate from any queries that reference the new values.
+
 ### Admin booking detail — hybrid inline edit
 Contact, collection details (date + location + notes) edit inline on the detail panel. Services edit links to the wizard (pricing/capacity implications). No full-wizard edit for simple field updates. Use Base UI Dialog for destructive confirmations (cancel booking), not `window.confirm()`.
 
