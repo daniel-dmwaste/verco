@@ -32,7 +32,7 @@ export async function cancelBooking(bookingId: string): Promise<Result<void>> {
   }
 
   // Only allow cancellation from pre-Scheduled statuses
-  const cancellableStatuses = ['Submitted', 'Confirmed']
+  const cancellableStatuses = ['Pending Payment', 'Submitted', 'Confirmed']
   if (!cancellableStatuses.includes(booking.status)) {
     return {
       ok: false,
