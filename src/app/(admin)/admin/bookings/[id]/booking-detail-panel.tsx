@@ -38,6 +38,8 @@ interface Booking {
   notes: string | null
   created_at: string
   updated_at: string
+  property_id: string | null
+  collection_area_id: string | null
   collection_area: { name: string; code: string }
   eligible_properties: { formatted_address: string | null; address: string } | null
   contact: { full_name: string; mobile_e164: string | null; email: string } | null
@@ -76,6 +78,17 @@ export function BookingDetailPanel({
 
   const canConfirm = booking.status === 'Submitted'
   const canCancel = ['Submitted', 'Confirmed'].includes(booking.status)
+  const canEdit = ['Pending Payment', 'Submitted', 'Confirmed'].includes(booking.status)
+    && booking.property_id && booking.collection_area_id
+
+  const editUrl = canEdit
+    ? `/book/services?${new URLSearchParams({
+        property_id: booking.property_id!,
+        collection_area_id: booking.collection_area_id!,
+        address,
+        on_behalf: 'true',
+      }).toString()}`
+    : '#'
 
   async function handleConfirm() {
     setIsPending(true)
@@ -256,7 +269,7 @@ export function BookingDetailPanel({
       )}
 
       {/* Actions */}
-      {(canConfirm || canCancel) && (
+      {(canConfirm || canEdit || canCancel) && (
         <div className="flex flex-col gap-2 px-5 py-4">
           {canConfirm && (
             <button
@@ -269,13 +282,15 @@ export function BookingDetailPanel({
               {isPending ? 'Confirming...' : 'Confirm Booking'}
             </button>
           )}
-          <button
-            type="button"
-            className="flex w-full items-center justify-center gap-2 rounded-xl border-[1.5px] border-gray-100 bg-white px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52]"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            Edit Booking
-          </button>
+          {canEdit && (
+            <Link
+              href={editUrl}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border-[1.5px] border-gray-100 bg-white px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52]"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Edit Booking
+            </Link>
+          )}
           {canCancel && (
             <button
               type="button"

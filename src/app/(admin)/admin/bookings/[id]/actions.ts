@@ -66,7 +66,7 @@ export async function cancelBooking(bookingId: string): Promise<Result<void>> {
 
   const { data: booking, error: fetchError } = await supabase
     .from('booking')
-    .select('id, status, booking_item(collection_date!inner(date))')
+    .select('id, status, contact_id, client_id, booking_item(unit_price_cents, no_services, is_extra, collection_date!inner(date))')
     .eq('id', bookingId)
     .single()
 
@@ -83,7 +83,7 @@ export async function cancelBooking(bookingId: string): Promise<Result<void>> {
   }
 
   // Check cutoff: 3:30pm AWST the day prior to collection
-  const items = booking.booking_item as Array<{ collection_date: { date: string } }>
+  const items = booking.booking_item as Array<{ unit_price_cents: number; no_services: number; is_extra: boolean; collection_date: { date: string } }>
   if (items.length > 0) {
     const collectionDateStr = items[0]?.collection_date?.date
     if (collectionDateStr) {
@@ -115,6 +115,51 @@ export async function cancelBooking(bookingId: string): Promise<Result<void>> {
 
   if (updateError) {
     return { ok: false, error: updateError.message }
+  }
+
+  // If booking has paid items, create refund_request and trigger Stripe refund
+  const paidItems = items.filter((i) => i.is_extra && i.unit_price_cents > 0)
+  const refundAmountCents = paidItems.reduce((sum, i) => sum + i.unit_price_cents * i.no_services, 0)
+
+  if (refundAmountCents > 0 && booking.contact_id && booking.client_id) {
+    const { data: refundReq, error: refundInsertError } = await supabase
+      .from('refund_request')
+      .insert({
+        booking_id: booking.id,
+        contact_id: booking.contact_id,
+        client_id: booking.client_id,
+        amount_cents: refundAmountCents,
+        reason: 'Booking cancelled by staff',
+        status: 'Pending',
+      })
+      .select('id')
+      .single()
+
+    if (!refundInsertError && refundReq) {
+      // Trigger refund via process-refund Edge Function
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/process-refund`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ refund_request_id: refundReq.id }),
+          }
+        )
+
+        if (!res.ok) {
+          const errText = await res.text().catch(() => 'Unknown error')
+          console.error(`Refund trigger failed for cancelled booking ${booking.id}: ${errText}`)
+          // Booking is already cancelled, refund_request in Pending — staff can retry from refunds page
+        }
+      }
+    } else {
+      console.error('Failed to create refund_request for cancelled booking:', refundInsertError?.message)
+    }
   }
 
   return { ok: true, data: undefined }
