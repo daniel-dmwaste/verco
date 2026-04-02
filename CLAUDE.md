@@ -361,13 +361,13 @@ These are absolute. If a task requires crossing one, stop and flag it.
 ## 21. Patterns & Gotchas
 
 ### Suspense boundaries for useSearchParams
-Any client component using `useSearchParams()` must be wrapped in `<Suspense>`. Split into `page.tsx` (server, renders `<Suspense><ClientForm /></Suspense>`) + `client-form.tsx` (client, uses hooks). This applies to all booking wizard steps, auth verify, and any page reading URL params.
+Any client component using `useSearchParams()` must be wrapped in `<Suspense>`.
 
 ### Postgres numeric → JavaScript number
-Supabase returns `numeric` columns (latitude, longitude) as strings. Always coerce with `Number()` before passing to components that expect numbers (e.g. Leaflet maps): `lat={Number(property.latitude)}`.
+Supabase returns `numeric` columns as strings. Coerce with `Number()` before passing to components (e.g., Leaflet maps).
 
-### Tailwind CSS 4 font configuration
-Fonts are configured in `@theme inline` block in `globals.css`, not `tailwind.config.ts` (which doesn't exist). Custom font families: `--font-sans` (DM Sans, body), `--font-heading` (Poppins, headings), applied via `font-[family-name:var(--font-heading)]`.
+### Tailwind CSS 4 configuration
+All theme config in `@theme inline` block in `globals.css` (no `tailwind.config.ts`). Font families: `--font-sans` (DM Sans), `--font-heading` (Poppins) via `font-[family-name:var(--font-heading)]`.
 
 ### Booking wizard layout
 `app/(public)/book/layout.tsx` wraps all `/book/*` pages with max-width + padding via inline styles (Tailwind classes were not rendering reliably). Individual step forms use `flex flex-col` only — no `min-h-screen` or `bg-*` (layout handles those).
@@ -379,16 +379,19 @@ AU mobiles only. `normaliseAuMobile()` in `lib/booking/schemas.ts` handles `04XX
 `supabase/functions/` is excluded from `tsconfig.json` — Deno imports conflict with Node/Next.js config.
 
 ### Admin page pattern
-Admin list pages: `page.tsx` wraps client component in `<Suspense>`. Client component uses `useQuery` + browser Supabase client. RLS handles tenant scoping.
+List pages: `<Suspense><Client /></Suspense>`. Client uses `useQuery` + browser Supabase. Header: `border-b border-gray-100 bg-white px-7 pb-5 pt-6`. RLS handles tenant scoping.
 
 ### Desktop layout conventions
-Public pages: `<main className="mx-auto w-full max-w-5xl px-6 py-8">` at server page level. Landing page is full-width. `bg-gray-50 min-h-screen` lives on `app/(public)/layout.tsx`. Mobile bottom nav padding: `pb-16 tablet:pb-0`.
+Public pages: `<main className="mx-auto w-full max-w-5xl px-6 py-8">` at server page level. `bg-gray-50 min-h-screen` on `app/(public)/layout.tsx`. Bottom nav: `pb-16 tablet:pb-0`.
 
 ### Tailwind v4 breakpoints
 `tablet:` (1024px) for nav/layout switching only. `md:` for text sizing and spacing.
 
-### Turbopack root for special-character paths
-`next.config.ts` sets `turbopack: { root: process.cwd() }` to fix workspace root detection when the project path contains `&` (OneDrive).
+### Supabase MCP migrations — verify DDL executed
+`apply_migration` can register a version without DDL running. Always verify with `execute_sql` (`SELECT EXISTS (...)`) after applying.
+
+### RLS on new columns — check UPDATE policies exist
+Adding a column doesn't grant UPDATE. If the table lacks an UPDATE policy, writes silently fail. Check `pg_policies` and add if missing.
 
 ### White-label colours — use `var(--brand)` not hardcoded hex
 Public/field pages use CSS variables (`--brand`, `--brand-accent` + derived `-light`/`-hover`/`-dark`). Never hardcode `#293F52`/`#00E47C` in public/field — admin pages are exempt.
