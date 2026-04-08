@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { SetMudModal } from './set-mud-modal'
 
 const PAGE_SIZE = 50
 
@@ -10,6 +11,14 @@ interface ParsedRow {
   address: string
   collection_area_code: string
   is_mud: boolean
+}
+
+interface ModalProperty {
+  id: string
+  address: string
+  formatted_address: string | null
+  collection_area_id: string
+  collection_area_code: string
 }
 
 export function PropertiesClient() {
@@ -24,6 +33,8 @@ export function PropertiesClient() {
   const [showImport, setShowImport] = useState(false)
   const [isGeocoding, setIsGeocoding] = useState(false)
   const [geocodeResult, setGeocodeResult] = useState<string | null>(null)
+  const [setMudOpen, setSetMudOpen] = useState(false)
+  const [setMudProperty, setSetMudProperty] = useState<ModalProperty | null>(null)
 
   // CSV import state
   const [csvRows, setCsvRows] = useState<ParsedRow[]>([])
@@ -63,7 +74,7 @@ export function PropertiesClient() {
       let query = supabase
         .from('eligible_properties')
         .select(
-          'id, address, formatted_address, collection_area_id, is_mud, has_geocode, latitude, longitude, collection_area!inner(name, code)',
+          'id, address, formatted_address, collection_area_id, is_mud, mud_code, mud_onboarding_status, unit_count, has_geocode, latitude, longitude, collection_area!inner(name, code)',
           { count: 'exact' }
         )
         .order('formatted_address', { ascending: true, nullsFirst: false })
@@ -101,10 +112,38 @@ export function PropertiesClient() {
   const properties = propertiesData?.properties ?? []
   const total = propertiesData?.total ?? 0
 
-  async function handleToggleMud(id: string, currentValue: boolean) {
+  function handleOpenSetMudModal(p: {
+    id: string
+    address: string
+    formatted_address: string | null
+    collection_area_id: string | null
+    collection_area: { code: string } | { code: string }[] | null
+  }) {
+    if (!p.collection_area_id) return
+    const area = Array.isArray(p.collection_area) ? p.collection_area[0] : p.collection_area
+    setSetMudProperty({
+      id: p.id,
+      address: p.address,
+      formatted_address: p.formatted_address,
+      collection_area_id: p.collection_area_id,
+      collection_area_code: area?.code ?? '',
+    })
+    setSetMudOpen(true)
+  }
+
+  async function handleSetResidential(id: string) {
     await supabase
       .from('eligible_properties')
-      .update({ is_mud: !currentValue })
+      .update({
+        is_mud: false,
+        mud_onboarding_status: null,
+        collection_cadence: null,
+        unit_count: 1,
+        mud_code: null,
+        strata_contact_id: null,
+        auth_form_url: null,
+        waste_location_notes: null,
+      })
       .eq('id', id)
     void queryClient.invalidateQueries({ queryKey: ['admin-properties'] })
   }
@@ -403,7 +442,22 @@ export function PropertiesClient() {
                     <td className="px-4 py-2.5 text-gray-600">{area.code}</td>
                     <td className="px-4 py-2.5 text-center">
                       {p.is_mud ? (
-                        <span className="rounded-full bg-[#F3EEFF] px-2 py-0.5 text-[10px] font-semibold text-[#805AD5]">MUD</span>
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className="rounded-full bg-[#F3EEFF] px-2 py-0.5 text-[10px] font-semibold text-[#805AD5]">
+                            {p.mud_code ?? 'MUD'}
+                          </span>
+                          {p.mud_onboarding_status && (
+                            <span className={`text-[10px] font-medium ${
+                              p.mud_onboarding_status === 'Registered'
+                                ? 'text-emerald-600'
+                                : p.mud_onboarding_status === 'Inactive'
+                                ? 'text-red-500'
+                                : 'text-gray-500'
+                            }`}>
+                              {p.mud_onboarding_status} · {p.unit_count}u
+                            </span>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-[11px] text-gray-400">Residential</span>
                       )}
@@ -420,13 +474,23 @@ export function PropertiesClient() {
                       )}
                     </td>
                     <td className="px-4 py-2.5 text-right">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleMud(p.id, p.is_mud)}
-                        className="mr-2 text-xs font-medium text-[#293F52] hover:underline"
-                      >
-                        {p.is_mud ? 'Set Residential' : 'Set MUD'}
-                      </button>
+                      {p.is_mud ? (
+                        <button
+                          type="button"
+                          onClick={() => handleSetResidential(p.id)}
+                          className="mr-2 text-xs font-medium text-[#293F52] hover:underline"
+                        >
+                          Set Residential
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenSetMudModal(p)}
+                          className="mr-2 text-xs font-medium text-[#293F52] hover:underline"
+                        >
+                          Set MUD
+                        </button>
+                      )}
                     </td>
                   </tr>
                 )
@@ -452,6 +516,15 @@ export function PropertiesClient() {
           </div>
         </div>
       )}
+
+      <SetMudModal
+        open={setMudOpen}
+        onOpenChange={setSetMudOpen}
+        property={setMudProperty}
+        onSuccess={() => {
+          void queryClient.invalidateQueries({ queryKey: ['admin-properties'] })
+        }}
+      />
     </div>
   )
 }
