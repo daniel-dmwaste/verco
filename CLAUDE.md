@@ -58,6 +58,9 @@ Category (Bulk / Ancillary / Illegal Dumping)
 - `allocation_rules` = per collection_area per category (max collections per FY)
 - `service_rules` = per collection_area per service (max collections + overage price)
 - `booking_item.service_id` → FK to `service` table (not `service_type`)
+- `allocation_override` = per property per FY per service admin grant of `extra_allocations` (used by both SUD and MUD allowance bumps; reuses existing UI to be built)
+
+**MUD scaffolding on `eligible_properties`:** `is_mud`, `unit_count`, `mud_code`, `mud_onboarding_status` enum (`Contact Made` / `Registered` / `Inactive`), `collection_cadence` enum (`Ad-hoc` / `Annual` / `Bi-annual` / `Quarterly`), `waste_location_notes`, `auth_form_url`, `strata_contact_id` → contacts. View `v_mud_next_expected` computes cadence-based reminder dates for Registered MUDs only. Storage bucket `mud-auth-forms` (private, 10 MB cap, PDF/JPG/PNG/HEIC) holds signed authorisation form uploads. CHECK constraints enforce `is_mud=true` requires `unit_count >= 8`, status set, cadence set; `Registered` requires strata_contact + auth_form + waste_location_notes all present.
 
 **Key rules:**
 - A resident portal is branded at the **client** level (e.g. `kwn.verco.au`)
@@ -579,6 +582,8 @@ test: add pricing engine edge cases for mixed cart
 supabase/.temp/
 ```
 
+**Never apply schema changes via the Supabase Studio SQL editor.** Always use `pnpm supabase migration new <name>` then `pnpm supabase db push`. Studio bypasses git and creates drift that requires recovery from `supabase_migrations.schema_migrations`. If drift is found, recover the SQL via `SELECT version, name, statements FROM supabase_migrations.schema_migrations WHERE version IN (...)` and reconstruct local migration files at the matching timestamps before pushing new ones.
+
 ---
 
 ## 18. Commands Reference
@@ -656,6 +661,24 @@ AU mobiles only. `normaliseAuMobile()` in `lib/booking/schemas.ts` handles `04XX
 
 ### Edge Function tsconfig exclusion
 `supabase/functions/` is excluded from `tsconfig.json` — Deno Edge Functions use URL imports and `Deno.*` APIs that conflict with the Node/Next.js TypeScript config.
+
+### Pure helper libs in `src/lib/<domain>/`
+Decision logic separate from data fetching. Functions take pre-fetched data as arguments — no DB calls, no Supabase imports. Tested via Vitest in `src/__tests__/<domain>-*.test.ts`. Existing examples: `lib/pricing/calculate.ts`, `lib/booking/state-machine.ts`, `lib/mud/{state-machine,address-strip,allowance,capacity,mud-lookup,validation}.ts`. Caller handles the DB query, helper decides.
+
+### Server-side gate helper pattern
+When a transition requires a precondition that applies to multiple actions, extract `assertX(id): Promise<Result<void>>` and call it at the top of every action. Example: `assertMudActualServicesSet(bookingId)` is called by `completeBooking`, `raiseNcn`, and `raiseNothingPresented` for MUD bookings. Keeps the gate logic in one place and prevents accidental gaps when new transitions are added.
+
+### `router.refresh()` vs `router.push()`
+After a server action that mutates data the parent server component is reading, use `router.refresh()` (re-fetches + re-renders the same route). Reserve `router.push(newRoute)` for actual navigation. Used in `mud-edit-form`, `mark-registered-button`, `mud-allocation-form`.
+
+### Two-state form pattern (read-only ↔ edit)
+For entity edit pages, toggle between read-only display and an inline edit form via local `isEditing` state in a single client component. Simpler than separate routes. See `src/app/(admin)/admin/properties/[id]/mud-detail-section.tsx`.
+
+### New booking type — reuse the capacity RPC
+When adding a new booking type (e.g. MUD), prefer reusing `create_booking_with_capacity_check` RPC with type-specific item defaults + immediate `update booking set type='X' where id=...` over forking the RPC. The follow-up update sits in the same server action so the inconsistency window is sub-millisecond. The RPC's collection_date capacity check applies to all types regardless. Example: MUD bookings pass `unit_price_cents=0`, `is_extra=false`, `no_services=2` placeholder per service, then update `type='MUD'`.
+
+### `for_mud=true` collection_date gotcha
+MUD bookings only see `collection_date` rows where `for_mud = true`. Easy to forget when seeding new dates — the date dropdown will silently show empty if no flagged dates exist for the area. Always set `for_mud=true` on at least one upcoming date per area when creating MUD records for testing.
 
 ---
 
@@ -1101,6 +1124,48 @@ Both use the same patterns: `verifyStaffRole()` helper, `Result<T>` return type,
 | 3 | Refund → Stripe wiring | Pending — connect admin refund approve button to `process-refund` Edge Function |
 | 4 | Bulk booking actions | Pending — confirm/cancel from list view (checkbox + action bar) |
 | 5 | Allocation override table | Separate feature — for new owner reinstatement, council credits |
+
+---
+
+## 28. Session Decisions — 8 April 2026 — MUD Module
+
+Built MUD onboarding-to-booking-to-crew loop end-to-end on `feature/mud-module`. Phases A + B + C done, D mostly done, D2 (NCN dual-recipient email) deferred to the field operator interface work, E pending. Full architectural design lives in `~/obsidian/Claude/wiki/projects/wmrc-verco-v2-rollout/{mud-module-brief.md, mud-module-tech-plan.md}`.
+
+### MUD admin booking — single page, not wizard reuse
+
+Originally the tech plan suggested branching the resident `/book/*` wizard with `?mud=` query params at every step. **Decision reversed in-session:** MUDs only need date + service inputs (contact + location pre-filled from the MUD record), so a dedicated single-page form at `/admin/properties/[id]/book` is dramatically simpler and zero risk to SUD flows. The `?on_behalf=true` param on the public wizard is still used for SUD admin bookings — MUDs don't touch it.
+
+### Eat-our-own-dog-food seed approach
+
+Brief specified seeding 3 test MUDs into a dev environment via a migration. Reality: there's no separate dev environment (`tfddjmplcizfirxqhotv` is also dev). Decision: defer A2 to B1's acceptance test. The very first MUD record (KWN-1-MUD-01 = 18 Sulphur Rd Wellard, 20 units, Quarterly cadence) was created via the new modal as B1's smoke test, validating both the schema constraints and the create form in one pass. Pattern reusable for any future "seed dev data" task in this single-environment setup.
+
+### Schema migration drift recovery
+
+Discovered 6 migrations existed in `supabase_migrations.schema_migrations` (live DB) that had been applied via the Supabase Studio SQL editor and never committed to git. Symptom: `pnpm supabase db push` refused to apply new migrations. Recovery: queried the migration history table via Studio (`SELECT version, name, statements FROM supabase_migrations.schema_migrations WHERE version IN (...)`), reconstructed local files at the matching timestamps with provenance comments, then push reconciled cleanly. Lesson now in §17: never use the Studio SQL editor for schema changes.
+
+**Known issue logged for later cleanup:** `20260402141720_allocation_override_service_level.sql` is timestamped before `20260402150000_allocation_override.sql`, but the former ALTERs a table the latter creates. Live applied them in author order; a fresh `supabase db reset` would fail. Rename one to fix the chronology before any reset.
+
+### MUD field crew gating — multi-item, no auto-complete
+
+Per brief Q2: `actual_services` is required on Completed, Non-conformance, AND Nothing Presented for MUD bookings (was: only Completed). Implementation: `assertMudActualServicesSet(bookingId)` server helper called by all three transition actions. The `MudAllocationForm` was rewritten to render one counter per booking_item (was: first item only — pre-existing scaffolding limitation) and the save action no longer auto-transitions to Completed. After save, `BookingCloseoutClient`'s early-return into the form falls through and the standard close-out actions render with all three transitions enabled.
+
+### Public booking MUD redirect — fallback strip-prefix lookup
+
+`address-form.tsx` now does the property lookup twice: first with the raw input, then on miss with `stripAddressPrefix()` applied (catches "Unit 5 / 18 Sulphur Rd"). If either resolves to a property with `is_mud=true`, the booking flow is blocked with a purple "Multi-unit property" notice pointing to `client.contact_email`. Pattern uses the pure helpers `lib/mud/address-strip.ts` and `lib/mud/mud-lookup.ts`.
+
+### Phase D2 deferred
+
+NCN dual-recipient email pipeline (greenfield — no email pipeline currently exists for NCN notifications) deferred to the broader field operator interface work. Rationale: this would be the first email pipeline in the codebase and the design will set precedent for all future notifications (place-out reminders, refund confirmations, etc) — better to design once with more requirements visible than to bind it to MUDs prematurely. Wireup point when it lands: `raiseNcn()` in `src/app/(field)/field/booking/[ref]/actions.ts`.
+
+### Pre-existing tech debt fixed (unmasked by type regen)
+
+- `nothing-presented-client.tsx`: `dm_fault` → `contractor_fault` (CLAUDE.md §26 follow-up was pending)
+- `address-form.tsx`: nullable `collection_area_id` guards added
+- Both were blocking the A1 typecheck gate after `pnpm supabase gen types typescript` regenerated from the live schema
+
+### Branch state at end of session
+
+`feature/mud-module` pushed to origin with 7 feature commits (`80801a6` → `81189a7`). Working tree clean. 183/183 tests green, build clean. PR creation link: `https://github.com/daniel-dmwaste/verco/pull/new/feature/mud-module`. Smoke test scheduled for 09/04/2026 morning via PA dispatch.
 
 ---
 
