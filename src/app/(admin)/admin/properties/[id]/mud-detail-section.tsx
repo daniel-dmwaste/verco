@@ -1,6 +1,9 @@
 'use client'
 
+import { useState } from 'react'
 import { format } from 'date-fns'
+import { MudEditForm } from './mud-edit-form'
+import { MudStatusActions } from './mud-status-actions'
 
 type StrataContact = {
   id: string
@@ -18,6 +21,7 @@ type Property = {
   collection_cadence: 'Ad-hoc' | 'Annual' | 'Bi-annual' | 'Quarterly' | null
   waste_location_notes: string | null
   auth_form_url: string | null
+  collection_area_id?: string | null
 }
 
 interface MudDetailSectionProps {
@@ -41,6 +45,35 @@ export function MudDetailSection({
 }: MudDetailSectionProps) {
   const status = property.mud_onboarding_status ?? 'Contact Made'
   const statusClasses = STATUS_STYLES[status] ?? STATUS_STYLES['Contact Made']
+  const [isEditing, setIsEditing] = useState(false)
+
+  if (isEditing) {
+    return (
+      <div className="rounded-xl bg-white p-5 shadow-sm">
+        <div className="mb-4 flex items-start justify-between">
+          <h2 className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+            Edit MUD details
+          </h2>
+          <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${statusClasses}`}>
+            {status}
+          </span>
+        </div>
+        <MudEditForm
+          property={{
+            id: property.id,
+            collection_area_id: property.collection_area_id ?? null,
+            unit_count: property.unit_count,
+            mud_code: property.mud_code,
+            collection_cadence: property.collection_cadence,
+            waste_location_notes: property.waste_location_notes,
+            auth_form_url: property.auth_form_url,
+          }}
+          strataContact={strataContact}
+          onCancel={() => setIsEditing(false)}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="rounded-xl bg-white p-5 shadow-sm">
@@ -48,9 +81,18 @@ export function MudDetailSection({
         <h2 className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
           MUD onboarding
         </h2>
-        <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${statusClasses}`}>
-          {status}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${statusClasses}`}>
+            {status}
+          </span>
+          <button
+            type="button"
+            onClick={() => setIsEditing(true)}
+            className="text-[11px] font-medium text-[#293F52] hover:underline"
+          >
+            Edit
+          </button>
+        </div>
       </div>
 
       <div className="mt-3 space-y-2.5 text-[13px]">
@@ -157,11 +199,20 @@ export function MudDetailSection({
         )}
       </div>
 
-      {/* Action footer — placeholder for B3 */}
+      {/* Status transitions */}
       <div className="mt-6 border-t border-gray-100 pt-4">
-        <p className="text-[11px] text-gray-400">
-          Edit MUD details + status transitions land in B3.
-        </p>
+        <MudStatusActions
+          property={{
+            id: property.id,
+            is_mud: property.is_mud,
+            unit_count: property.unit_count,
+            strata_contact_id: strataContact?.id ?? null,
+            auth_form_url: property.auth_form_url,
+            waste_location_notes: property.waste_location_notes,
+            collection_cadence: property.collection_cadence,
+            mud_onboarding_status: property.mud_onboarding_status,
+          }}
+        />
       </div>
     </div>
   )

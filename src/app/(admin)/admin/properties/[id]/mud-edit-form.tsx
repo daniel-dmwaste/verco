@@ -1,0 +1,312 @@
+'use client'
+
+import { useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import {
+  updateMudProperty,
+  upsertStrataContact,
+  createAuthFormUploadUrl,
+} from '../actions'
+import { COLLECTION_CADENCES, type CollectionCadence } from '@/lib/mud/validation'
+
+type StrataContact = {
+  id: string
+  full_name: string
+  mobile_e164: string | null
+  email: string
+} | null
+
+interface MudEditFormProps {
+  property: {
+    id: string
+    collection_area_id: string | null
+    unit_count: number
+    mud_code: string | null
+    collection_cadence: CollectionCadence | null
+    waste_location_notes: string | null
+    auth_form_url: string | null
+  }
+  strataContact: StrataContact
+  onCancel: () => void
+}
+
+const auMobileRegex = /^(\+614\d{8}|04\d{8})$/
+
+export function MudEditForm({ property, strataContact, onCancel }: MudEditFormProps) {
+  const router = useRouter()
+  const supabase = createClient()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const [unitCount, setUnitCount] = useState(property.unit_count)
+  const [mudCode, setMudCode] = useState(property.mud_code ?? '')
+  const [cadence, setCadence] = useState<CollectionCadence>(
+    property.collection_cadence ?? 'Quarterly'
+  )
+  const [wasteNotes, setWasteNotes] = useState(property.waste_location_notes ?? '')
+  const [contactName, setContactName] = useState(strataContact?.full_name ?? '')
+  const [contactMobile, setContactMobile] = useState(strataContact?.mobile_e164 ?? '')
+  const [contactEmail, setContactEmail] = useState(strataContact?.email ?? '')
+  const [authFormPath, setAuthFormPath] = useState<string | null>(property.auth_form_url)
+  const [authFormJustUploaded, setAuthFormJustUploaded] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !property.collection_area_id) return
+
+    setError(null)
+    setIsUploading(true)
+
+    try {
+      if (file.size > 10 * 1024 * 1024) {
+        setError('File too large (max 10 MB).')
+        return
+      }
+      const allowed = ['application/pdf', 'image/jpeg', 'image/png', 'image/heic']
+      if (!allowed.includes(file.type)) {
+        setError('File must be PDF, JPG, PNG, or HEIC.')
+        return
+      }
+
+      const urlResult = await createAuthFormUploadUrl(
+        property.id,
+        property.collection_area_id,
+        file.name
+      )
+      if (!urlResult.ok) {
+        setError(urlResult.error)
+        return
+      }
+
+      const { error: uploadError } = await supabase.storage
+        .from('mud-auth-forms')
+        .uploadToSignedUrl(urlResult.data.path, urlResult.data.token, file)
+
+      if (uploadError) {
+        setError(`Upload failed: ${uploadError.message}`)
+        return
+      }
+
+      setAuthFormPath(urlResult.data.path)
+      setAuthFormJustUploaded(file.name)
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  async function handleSave() {
+    setError(null)
+
+    if (unitCount < 8) {
+      setError('Unit count must be at least 8.')
+      return
+    }
+    if (!mudCode.trim()) {
+      setError('MUD code is required.')
+      return
+    }
+
+    // Strata contact: all-or-nothing
+    const anyContactField = contactName || contactMobile || contactEmail
+    let strataContactId: string | null = strataContact?.id ?? null
+
+    if (anyContactField) {
+      if (!contactName.trim()) {
+        setError('Strata contact name is required if any contact field is filled.')
+        return
+      }
+      if (!auMobileRegex.test(contactMobile.trim())) {
+        setError('Mobile must be an Australian number (04XX or +614XX).')
+        return
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail.trim())) {
+        setError('Email must be valid.')
+        return
+      }
+    }
+
+    setIsSubmitting(true)
+    try {
+      if (anyContactField) {
+        const contactResult = await upsertStrataContact({
+          full_name: contactName.trim(),
+          mobile_e164: contactMobile.trim(),
+          email: contactEmail.trim(),
+        })
+        if (!contactResult.ok) {
+          setError(contactResult.error)
+          return
+        }
+        strataContactId = contactResult.data.contact_id
+      }
+
+      const result = await updateMudProperty({
+        property_id: property.id,
+        unit_count: unitCount,
+        mud_code: mudCode.trim().toUpperCase(),
+        collection_cadence: cadence,
+        waste_location_notes: wasteNotes.trim() || null,
+        strata_contact_id: strataContactId,
+        auth_form_url: authFormPath,
+      })
+
+      if (!result.ok) {
+        setError(result.error)
+        return
+      }
+
+      router.refresh()
+      onCancel()
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+            Unit count
+          </label>
+          <input
+            type="number"
+            min={8}
+            value={unitCount}
+            onChange={(e) => setUnitCount(Number.parseInt(e.target.value, 10) || 0)}
+            className="mt-1 w-full rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-2 text-[13px] outline-none focus:border-[#293F52]"
+          />
+        </div>
+        <div>
+          <label className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+            MUD code
+          </label>
+          <input
+            type="text"
+            value={mudCode}
+            onChange={(e) => setMudCode(e.target.value.toUpperCase())}
+            className="mt-1 w-full rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-2 font-mono text-[13px] outline-none focus:border-[#293F52]"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+          Cadence
+        </label>
+        <select
+          value={cadence}
+          onChange={(e) => setCadence(e.target.value as CollectionCadence)}
+          className="mt-1 w-full rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-2 text-[13px] outline-none focus:border-[#293F52]"
+        >
+          {COLLECTION_CADENCES.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+          Waste location notes
+        </label>
+        <textarea
+          value={wasteNotes}
+          onChange={(e) => setWasteNotes(e.target.value)}
+          placeholder="e.g. Collect all from the corner of Eric and Gadson"
+          className="mt-1 h-20 w-full resize-none rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-2 text-[13px] outline-none placeholder:text-gray-400 focus:border-[#293F52]"
+        />
+      </div>
+
+      <div className="rounded-xl border border-gray-100 p-3.5">
+        <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+          Strata contact
+        </div>
+        <div className="space-y-2">
+          <input
+            type="text"
+            value={contactName}
+            onChange={(e) => setContactName(e.target.value)}
+            placeholder="Full name"
+            className="w-full rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-2 text-[13px] outline-none placeholder:text-gray-400 focus:border-[#293F52]"
+          />
+          <input
+            type="tel"
+            value={contactMobile}
+            onChange={(e) => setContactMobile(e.target.value)}
+            placeholder="Mobile (04XX or +614XX)"
+            className="w-full rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-2 text-[13px] outline-none placeholder:text-gray-400 focus:border-[#293F52]"
+          />
+          <input
+            type="email"
+            value={contactEmail}
+            onChange={(e) => setContactEmail(e.target.value)}
+            placeholder="Email"
+            className="w-full rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-2 text-[13px] outline-none placeholder:text-gray-400 focus:border-[#293F52]"
+          />
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-gray-100 p-3.5">
+        <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+          Authorisation form
+        </div>
+        {authFormPath ? (
+          <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-3 py-2 text-[12px]">
+            <span className="truncate text-emerald-700">
+              ✓ {authFormJustUploaded ?? 'Uploaded'}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthFormPath(null)
+                setAuthFormJustUploaded(null)
+                if (fileInputRef.current) fileInputRef.current.value = ''
+              }}
+              className="ml-2 text-[11px] font-medium text-emerald-600 hover:underline"
+            >
+              Replace
+            </button>
+          </div>
+        ) : (
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png,.heic,application/pdf,image/jpeg,image/png,image/heic"
+            onChange={handleFileSelect}
+            disabled={isUploading}
+            className="block w-full text-[12px] text-gray-500 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-[12px] file:font-medium file:text-gray-700"
+          />
+        )}
+        {isUploading && <p className="mt-2 text-[11px] text-gray-500">Uploading...</p>}
+      </div>
+
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700">
+          {error}
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isSubmitting}
+          className="flex-1 rounded-xl border-[1.5px] border-gray-100 bg-white px-3.5 py-2.5 text-[13px] font-semibold text-[#293F52]"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={isSubmitting || isUploading}
+          className="flex-1 rounded-xl bg-[#293F52] px-3.5 py-2.5 text-[13px] font-semibold text-white disabled:opacity-50"
+        >
+          {isSubmitting ? 'Saving...' : 'Save changes'}
+        </button>
+      </div>
+    </div>
+  )
+}
