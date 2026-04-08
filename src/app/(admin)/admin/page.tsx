@@ -35,6 +35,7 @@ export default async function AdminDashboardPage() {
     weeklyNcn,
     weeklyNp,
     openTicketsResult,
+    mudRemindersResult,
   ] = await Promise.all([
     supabase
       .from('booking')
@@ -76,6 +77,14 @@ export default async function AdminDashboardPage() {
       .in('status', ['open', 'in_progress'])
       .order('created_at', { ascending: false })
       .limit(5),
+    // MUD reminders: Registered MUDs with next_expected_date <= 14 days from today
+    // (or NULL — for new MUDs that haven't had a booking yet, surfacing them
+    // gives admins a chance to schedule the first one).
+    supabase
+      .from('v_mud_next_expected')
+      .select('property_id, collection_cadence, last_date, next_expected_date')
+      .order('next_expected_date', { ascending: true, nullsFirst: false })
+      .limit(20),
   ])
 
   const openExceptions = (ncnResult.count ?? 0) + (npResult.count ?? 0)
@@ -125,6 +134,37 @@ export default async function AdminDashboardPage() {
 
   const upcomingDates = upcomingDatesResult.data ?? []
   const openTickets = openTicketsResult.data ?? []
+
+  // ── MUD reminder block — filter to due-soon (<= 14 days) and decorate ────
+  const REMINDER_HORIZON_DAYS = 14
+  const reminderHorizon = new Date(now.getTime() + REMINDER_HORIZON_DAYS * 24 * 60 * 60 * 1000)
+  const dueSoonRows = (mudRemindersResult.data ?? []).filter((r) => {
+    if (!r.next_expected_date) return false
+    const d = new Date(r.next_expected_date + 'T00:00:00')
+    return d <= reminderHorizon
+  })
+
+  // Brand-new Registered MUDs with no completed bookings — surface separately
+  // so they don't get lost. The view returns them with last_date = null and
+  // next_expected_date = null.
+  const newRegisteredRows = (mudRemindersResult.data ?? []).filter(
+    (r) => r.last_date === null && r.next_expected_date === null
+  )
+
+  // Fetch addresses + codes for everything we'll display
+  const reminderPropertyIds = [...dueSoonRows, ...newRegisteredRows]
+    .map((r) => r.property_id)
+    .filter((id): id is string => id !== null)
+  const { data: reminderProperties } = reminderPropertyIds.length
+    ? await supabase
+        .from('eligible_properties')
+        .select('id, formatted_address, address, mud_code, unit_count')
+        .in('id', reminderPropertyIds)
+    : { data: [] }
+
+  const propertyById = new Map(
+    (reminderProperties ?? []).map((p) => [p.id, p])
+  )
 
   type UpcomingDate = typeof upcomingDates[number]
 
@@ -307,6 +347,96 @@ export default async function AdminDashboardPage() {
           })}
           {openTickets.length === 0 && (
             <p className="py-4 text-center text-sm text-gray-400">No open tickets</p>
+          )}
+        </div>
+
+        {/* MUD reminders — full width across both columns */}
+        <div className="rounded-xl bg-white p-5 shadow-sm md:col-span-2">
+          <div className="mb-3.5 flex items-center justify-between font-[family-name:var(--font-heading)] text-sm font-semibold text-[#293F52]">
+            <span>
+              MUDs Due Soon
+              <span className="ml-2 text-[11px] font-normal text-gray-400">
+                Next 14 days · cadence-based
+              </span>
+            </span>
+            <Link
+              href="/admin/properties?mud=mud"
+              className="text-xs font-medium text-[#00B864]"
+            >
+              All MUDs &rarr;
+            </Link>
+          </div>
+          {dueSoonRows.length === 0 && newRegisteredRows.length === 0 ? (
+            <p className="py-4 text-center text-sm text-gray-400">
+              No MUDs due in the next 14 days.
+            </p>
+          ) : (
+            <div className="space-y-1">
+              {dueSoonRows.map((r) => {
+                if (!r.property_id) return null
+                const p = propertyById.get(r.property_id)
+                if (!p) return null
+                return (
+                  <Link
+                    key={r.property_id}
+                    href={`/admin/properties/${r.property_id}`}
+                    className="flex items-center justify-between rounded-lg px-3 py-2 hover:bg-gray-50"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[13px] font-medium text-[#293F52]">
+                        {p.formatted_address ?? p.address}
+                      </div>
+                      <div className="mt-0.5 text-[11px] text-gray-500">
+                        {p.mud_code ?? 'MUD'} · {p.unit_count}u · {r.collection_cadence}
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <div className="text-[12px] font-semibold text-[#293F52]">
+                        {r.next_expected_date
+                          ? format(new Date(r.next_expected_date + 'T00:00:00'), 'd MMM')
+                          : '—'}
+                      </div>
+                      <div className="mt-0.5 text-[10px] text-gray-400">
+                        last {r.last_date
+                          ? format(new Date(r.last_date + 'T00:00:00'), 'd MMM yyyy')
+                          : 'never'}
+                      </div>
+                    </div>
+                  </Link>
+                )
+              })}
+              {newRegisteredRows.length > 0 && (
+                <div className="mt-3 border-t border-gray-100 pt-3">
+                  <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                    New Registered (no bookings yet)
+                  </div>
+                  {newRegisteredRows.map((r) => {
+                    if (!r.property_id) return null
+                    const p = propertyById.get(r.property_id)
+                    if (!p) return null
+                    return (
+                      <Link
+                        key={r.property_id}
+                        href={`/admin/properties/${r.property_id}`}
+                        className="flex items-center justify-between rounded-lg px-3 py-2 hover:bg-gray-50"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-[13px] font-medium text-[#293F52]">
+                            {p.formatted_address ?? p.address}
+                          </div>
+                          <div className="mt-0.5 text-[11px] text-gray-500">
+                            {p.mud_code ?? 'MUD'} · {p.unit_count}u · {r.collection_cadence}
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-[11px] text-amber-600">
+                          Schedule first booking
+                        </div>
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           )}
         </div>
 
