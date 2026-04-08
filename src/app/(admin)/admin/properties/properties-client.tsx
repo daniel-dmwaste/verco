@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import Link from 'next/link'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { SetMudModal } from './set-mud-modal'
@@ -434,7 +435,9 @@ export function PropertiesClient() {
                 return (
                   <tr key={p.id} className="border-b border-gray-50">
                     <td className="px-4 py-2.5">
-                      <div className="font-medium text-[#293F52]">{p.formatted_address ?? p.address}</div>
+                      <Link href={`/admin/properties/${p.id}`} className="font-medium text-[#293F52] hover:underline">
+                        {p.formatted_address ?? p.address}
+                      </Link>
                       {p.formatted_address && p.formatted_address !== p.address && (
                         <div className="text-[11px] text-gray-400">{p.address}</div>
                       )}
