@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Dialog } from '@base-ui/react/dialog'
 import { markMudRegistered, markMudInactive, reactivateMud } from '../actions'
@@ -116,14 +117,22 @@ export function MudStatusActions({ property }: MudStatusActionsProps) {
       )}
 
       {status === 'Registered' && (
-        <button
-          type="button"
-          onClick={() => setShowInactiveDialog(true)}
-          disabled={isSubmitting}
-          className="w-full rounded-xl border-[1.5px] border-red-200 bg-white px-3.5 py-2.5 text-[13px] font-semibold text-red-700 hover:bg-red-50"
-        >
-          Mark Inactive
-        </button>
+        <>
+          <Link
+            href={`/admin/properties/${property.id}/book`}
+            className="block w-full rounded-xl bg-[#00E47C] px-3.5 py-2.5 text-center text-[13px] font-semibold text-[#293F52]"
+          >
+            Create booking
+          </Link>
+          <button
+            type="button"
+            onClick={() => setShowInactiveDialog(true)}
+            disabled={isSubmitting}
+            className="w-full rounded-xl border-[1.5px] border-red-200 bg-white px-3.5 py-2.5 text-[13px] font-semibold text-red-700 hover:bg-red-50"
+          >
+            Mark Inactive
+          </button>
+        </>
       )}
 
       {status === 'Inactive' && (
