@@ -37,7 +37,7 @@ export function NothingPresentedClient() {
       let query = supabase
         .from('nothing_presented')
         .select(
-          `id, status, dm_fault, notes, photos, reported_at, resolved_at,
+          `id, status, contractor_fault, notes, photos, reported_at, resolved_at,
            booking:booking_id(id, ref, status, location,
              eligible_properties:property_id(formatted_address, address),
              collection_area!inner(code)),
@@ -48,8 +48,8 @@ export function NothingPresentedClient() {
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
 
       if (statusFilter) query = query.eq('status', statusFilter as never)
-      if (faultFilter === 'dm') query = query.eq('dm_fault', true)
-      if (faultFilter === 'resident') query = query.eq('dm_fault', false)
+      if (faultFilter === 'dm') query = query.eq('contractor_fault', true)
+      if (faultFilter === 'resident') query = query.eq('contractor_fault', false)
       if (search) {
         query = query.ilike('notes', `%${search}%`)
       }
@@ -183,8 +183,8 @@ export function NothingPresentedClient() {
                       {getAreaCode(np)}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${np.dm_fault ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
-                        {np.dm_fault ? 'Contractor' : 'Resident'}
+                      <span className={`inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${np.contractor_fault ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
+                        {np.contractor_fault ? 'Contractor' : 'Resident'}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500">
