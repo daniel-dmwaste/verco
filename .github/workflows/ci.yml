@@ -105,6 +105,51 @@ jobs:
           fi
           echo "Types are up to date."
 
+  template-sync:
+    name: Notification Template Mirror
+    runs-on: ubuntu-latest
+    # Safety note: this job operates only on files checked into the repo.
+    # It uses no github.event.* inputs, so the injection risks flagged by
+    # the workflow-security guidance do not apply.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify Node/Deno template mirrors are in sync
+        run: |
+          NODE_DIR=src/lib/notifications/templates
+          DENO_DIR=supabase/functions/_shared/templates
+          if [ ! -d "$NODE_DIR" ] || [ ! -d "$DENO_DIR" ]; then
+            echo "::error::Expected template directories missing (Node: $NODE_DIR, Deno: $DENO_DIR)"
+            exit 1
+          fi
+          drift=0
+          for f in "$NODE_DIR"/*.ts; do
+            name=$(basename "$f")
+            deno_file="$DENO_DIR/$name"
+            if [ ! -f "$deno_file" ]; then
+              echo "::error::Missing Deno mirror: $deno_file"
+              drift=1
+              continue
+            fi
+            # Strip import lines (differ between Node and Deno — e.g. Deno
+            # uses explicit .ts extensions) then diff ignoring whitespace
+            # and blank lines so formatter tweaks don't cause false fails.
+            node_stripped=$(mktemp)
+            deno_stripped=$(mktemp)
+            grep -v '^import ' "$f" > "$node_stripped"
+            grep -v '^import ' "$deno_file" > "$deno_stripped"
+            if ! diff -q -w -B "$node_stripped" "$deno_stripped" > /dev/null 2>&1; then
+              echo "::error::Template drift detected: $name"
+              diff -u -w -B "$node_stripped" "$deno_stripped" || true
+              drift=1
+            fi
+            rm -f "$node_stripped" "$deno_stripped"
+          done
+          if [ "$drift" != "0" ]; then
+            exit 1
+          fi
+          echo "All notification templates in sync."
+
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
