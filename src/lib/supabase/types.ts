@@ -64,6 +64,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "allocation_override_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "v_mud_next_expected"
+            referencedColumns: ["property_id"]
+          },
+          {
             foreignKeyName: "allocation_override_service_id_fkey"
             columns: ["service_id"]
             isOneToOne: false
@@ -330,6 +337,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "eligible_properties"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "v_mud_next_expected"
+            referencedColumns: ["property_id"]
           },
         ]
       }
@@ -959,7 +973,11 @@ export type Database = {
       eligible_properties: {
         Row: {
           address: string
+          auth_form_url: string | null
           collection_area_id: string | null
+          collection_cadence:
+            | Database["public"]["Enums"]["collection_cadence"]
+            | null
           created_at: string
           formatted_address: string | null
           google_place_id: string | null
@@ -969,11 +987,22 @@ export type Database = {
           is_mud: boolean
           latitude: number | null
           longitude: number | null
+          mud_code: string | null
+          mud_onboarding_status:
+            | Database["public"]["Enums"]["mud_onboarding_status"]
+            | null
+          strata_contact_id: string | null
+          unit_count: number
           updated_at: string
+          waste_location_notes: string | null
         }
         Insert: {
           address: string
+          auth_form_url?: string | null
           collection_area_id?: string | null
+          collection_cadence?:
+            | Database["public"]["Enums"]["collection_cadence"]
+            | null
           created_at?: string
           formatted_address?: string | null
           google_place_id?: string | null
@@ -983,11 +1012,22 @@ export type Database = {
           is_mud?: boolean
           latitude?: number | null
           longitude?: number | null
+          mud_code?: string | null
+          mud_onboarding_status?:
+            | Database["public"]["Enums"]["mud_onboarding_status"]
+            | null
+          strata_contact_id?: string | null
+          unit_count?: number
           updated_at?: string
+          waste_location_notes?: string | null
         }
         Update: {
           address?: string
+          auth_form_url?: string | null
           collection_area_id?: string | null
+          collection_cadence?:
+            | Database["public"]["Enums"]["collection_cadence"]
+            | null
           created_at?: string
           formatted_address?: string | null
           google_place_id?: string | null
@@ -997,7 +1037,14 @@ export type Database = {
           is_mud?: boolean
           latitude?: number | null
           longitude?: number | null
+          mud_code?: string | null
+          mud_onboarding_status?:
+            | Database["public"]["Enums"]["mud_onboarding_status"]
+            | null
+          strata_contact_id?: string | null
+          unit_count?: number
           updated_at?: string
+          waste_location_notes?: string | null
         }
         Relationships: [
           {
@@ -1005,6 +1052,13 @@ export type Database = {
             columns: ["collection_area_id"]
             isOneToOne: false
             referencedRelation: "collection_area"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eligible_properties_strata_contact_id_fkey"
+            columns: ["strata_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
             referencedColumns: ["id"]
           },
         ]
@@ -1677,6 +1731,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "strata_user_properties_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "v_mud_next_expected"
+            referencedColumns: ["property_id"]
+          },
+          {
             foreignKeyName: "strata_user_properties_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -1867,7 +1928,17 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_mud_next_expected: {
+        Row: {
+          collection_cadence:
+            | Database["public"]["Enums"]["collection_cadence"]
+            | null
+          last_date: string | null
+          next_expected_date: string | null
+          property_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       accessible_client_ids: { Args: never; Returns: string[] }
@@ -1951,6 +2022,8 @@ export type Database = {
         | "closed"
         | "wont_fix"
       capacity_bucket: "bulk" | "anc" | "id"
+      collection_cadence: "Ad-hoc" | "Annual" | "Bi-annual" | "Quarterly"
+      mud_onboarding_status: "Contact Made" | "Registered" | "Inactive"
       ncn_reason:
         | "Collection Limit Exceeded"
         | "Items Obstructed or Not On Verge"
@@ -2173,6 +2246,8 @@ export const Constants = {
         "wont_fix",
       ],
       capacity_bucket: ["bulk", "anc", "id"],
+      collection_cadence: ["Ad-hoc", "Annual", "Bi-annual", "Quarterly"],
+      mud_onboarding_status: ["Contact Made", "Registered", "Inactive"],
       ncn_reason: [
         "Collection Limit Exceeded",
         "Items Obstructed or Not On Verge",
@@ -2226,4 +2301,3 @@ export const Constants = {
     },
   },
 } as const
-

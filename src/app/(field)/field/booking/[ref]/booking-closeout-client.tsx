@@ -77,15 +77,30 @@ function CloseoutInner({ booking }: { booking: Booking }) {
     )
   }
 
-  // Show MUD allocation form
-  if (isMud && isScheduled && booking.booking_item.length > 0) {
-    const firstItem = booking.booking_item[0]!
+  // Show MUD allocation form when any item still needs an actual_services
+  // count, OR when the crew explicitly clicked "Edit counts" via ?recount=1.
+  // Once all are filled (and ?recount is absent) the close-out actions render
+  // below.
+  const wantsRecount = searchParams.get('recount') === '1'
+  const needsMudCounts =
+    isMud &&
+    isScheduled &&
+    booking.booking_item.length > 0 &&
+    (wantsRecount ||
+      booking.booking_item.some((i) => i.actual_services === null || i.actual_services === undefined))
+
+  if (needsMudCounts) {
     return (
       <MudAllocationForm
+        bookingId={booking.id}
         bookingRef={booking.ref}
-        bookingItemId={firstItem.id}
         address={address}
-        preBooked={firstItem.no_services}
+        items={booking.booking_item.map((i) => ({
+          id: i.id,
+          service_name: (i.service as { name: string }).name,
+          pre_booked: i.no_services,
+          initial_count: i.actual_services,
+        }))}
       />
     )
   }
@@ -180,6 +195,29 @@ function CloseoutInner({ booking }: { booking: Booking }) {
           </svg>
           Open in Google Maps
         </a>
+
+        {/* MUD counts confirmation banner — only when all counts are saved */}
+        {isMud && isScheduled && (
+          <div className="rounded-[10px] border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-[12px] text-emerald-800">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold">Counts saved</span>
+              <Link
+                href={`/field/booking/${booking.ref}?recount=1`}
+                className="text-[11px] font-medium text-emerald-700 underline"
+              >
+                Edit counts
+              </Link>
+            </div>
+            <div className="mt-1 space-y-0.5">
+              {booking.booking_item.map((i) => (
+                <div key={i.id} className="flex justify-between text-[11px]">
+                  <span>{(i.service as { name: string }).name}</span>
+                  <span className="font-mono">{i.actual_services ?? '—'}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Close out actions */}
         {isScheduled && (

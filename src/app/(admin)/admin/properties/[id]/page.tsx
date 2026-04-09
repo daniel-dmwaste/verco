@@ -13,10 +13,15 @@ export default async function AdminPropertyDetailPage({
   const supabase = await createClient()
 
   // Step 1: Fetch property + current FY in parallel (needed for subsequent queries)
+  // Property select uses `*` plus joined relations — `*` covers MUD columns
+  // (is_mud, mud_code, mud_onboarding_status, unit_count, collection_cadence,
+  // waste_location_notes, auth_form_url) which the MUD section consumes.
   const [{ data: property }, { data: fy }] = await Promise.all([
     supabase
       .from('eligible_properties')
-      .select('*, collection_area!inner(id, name, code)')
+      .select(
+        '*, collection_area!inner(id, name, code), strata_contact:strata_contact_id(id, full_name, mobile_e164, email)'
+      )
       .eq('id', id)
       .single(),
     supabase
@@ -35,17 +40,40 @@ export default async function AdminPropertyDetailPage({
   }
 
   // Step 2: Fetch bookings for this property in current FY
+  // booking_item.actual_services is included so the MUD detail section can
+  // show actual collected counts for completed MUD bookings.
   const { data: bookings } = await supabase
     .from('booking')
     .select(
       `id, ref, status, type, created_at,
        contact:contact_id(full_name),
-       booking_item(no_services, service!inner(name), collection_date!inner(date))`
+       booking_item(no_services, actual_services, service!inner(name), collection_date!inner(date))`
     )
     .eq('property_id', id)
     .eq('fy_id', fy.id)
     .order('created_at', { ascending: false })
     .limit(20)
+
+  // Step 2b: MUD-specific lookups (only when relevant)
+  // - nextExpected: next-due reminder date for Registered MUDs (cadence-based view)
+  // - authFormSignedUrl: 1h signed URL for the strata authority form (when uploaded)
+  let nextExpected: { last_date: string | null; next_expected_date: string | null } | null = null
+  if (property.is_mud && property.mud_onboarding_status === 'Registered') {
+    const { data: nx } = await supabase
+      .from('v_mud_next_expected')
+      .select('last_date, next_expected_date')
+      .eq('property_id', id)
+      .maybeSingle()
+    nextExpected = nx ?? null
+  }
+
+  let authFormSignedUrl: string | null = null
+  if (property.auth_form_url) {
+    const { data: signed } = await supabase.storage
+      .from('mud-auth-forms')
+      .createSignedUrl(property.auth_form_url, 60 * 60)
+    authFormSignedUrl = signed?.signedUrl ?? null
+  }
 
   const bookingIds = (bookings ?? []).map((b) => b.id)
 
@@ -123,6 +151,8 @@ export default async function AdminPropertyDetailPage({
       allocationOverrides={allocationOverrides ?? []}
       allocationRules={allocationRules ?? []}
       fyUsage={fyUsage ?? []}
+      nextExpected={nextExpected}
+      authFormSignedUrl={authFormSignedUrl}
     />
   )
 }

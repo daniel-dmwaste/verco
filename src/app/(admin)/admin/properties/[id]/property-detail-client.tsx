@@ -7,10 +7,18 @@ import { format } from 'date-fns'
 import { BookingStatusBadge } from '@/components/booking/booking-status-badge'
 import { getStatusStyle } from '@/lib/ui/status-styles'
 import { AllocationFormModal } from '@/app/(admin)/admin/allocations/allocation-form-modal'
+import { MudDetailSection } from './mud-detail-section'
 
 /* ------------------------------------------------------------------ */
 /*  Props — shaped by what page.tsx actually passes                    */
 /* ------------------------------------------------------------------ */
+
+type StrataContact = {
+  id: string
+  full_name: string
+  mobile_e164: string | null
+  email: string
+} | null
 
 interface PropertyDetailClientProps {
   property: {
@@ -19,9 +27,20 @@ interface PropertyDetailClientProps {
     formatted_address: string | null
     is_mud: boolean
     is_eligible: boolean
+    collection_area_id: string | null
     collection_area: { id: string; name: string; code: string }
+    // MUD fields (nullable when is_mud=false)
+    unit_count: number
+    mud_code: string | null
+    mud_onboarding_status: 'Contact Made' | 'Registered' | 'Inactive' | null
+    collection_cadence: 'Ad-hoc' | 'Annual' | 'Bi-annual' | 'Quarterly' | null
+    waste_location_notes: string | null
+    auth_form_url: string | null
+    strata_contact: StrataContact | StrataContact[] | null
   }
   fy: { id: string; label: string }
+  nextExpected: { last_date: string | null; next_expected_date: string | null } | null
+  authFormSignedUrl: string | null
   bookings: Array<{
     id: string
     ref: string
@@ -170,9 +189,17 @@ export function PropertyDetailClient({
   allocationOverrides,
   allocationRules,
   fyUsage,
+  nextExpected,
+  authFormSignedUrl,
 }: PropertyDetailClientProps) {
   const queryClient = useQueryClient()
   const [showAllocationModal, setShowAllocationModal] = useState(false)
+
+  // Strata contact may arrive as object or single-element array depending on
+  // the Supabase select shape — normalise to a single value (or null).
+  const strataContact: StrataContact = Array.isArray(property.strata_contact)
+    ? (property.strata_contact[0] ?? null)
+    : (property.strata_contact ?? null)
 
   const allocations = buildAllocations(allocationRules, allocationOverrides, fyUsage)
 
@@ -234,6 +261,18 @@ export function PropertyDetailClient({
           <StatCard label="Open Tickets" value={openTickets} />
         </div>
       </div>
+
+      {/* ── 2b. MUD section (only shown for MUD properties) ──────── */}
+      {property.is_mud && (
+        <div className="px-7 pb-5">
+          <MudDetailSection
+            property={property}
+            strataContact={strataContact}
+            nextExpected={nextExpected}
+            authFormSignedUrl={authFormSignedUrl}
+          />
+        </div>
+      )}
 
       {/* ── 3. Allocations ────────────────────────────────────────── */}
       <div className="px-7 py-5">

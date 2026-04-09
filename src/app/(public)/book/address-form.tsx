@@ -8,9 +8,16 @@ import { createClient } from '@/lib/supabase/client'
 import { BookingStepper } from '@/components/booking/booking-stepper'
 import { AddressAutocomplete } from '@/components/booking/address-autocomplete'
 import { Spinner } from '@/components/ui/spinner'
+import { stripAddressPrefix } from '@/lib/mud/address-strip'
+import { decideMudRedirect, type MudLookupCandidate } from '@/lib/mud/mud-lookup'
 import type { Database } from '@/lib/supabase/types'
 
 type EligibleProperty = Database['public']['Tables']['eligible_properties']['Row']
+
+interface MudRedirectState {
+  building_address: string
+  contact_email: string | null
+}
 
 const PropertyMap = dynamic(
   () =>
@@ -29,35 +36,70 @@ export function AddressForm() {
   const [selectedProperty, setSelectedProperty] = useState<EligibleProperty | null>(null)
   const [notFound, setNotFound] = useState(false)
   const [hasAutoResolved, setHasAutoResolved] = useState(false)
+  const [mudRedirect, setMudRedirect] = useState<MudRedirectState | null>(null)
 
-  // Shared lookup function used by both manual selection and auto-resolve
+  // Shared lookup function used by both manual selection and auto-resolve.
+  //
+  // Tries the input as-is first; if no match is found, retries with the
+  // address prefix stripped (e.g. "Unit 5 / 18 Sulphur Rd" → "18 Sulphur Rd")
+  // to catch residents who entered their MUD address with a unit prefix.
+  // If the resolved property is a MUD, blocks the booking flow and renders
+  // the redirect message instead of advancing.
   const lookupProperty = useCallback(
     async (searchStr: string) => {
       setNotFound(false)
       setSelectedProperty(null)
+      setMudRedirect(null)
 
-      const streetPart = searchStr.split(',')[0] ?? searchStr
-      console.log('[AddressStep] Looking up property:', { searchStr, streetPart })
-
-      const { data: properties, error: lookupError } = await supabase
-        .from('eligible_properties')
-        .select('*')
-        .or(
-          `formatted_address.ilike.%${streetPart}%,address.ilike.%${streetPart}%`
-        )
-        .limit(1)
-
-      console.log('[AddressStep] Lookup result:', {
-        count: properties?.length ?? 0,
-        error: lookupError?.message ?? null,
-        firstMatch: properties?.[0]?.formatted_address ?? null,
-      })
-
-      if (properties && properties.length > 0) {
-        setSelectedProperty(properties[0])
-      } else {
-        setNotFound(true)
+      const tryLookup = async (s: string) => {
+        const streetPart = s.split(',')[0] ?? s
+        const { data } = await supabase
+          .from('eligible_properties')
+          .select('*')
+          .or(`formatted_address.ilike.%${streetPart}%,address.ilike.%${streetPart}%`)
+          .limit(1)
+        return data?.[0] ?? null
       }
+
+      let property = await tryLookup(searchStr)
+
+      // Fallback: strip a Unit/Apt/Lot prefix and retry
+      if (!property) {
+        const stripped = stripAddressPrefix(searchStr)
+        if (stripped !== searchStr) {
+          property = await tryLookup(stripped)
+        }
+      }
+
+      if (!property) {
+        setNotFound(true)
+        return
+      }
+
+      // MUD redirect check via the pure decision helper
+      const candidate: MudLookupCandidate = {
+        id: property.id,
+        formatted_address: property.formatted_address,
+        address: property.address,
+        is_mud: property.is_mud,
+        is_eligible: property.is_eligible,
+      }
+      const decision = decideMudRedirect([candidate])
+      if (decision.redirect) {
+        // Fetch the resolved client's contact email for the redirect link
+        const { data: client } = await supabase
+          .from('client')
+          .select('contact_email')
+          .limit(1)
+          .maybeSingle()
+        setMudRedirect({
+          building_address: decision.building_address ?? property.address,
+          contact_email: client?.contact_email ?? null,
+        })
+        return
+      }
+
+      setSelectedProperty(property)
     },
     [supabase]
   )
@@ -84,6 +126,8 @@ export function AddressForm() {
         .single()
 
       if (!fy) return null
+
+      if (!selectedProperty.collection_area_id) return null
 
       const { data: rules } = await supabase
         .from('allocation_rules')
@@ -203,6 +247,37 @@ export function AddressForm() {
                 <div className="font-semibold">Address not eligible</div>
                 <div className="mt-px text-xs font-normal">
                   This address is not registered for verge collection services.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* MUD redirect — block individual bookings, point to strata manager */}
+          {mudRedirect && (
+            <div className="mt-3 rounded-[10px] border border-[#805AD5] bg-[#F3EEFF] px-4 py-4 text-[13px] text-[#293F52]">
+              <div className="flex items-start gap-2.5">
+                <span className="mt-0.5 shrink-0 text-base">&#x1F3E2;</span>
+                <div className="flex-1">
+                  <div className="font-semibold text-[#5B348B]">
+                    Multi-unit property
+                  </div>
+                  <p className="mt-1 leading-relaxed">
+                    Collections for <strong>{mudRedirect.building_address}</strong> are
+                    arranged centrally — please contact your strata manager or building
+                    manager to organise a collection.
+                  </p>
+                  {mudRedirect.contact_email && (
+                    <p className="mt-2 text-[12px]">
+                      If you think this is wrong, contact our team at{' '}
+                      <a
+                        href={`mailto:${mudRedirect.contact_email}`}
+                        className="font-medium text-[#5B348B] underline"
+                      >
+                        {mudRedirect.contact_email}
+                      </a>
+                      .
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

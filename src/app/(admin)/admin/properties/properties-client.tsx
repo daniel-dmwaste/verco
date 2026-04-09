@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { SkeletonRow } from '@/components/ui/skeleton'
 import { AllocationFormModal } from '@/app/(admin)/admin/allocations/allocation-form-modal'
+import { SetMudModal } from './set-mud-modal'
 
 const PAGE_SIZE = 50
 
@@ -13,6 +14,14 @@ interface ParsedRow {
   address: string
   collection_area_code: string
   is_mud: boolean
+}
+
+interface ModalProperty {
+  id: string
+  address: string
+  formatted_address: string | null
+  collection_area_id: string
+  collection_area_code: string
 }
 
 export function PropertiesClient() {
@@ -27,6 +36,8 @@ export function PropertiesClient() {
   const [showImport, setShowImport] = useState(false)
   const [isGeocoding, setIsGeocoding] = useState(false)
   const [geocodeResult, setGeocodeResult] = useState<string | null>(null)
+  const [setMudOpen, setSetMudOpen] = useState(false)
+  const [setMudProperty, setSetMudProperty] = useState<ModalProperty | null>(null)
   const [overridePropertyId, setOverridePropertyId] = useState<string | null>(null)
   const [overridePropertyAddress, setOverridePropertyAddress] = useState('')
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
@@ -78,7 +89,7 @@ export function PropertiesClient() {
       let query = supabase
         .from('eligible_properties')
         .select(
-          'id, address, formatted_address, collection_area_id, is_mud, is_eligible, has_geocode, latitude, longitude, collection_area!inner(name, code)',
+          'id, address, formatted_address, collection_area_id, is_mud, is_eligible, mud_code, mud_onboarding_status, unit_count, has_geocode, latitude, longitude, collection_area!inner(name, code)',
           { count: 'exact' }
         )
         .order('formatted_address', { ascending: true, nullsFirst: false })
@@ -116,10 +127,38 @@ export function PropertiesClient() {
   const properties = propertiesData?.properties ?? []
   const total = propertiesData?.total ?? 0
 
-  async function handleToggleMud(id: string, currentValue: boolean) {
+  function handleOpenSetMudModal(p: {
+    id: string
+    address: string
+    formatted_address: string | null
+    collection_area_id: string | null
+    collection_area: { code: string } | { code: string }[] | null
+  }) {
+    if (!p.collection_area_id) return
+    const area = Array.isArray(p.collection_area) ? p.collection_area[0] : p.collection_area
+    setSetMudProperty({
+      id: p.id,
+      address: p.address,
+      formatted_address: p.formatted_address,
+      collection_area_id: p.collection_area_id,
+      collection_area_code: area?.code ?? '',
+    })
+    setSetMudOpen(true)
+  }
+
+  async function handleSetResidential(id: string) {
     const { error } = await supabase
       .from('eligible_properties')
-      .update({ is_mud: !currentValue })
+      .update({
+        is_mud: false,
+        mud_onboarding_status: null,
+        collection_cadence: null,
+        unit_count: 1,
+        mud_code: null,
+        strata_contact_id: null,
+        auth_form_url: null,
+        waste_location_notes: null,
+      })
       .eq('id', id)
     if (error) { alert(`Failed to update: ${error.message}`); return }
     void queryClient.invalidateQueries({ queryKey: ['admin-properties'] })
@@ -435,7 +474,22 @@ export function PropertiesClient() {
                     <td className="px-4 py-2.5 text-gray-600">{area.code}</td>
                     <td className="px-4 py-2.5 text-center">
                       {p.is_mud ? (
-                        <span className="rounded-full bg-[#F3EEFF] px-2 py-0.5 text-2xs font-semibold text-[#805AD5]">MUD</span>
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className="rounded-full bg-[#F3EEFF] px-2 py-0.5 text-2xs font-semibold text-[#805AD5]">
+                            {p.mud_code ?? 'MUD'}
+                          </span>
+                          {p.mud_onboarding_status && (
+                            <span className={`text-2xs font-medium ${
+                              p.mud_onboarding_status === 'Registered'
+                                ? 'text-emerald-600'
+                                : p.mud_onboarding_status === 'Inactive'
+                                ? 'text-red-500'
+                                : 'text-gray-500'
+                            }`}>
+                              {p.mud_onboarding_status} · {p.unit_count}u
+                            </span>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-[11px] text-gray-400">Residential</span>
                       )}
@@ -465,7 +519,14 @@ export function PropertiesClient() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => { void handleToggleMud(p.id, p.is_mud); setOpenMenuId(null) }}
+                              onClick={() => {
+                                if (p.is_mud) {
+                                  void handleSetResidential(p.id)
+                                } else {
+                                  handleOpenSetMudModal(p)
+                                }
+                                setOpenMenuId(null)
+                              }}
                               className="flex w-full items-center gap-2 px-3 py-2 text-left text-body-sm text-gray-700 hover:bg-gray-50"
                             >
                               {p.is_mud ? 'Set Residential' : 'Set MUD'}
@@ -505,6 +566,15 @@ export function PropertiesClient() {
           </div>
         </div>
       )}
+
+      <SetMudModal
+        open={setMudOpen}
+        onOpenChange={setSetMudOpen}
+        property={setMudProperty}
+        onSuccess={() => {
+          void queryClient.invalidateQueries({ queryKey: ['admin-properties'] })
+        }}
+      />
 
       {overridePropertyId && (
         <AllocationFormModal
