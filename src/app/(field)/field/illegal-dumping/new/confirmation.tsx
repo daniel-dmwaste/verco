@@ -25,13 +25,13 @@ export function Confirmation({
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-7 pb-16">
       {/* Success icon */}
-      <div className="flex size-16 items-center justify-center rounded-full bg-[#E8FDF0]">
+      <div className="flex size-16 items-center justify-center rounded-full bg-[var(--brand-accent-light)]">
         <svg
           width="32"
           height="32"
           viewBox="0 0 24 24"
           fill="none"
-          stroke="#00B864"
+          stroke="var(--brand-accent-dark)"
           strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -40,41 +40,41 @@ export function Confirmation({
         </svg>
       </div>
 
-      <h1 className="mt-5 font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
+      <h1 className="mt-5 font-[family-name:var(--font-heading)] text-xl font-bold text-[var(--brand)]">
         ID Collection Logged
       </h1>
-      <p className="mt-1.5 text-center text-[13px] leading-relaxed text-gray-500">
+      <p className="mt-1.5 text-center text-body-sm leading-relaxed text-gray-500">
         The booking has been submitted and will appear on the run sheet for{' '}
         {formattedDate}.
       </p>
 
       {/* Summary card */}
       <div className="mt-6 flex w-full flex-col gap-2 rounded-xl bg-gray-50 px-4 py-3.5">
-        <div className="flex items-center justify-between border-b border-gray-100 py-1.5 text-[13px]">
+        <div className="flex items-center justify-between border-b border-gray-100 py-1.5 text-body-sm">
           <span className="text-xs text-gray-500">Booking ref</span>
-          <span className="font-[family-name:var(--font-heading)] font-semibold text-[#293F52]">
+          <span className="font-[family-name:var(--font-heading)] font-semibold text-[var(--brand)]">
             {bookingRef}
           </span>
         </div>
-        <div className="flex items-center justify-between border-b border-gray-100 py-1.5 text-[13px]">
+        <div className="flex items-center justify-between border-b border-gray-100 py-1.5 text-body-sm">
           <span className="text-xs text-gray-500">Location</span>
           <span className="max-w-[200px] text-right font-medium text-gray-900">
             {geoAddress}
           </span>
         </div>
-        <div className="flex items-center justify-between border-b border-gray-100 py-1.5 text-[13px]">
+        <div className="flex items-center justify-between border-b border-gray-100 py-1.5 text-body-sm">
           <span className="text-xs text-gray-500">Waste type</span>
           <span className="font-medium text-gray-900">
             {wasteTypes.join(', ')}
           </span>
         </div>
-        <div className="flex items-center justify-between border-b border-gray-100 py-1.5 text-[13px]">
+        <div className="flex items-center justify-between border-b border-gray-100 py-1.5 text-body-sm">
           <span className="text-xs text-gray-500">Volume</span>
           <span className="font-medium text-gray-900">{volume}</span>
         </div>
-        <div className="flex items-center justify-between py-1.5 text-[13px]">
+        <div className="flex items-center justify-between py-1.5 text-body-sm">
           <span className="text-xs text-gray-500">Collection date</span>
-          <span className="font-medium text-[#293F52]">{formattedDate}</span>
+          <span className="font-medium text-[var(--brand)]">{formattedDate}</span>
         </div>
       </div>
 
@@ -82,7 +82,7 @@ export function Confirmation({
       <div className="mt-6 flex w-full flex-col gap-2">
         <Link
           href="/field/run-sheet"
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#293F52] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-sm font-semibold text-white"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand)] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-sm font-semibold text-white"
         >
           <svg
             width="16"
@@ -101,7 +101,7 @@ export function Confirmation({
         </Link>
         <Link
           href="/field/illegal-dumping/new"
-          className="flex w-full items-center justify-center rounded-xl border-[1.5px] border-gray-100 bg-white px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-sm font-semibold text-[#293F52]"
+          className="flex w-full items-center justify-center rounded-xl border-[1.5px] border-gray-100 bg-white px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-sm font-semibold text-[var(--brand)]"
         >
           Log Another ID Collection
         </Link>

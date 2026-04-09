@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, addDays, addWeeks, addMonths } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
+import { SkeletonRow } from '@/components/ui/skeleton'
 
 const PAGE_SIZE = 50
 
@@ -212,22 +213,22 @@ export function CollectionDatesClient() {
   const bulkPreviewDates = showBulkPreview ? generateBulkDates() : []
 
   return (
-    <div className="p-6">
+    <>
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="flex items-center justify-between border-b border-gray-100 bg-white px-7 pb-5 pt-6">
         <div>
           <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
             Collection Dates
           </h1>
-          <p className="mt-0.5 text-sm text-gray-500">
-            Manage collection date capacity and availability
+          <p className="mt-0.5 text-body-sm text-gray-500">
+            {total} date{total !== 1 ? 's' : ''}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setShowPast((p) => !p)}
-            className={`rounded-lg border px-3 py-2 text-[13px] font-medium transition-colors ${
+            className={`rounded-lg border px-3 py-2 text-body-sm font-medium transition-colors ${
               showPast
                 ? 'border-[#293F52] bg-[#293F52] text-white'
                 : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
@@ -238,14 +239,14 @@ export function CollectionDatesClient() {
           <button
             type="button"
             onClick={() => { setShowBulkCreate((p) => !p); setShowCreate(false) }}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-[13px] font-medium text-gray-600 hover:bg-gray-50"
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-body-sm font-medium text-gray-600 hover:bg-gray-50"
           >
             Bulk Create
           </button>
           <button
             type="button"
             onClick={() => { setShowCreate((p) => !p); setShowBulkCreate(false) }}
-            className="rounded-lg bg-[#00E47C] px-4 py-2 text-[13px] font-semibold text-[#293F52]"
+            className="rounded-lg bg-[#00E47C] px-4 py-2 text-body-sm font-semibold text-[#293F52]"
           >
             + New Date
           </button>
@@ -254,7 +255,7 @@ export function CollectionDatesClient() {
 
       {/* Create form */}
       {showCreate && (
-        <div className="mb-4 rounded-xl border border-gray-200 bg-white p-5">
+        <div className="mx-7 mt-4 rounded-xl border border-gray-200 bg-white p-5">
           <h3 className="mb-3 text-sm font-semibold text-[#293F52]">Create Collection Date</h3>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <div>
@@ -305,7 +306,7 @@ export function CollectionDatesClient() {
 
       {/* Bulk create form */}
       {showBulkCreate && (
-        <div className="mb-4 rounded-xl border border-gray-200 bg-white p-5">
+        <div className="mx-7 mt-4 rounded-xl border border-gray-200 bg-white p-5">
           <h3 className="mb-3 text-sm font-semibold text-[#293F52]">Bulk Create Collection Dates</h3>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <div>
@@ -376,7 +377,7 @@ export function CollectionDatesClient() {
       )}
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+      <div className="mx-7 mt-6 overflow-x-auto rounded-xl border border-gray-200 bg-white">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -392,7 +393,9 @@ export function CollectionDatesClient() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+              <>{Array.from({ length: 5 }).map((_, i) => (
+                <SkeletonRow key={i} columns={8} />
+              ))}</>
             ) : dates.length === 0 ? (
               <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">No collection dates found</td></tr>
             ) : (
@@ -407,7 +410,7 @@ export function CollectionDatesClient() {
                     <tr key={d.id} className="border-b border-gray-50 bg-blue-50/50">
                       <td className="px-4 py-2.5 font-medium text-[#293F52]">{format(new Date(d.date + 'T00:00:00'), 'EEE d MMM yyyy')}</td>
                       <td className="px-4 py-2.5 text-gray-600">{area.code}</td>
-                      <td className="px-4 py-2.5 text-center">{d.for_mud && <span className="rounded-full bg-[#F3EEFF] px-2 py-0.5 text-[10px] font-semibold text-[#805AD5]">MUD</span>}</td>
+                      <td className="px-4 py-2.5 text-center">{d.for_mud && <span className="rounded-full bg-[#F3EEFF] px-2 py-0.5 text-2xs font-semibold text-[#805AD5]">MUD</span>}</td>
                       <td className="px-4 py-2.5 text-center">
                         <input type="checkbox" checked={editIsOpen} onChange={(e) => setEditIsOpen(e.target.checked)} className="rounded" />
                       </td>
@@ -429,7 +432,7 @@ export function CollectionDatesClient() {
                     </td>
                     <td className="px-4 py-2.5 text-gray-600">{area.code}</td>
                     <td className="px-4 py-2.5 text-center">
-                      {d.for_mud && <span className="rounded-full bg-[#F3EEFF] px-2 py-0.5 text-[10px] font-semibold text-[#805AD5]">MUD</span>}
+                      {d.for_mud && <span className="rounded-full bg-[#F3EEFF] px-2 py-0.5 text-2xs font-semibold text-[#805AD5]">MUD</span>}
                     </td>
                     <td className="px-4 py-2.5 text-center">
                       {d.is_open ? (
@@ -490,7 +493,7 @@ export function CollectionDatesClient() {
 
       {/* Pagination */}
       {total > 0 && (
-        <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
+        <div className="mx-7 mt-4 flex items-center justify-between text-sm text-gray-500">
           <span>
             Showing {page * PAGE_SIZE + 1}&ndash;{Math.min((page + 1) * PAGE_SIZE, total)} of {total}
           </span>
@@ -504,6 +507,6 @@ export function CollectionDatesClient() {
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }

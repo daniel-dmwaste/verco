@@ -4,22 +4,14 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
+import { getStatusStyle } from '@/lib/ui/status-styles'
 import Link from 'next/link'
+import { SkeletonRow } from '@/components/ui/skeleton'
 import type { Database } from '@/lib/supabase/types'
 
 type NpStatus = Database['public']['Enums']['np_status']
 
 const STATUS_OPTIONS: string[] = ['Issued', 'Disputed', 'Under Review', 'Resolved', 'Rebooked', 'Closed']
-
-const STATUS_STYLE: Record<string, { bg: string; text: string }> = {
-  Issued: { bg: 'bg-gray-100', text: 'text-gray-600' },
-  Open: { bg: 'bg-amber-50', text: 'text-amber-700' },
-  Disputed: { bg: 'bg-red-50', text: 'text-red-700' },
-  'Under Review': { bg: 'bg-blue-50', text: 'text-blue-700' },
-  Resolved: { bg: 'bg-emerald-50', text: 'text-emerald-700' },
-  Rebooked: { bg: 'bg-purple-50', text: 'text-purple-700' },
-  Closed: { bg: 'bg-gray-50', text: 'text-gray-400' },
-}
 
 const PAGE_SIZE = 20
 
@@ -90,7 +82,7 @@ export function NothingPresentedClient() {
           <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
             Nothing Presented
           </h1>
-          <p className="mt-0.5 text-[13px] text-gray-500">
+          <p className="mt-0.5 text-body-sm text-gray-500">
             {total} records
           </p>
         </div>
@@ -105,14 +97,16 @@ export function NothingPresentedClient() {
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(0) }}
             placeholder="Search notes..."
-            className="w-full border-none bg-transparent text-[13px] text-gray-900 outline-none placeholder:text-gray-300"
+            aria-label="Search nothing presented records"
+            className="w-full border-none bg-transparent text-body-sm text-gray-900 outline-none placeholder:text-gray-300"
           />
         </div>
 
         <select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(0) }}
-          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-[13px] text-gray-700"
+          aria-label="Filter by status"
+          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-body-sm text-gray-700"
         >
           <option value="">All Statuses</option>
           {STATUS_OPTIONS.map((s) => (
@@ -123,7 +117,8 @@ export function NothingPresentedClient() {
         <select
           value={faultFilter}
           onChange={(e) => { setFaultFilter(e.target.value); setPage(0) }}
-          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-[13px] text-gray-700"
+          aria-label="Filter by fault type"
+          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-body-sm text-gray-700"
         >
           <option value="">All Fault Types</option>
           <option value="dm">Contractor Fault</option>
@@ -154,15 +149,15 @@ export function NothingPresentedClient() {
               </tr>
             </thead>
             <tbody>
-              {isLoading && (
-                <tr><td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-400">Loading...</td></tr>
-              )}
+              {isLoading && Array.from({ length: 5 }).map((_, i) => (
+                <SkeletonRow key={i} columns={9} />
+              ))}
               {!isLoading && records.length === 0 && (
                 <tr><td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-400">No nothing presented records found</td></tr>
               )}
               {records.map((np) => {
                 const bookingInfo = getBookingRef(np)
-                const ss = STATUS_STYLE[np.status] ?? STATUS_STYLE.Issued
+                const ss = getStatusStyle('np', np.status)
                 const reporter = np.reporter as { display_name: string | null } | null
                 return (
                   <tr key={np.id} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
@@ -170,13 +165,13 @@ export function NothingPresentedClient() {
                       {bookingInfo ? (
                         <Link
                           href={`/admin/bookings/${bookingInfo.id}`}
-                          className="font-[family-name:var(--font-heading)] text-[13px] font-semibold text-[#293F52] hover:underline"
+                          className="font-[family-name:var(--font-heading)] text-body-sm font-semibold text-[#293F52] hover:underline"
                         >
                           {bookingInfo.ref}
                         </Link>
                       ) : '—'}
                     </td>
-                    <td className="max-w-[180px] truncate px-4 py-3 text-[13px]">
+                    <td className="max-w-[180px] truncate px-4 py-3 text-body-sm">
                       {getAddress(np)}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500">

@@ -5,7 +5,10 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { BookingStepper } from '@/components/booking/booking-stepper'
-import { encodeItems } from '@/lib/booking/search-params'
+import { BookingCancelLink } from '@/components/booking/booking-cancel-link'
+import { VercoButton } from '@/components/ui/verco-button'
+import { Spinner } from '@/components/ui/spinner'
+import { encodeItems, decodeItems } from '@/lib/booking/search-params'
 import type { BookingItem } from '@/lib/booking/schemas'
 
 interface ServiceRuleRow {
@@ -36,11 +39,12 @@ export function ServicesForm() {
 
   const supabase = createClient()
 
-  // Quantities map: service_id → quantity (current form selections)
-  const [quantities, setQuantities] = useState<Map<string, number>>(new Map())
+  // Prefill from ?items= param (edit flow) or start empty
+  const initialItems = searchParams.get('items') ?? ''
+  const [quantities, setQuantities] = useState<Map<string, number>>(() => decodeItems(initialItems))
 
   // Fetch service rules for this collection area
-  const { data: serviceRules } = useQuery({
+  const { data: serviceRules, isLoading: serviceRulesLoading } = useQuery({
     queryKey: ['service-rules', collectionAreaId],
     enabled: !!collectionAreaId,
     queryFn: async () => {
@@ -56,7 +60,7 @@ export function ServicesForm() {
   })
 
   // Fetch allocation_rules at category level (Bulk max, Ancillary max)
-  const { data: categoryAllocations } = useQuery({
+  const { data: categoryAllocations, isLoading: categoryAllocationsLoading } = useQuery({
     queryKey: ['category-allocations', collectionAreaId],
     enabled: !!collectionAreaId,
     queryFn: async () => {
@@ -77,7 +81,7 @@ export function ServicesForm() {
   })
 
   // Fetch existing FY usage grouped by category code
-  const { data: fyUsageByCategory } = useQuery({
+  const { data: fyUsageByCategory, isLoading: fyUsageByCategoryLoading } = useQuery({
     queryKey: ['fy-usage-by-category', propertyId],
     enabled: !!propertyId,
     queryFn: async () => {
@@ -111,7 +115,7 @@ export function ServicesForm() {
   })
 
   // Also fetch per-service FY usage (for individual service pricing calc)
-  const { data: fyUsageByService } = useQuery({
+  const { data: fyUsageByService, isLoading: fyUsageByServiceLoading } = useQuery({
     queryKey: ['fy-usage-by-service', propertyId],
     enabled: !!propertyId,
     queryFn: async () => {
@@ -144,6 +148,9 @@ export function ServicesForm() {
       return usage
     },
   })
+
+  // Show loading state if any critical query is loading
+  const isLoadingData = serviceRulesLoading || categoryAllocationsLoading || fyUsageByCategoryLoading || fyUsageByServiceLoading
 
   // Group services by category code
   const grouped = useMemo(() => {
@@ -246,6 +253,24 @@ export function ServicesForm() {
     })
   }
 
+  // Carry forward params from later steps (edit flow) + return_url
+  const collectionDateId = searchParams.get('collection_date_id')
+  const locationParam = searchParams.get('location')
+  const notesParam = searchParams.get('notes')
+  const contactName = searchParams.get('contact_name')
+  const contactEmail = searchParams.get('contact_email')
+  const contactMobile = searchParams.get('contact_mobile')
+  const returnUrl = searchParams.get('return_url')
+  const carryParams = {
+    ...(collectionDateId ? { collection_date_id: collectionDateId } : {}),
+    ...(locationParam ? { location: locationParam } : {}),
+    ...(notesParam ? { notes: notesParam } : {}),
+    ...(contactName ? { contact_name: contactName } : {}),
+    ...(contactEmail ? { contact_email: contactEmail } : {}),
+    ...(contactMobile ? { contact_mobile: contactMobile } : {}),
+    ...(returnUrl ? { return_url: returnUrl } : {}),
+  }
+
   function handleContinue() {
     if (totalItems === 0) return
     const params = new URLSearchParams({
@@ -255,12 +280,19 @@ export function ServicesForm() {
       items: encodeItems(pricingItems),
       total_cents: totalChargeCents.toString(),
       ...(onBehalf ? { on_behalf: 'true' } : {}),
+      ...carryParams,
     })
     router.push(`/book/date?${params.toString()}`)
   }
 
   function handleBack() {
-    router.push('/book')
+    const params = new URLSearchParams({
+      address,
+      ...(initialItems ? { items: initialItems } : {}),
+      ...(onBehalf ? { on_behalf: 'true' } : {}),
+      ...carryParams,
+    })
+    router.push(`/book?${params.toString()}`)
   }
 
   function renderServiceSection(
@@ -272,10 +304,10 @@ export function ServicesForm() {
     const remaining = getLiveRemaining(categoryCode)
     const badgeClass =
       remaining > 0
-        ? 'bg-[#E8FDF0] text-[#006A38]'
+        ? 'bg-[var(--brand-accent-light)] text-[#006A38]'
         : 'bg-[#FFF0F0] text-[#E53E3E]'
     const accentBg =
-      categoryCode === 'bulk' ? 'bg-[#00B864]' : 'bg-[#293F52]'
+      categoryCode === 'bulk' ? 'bg-[var(--brand-accent-dark)]' : 'bg-[var(--brand)]'
 
     // Extra cost rows for this section
     const extraRows = pricingItems.filter(
@@ -287,7 +319,7 @@ export function ServicesForm() {
     return (
       <div>
         <div className="mb-2.5 flex items-center justify-between">
-          <span className="font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52]">
+          <span className="font-[family-name:var(--font-heading)] text-body font-semibold text-[var(--brand)]">
             {title}
           </span>
           <span
@@ -309,7 +341,7 @@ export function ServicesForm() {
                     className={`h-10 w-1 rounded-sm ${accentBg}`}
                   />
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-[15px] font-semibold text-gray-900">
+                    <span className="text-body font-semibold text-gray-900">
                       {rule.service.name}
                     </span>
                     <span className="text-xs text-gray-500">
@@ -325,13 +357,13 @@ export function ServicesForm() {
                   >
                     &minus;
                   </button>
-                  <span className="min-w-[16px] text-center text-[15px] font-semibold text-[#293F52]">
+                  <span className="min-w-[16px] text-center text-body font-semibold text-[var(--brand)]">
                     {qty}
                   </span>
                   <button
                     type="button"
                     onClick={() => updateQty(rule.service_id, 1)}
-                    className="flex size-7 items-center justify-center rounded-full bg-[#293F52] text-lg font-semibold text-white"
+                    className="flex size-7 items-center justify-center rounded-full bg-[var(--brand)] text-lg font-semibold text-white"
                   >
                     +
                   </button>
@@ -344,14 +376,14 @@ export function ServicesForm() {
           {extraRows.map((item) => (
             <div
               key={`extra-${item.service_id}`}
-              className="flex items-center justify-between rounded-lg border border-[#00B864] bg-[#F0FBF5] px-3.5 py-2.5 text-[13px]"
+              className="flex items-center justify-between rounded-lg border border-[var(--brand-accent-dark)] bg-[#F0FBF5] px-3.5 py-2.5 text-body-sm"
             >
               <div className="flex items-center gap-2 text-gray-700">
-                <span className="font-semibold text-[#00B864]">$</span>
+                <span className="font-semibold text-[var(--brand-accent-dark)]">$</span>
                 {item.paid_units} extra {item.service_name.toLowerCase()} @
                 ${(item.unit_price_cents / 100).toFixed(2)} each
               </div>
-              <span className="font-semibold text-[#293F52]">
+              <span className="font-semibold text-[var(--brand)]">
                 ${(item.line_charge_cents / 100).toFixed(2)}
               </span>
             </div>
@@ -368,27 +400,40 @@ export function ServicesForm() {
       {/* Content */}
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto pb-24 pt-6">
         <div>
-          <h1 className="font-[family-name:var(--font-heading)] text-[22px] font-bold leading-tight text-[#293F52]">
+          <h1 className="font-[family-name:var(--font-heading)] text-title font-bold leading-tight text-[var(--brand)]">
             Select Services
           </h1>
-          <p className="mt-1 text-[13px] leading-relaxed text-gray-500">
+          <p className="mt-1 text-body-sm leading-relaxed text-gray-500">
             Choose items for collection. Combine multiple service types.
           </p>
         </div>
 
-        {grouped.bulk.length > 0 &&
-          renderServiceSection('Bulk Collection', 'bulk', grouped.bulk)}
+        {/* Loading state */}
+        {isLoadingData && (
+          <div className="flex flex-col items-center justify-center gap-3 rounded-xl bg-white px-4 py-12 shadow-sm">
+            <Spinner size="md" />
+            <p className="text-sm text-gray-500">Loading service options...</p>
+          </div>
+        )}
 
-        {grouped.anc.length > 0 &&
-          renderServiceSection('Ancillary Collection', 'anc', grouped.anc)}
+        {/* Services sections — only show when data is loaded */}
+        {!isLoadingData && (
+          <>
+            {grouped.bulk.length > 0 &&
+              renderServiceSection('Bulk Collection', 'bulk', grouped.bulk)}
+
+            {grouped.anc.length > 0 &&
+              renderServiceSection('Ancillary Collection', 'anc', grouped.anc)}
+          </>
+        )}
 
         {/* Total bar */}
-        {totalChargeCents > 0 && (
+        {!isLoadingData && totalChargeCents > 0 && (
           <div className="flex items-center justify-between rounded-[10px] bg-[#E8EEF2] px-4 py-3.5">
-            <span className="text-sm font-semibold text-[#293F52]">
+            <span className="text-sm font-semibold text-[var(--brand)]">
               Total Extra Services Cost
             </span>
-            <span className="font-[family-name:var(--font-heading)] text-lg font-bold text-[#293F52]">
+            <span className="font-[family-name:var(--font-heading)] text-lg font-bold text-[var(--brand)]">
               ${(totalChargeCents / 100).toFixed(2)}
             </span>
           </div>
@@ -397,21 +442,21 @@ export function ServicesForm() {
 
       {/* Bottom nav */}
       <div className="sticky bottom-0 flex gap-2.5 pb-5 pt-3">
-        <button
-          type="button"
+        <VercoButton
+          variant="secondary"
+          className="flex-1"
           onClick={handleBack}
-          className="flex h-[52px] flex-1 items-center justify-center rounded-xl border-[1.5px] border-gray-100 bg-white font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52] transition-opacity hover:opacity-90"
         >
           &larr; Back
-        </button>
-        <button
-          type="button"
+        </VercoButton>
+        <BookingCancelLink />
+        <VercoButton
+          className="flex-1"
           onClick={handleContinue}
-          disabled={totalItems === 0}
-          className="flex h-[52px] flex-1 items-center justify-center rounded-xl bg-[#293F52] font-[family-name:var(--font-heading)] text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          disabled={totalItems === 0 || isLoadingData}
         >
           Next Step &rarr;
-        </button>
+        </VercoButton>
       </div>
     </div>
   )

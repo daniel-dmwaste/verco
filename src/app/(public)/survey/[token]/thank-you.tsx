@@ -33,12 +33,12 @@ export function ThankYou({ bookingRef, responses }: ThankYouProps) {
   return (
     <div className="flex min-h-screen flex-col bg-white">
       {/* Header */}
-      <div className="shrink-0 bg-[#293F52] px-5 pb-5 pt-4">
+      <div className="shrink-0 bg-[var(--brand)] px-5 pb-5 pt-4">
         <div className="flex items-center gap-2">
-          <div className="flex size-[26px] items-center justify-center rounded-[6px] bg-[#00E47C] font-[family-name:var(--font-heading)] text-sm font-bold text-[#293F52]">
+          <div className="flex size-[26px] items-center justify-center rounded-[6px] bg-[var(--brand-accent)] font-[family-name:var(--font-heading)] text-sm font-bold text-[var(--brand)]">
             V
           </div>
-          <span className="font-[family-name:var(--font-heading)] text-[15px] font-bold text-white">
+          <span className="font-[family-name:var(--font-heading)] text-body font-bold text-white">
             Verge Collection
           </span>
         </div>
@@ -47,13 +47,13 @@ export function ThankYou({ bookingRef, responses }: ThankYouProps) {
       {/* Content */}
       <div className="flex flex-1 flex-col items-center justify-center px-8 pb-16">
         {/* Success icon */}
-        <div className="flex size-[72px] items-center justify-center rounded-full bg-[#E8FDF0]">
+        <div className="flex size-[72px] items-center justify-center rounded-full bg-[var(--brand-accent-light)]">
           <svg
             width="36"
             height="36"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#00B864"
+            stroke="var(--brand-accent-dark)"
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -62,7 +62,7 @@ export function ThankYou({ bookingRef, responses }: ThankYouProps) {
           </svg>
         </div>
 
-        <h1 className="mt-5 font-[family-name:var(--font-heading)] text-[22px] font-bold text-[#293F52]">
+        <h1 className="mt-5 font-[family-name:var(--font-heading)] text-title font-bold text-[var(--brand)]">
           Thank you!
         </h1>
         <p className="mt-2 max-w-[280px] text-center text-sm leading-relaxed text-gray-500">
@@ -77,21 +77,21 @@ export function ThankYou({ bookingRef, responses }: ThankYouProps) {
               Your ratings
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-[13px] text-gray-700">
+              <span className="text-body-sm text-gray-700">
                 Booking experience
               </span>
               <MiniStars count={bookingRating} />
             </div>
             <div className="h-px bg-gray-100" />
             <div className="flex items-center justify-between">
-              <span className="text-[13px] text-gray-700">
+              <span className="text-body-sm text-gray-700">
                 Collection service
               </span>
               <MiniStars count={collectionRating} />
             </div>
             <div className="h-px bg-gray-100" />
             <div className="flex items-center justify-between">
-              <span className="text-[13px] text-gray-700">Overall</span>
+              <span className="text-body-sm text-gray-700">Overall</span>
               <MiniStars count={overallRating} />
             </div>
           </div>
@@ -99,7 +99,7 @@ export function ThankYou({ bookingRef, responses }: ThankYouProps) {
 
         <Link
           href="/dashboard"
-          className="mt-7 flex w-full items-center justify-center gap-2 rounded-xl bg-[#00E47C] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52]"
+          className="mt-7 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-accent)] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-body font-semibold text-[var(--brand)]"
         >
           <svg
             width="16"
@@ -123,7 +123,7 @@ export function ThankYou({ bookingRef, responses }: ThankYouProps) {
 
         <div className="mt-6 flex items-center justify-center gap-1.5 text-[11px] text-gray-300">
           Powered by
-          <span className="rounded bg-gray-100 px-1.5 py-px font-[family-name:var(--font-heading)] text-[10px] font-bold text-gray-500">
+          <span className="rounded bg-gray-100 px-1.5 py-px font-[family-name:var(--font-heading)] text-2xs font-bold text-gray-500">
             VERCO
           </span>
         </div>

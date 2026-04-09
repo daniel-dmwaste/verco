@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useState, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { BookingStatusBadge } from '@/components/booking/booking-status-badge'
+import { SkeletonRow } from '@/components/ui/skeleton'
 import Link from 'next/link'
 import type { Database } from '@/lib/supabase/types'
 
@@ -13,6 +14,7 @@ type BookingStatus = Database['public']['Enums']['booking_status']
 type BookingType = Database['public']['Enums']['booking_type']
 
 const STATUS_OPTIONS: BookingStatus[] = [
+  'Pending Payment',
   'Submitted',
   'Confirmed',
   'Scheduled',
@@ -39,9 +41,9 @@ const TYPE_DOT_COLOR: Record<string, string> = {
 const PAGE_SIZE = 20
 
 export function BookingsListClient() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
+  const [payingBookingId, setPayingBookingId] = useState<string | null>(null)
 
   const [search, setSearch] = useState(searchParams.get('search') ?? '')
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') ?? '')
@@ -75,7 +77,6 @@ export function BookingsListClient() {
            booking_item(no_services, service!inner(name), collection_date!inner(date))`,
           { count: 'exact' }
         )
-        .not('status', 'eq', 'Pending Payment')
         .order('created_at', { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
 
@@ -120,6 +121,50 @@ export function BookingsListClient() {
     return prop.formatted_address ?? prop.address
   }
 
+  const handlePayNow = useCallback(async (bookingId: string) => {
+    setPayingBookingId(bookingId)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+
+      const origin = window.location.origin
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-checkout`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            booking_id: bookingId,
+            success_url: `${origin}/admin/bookings`,
+            cancel_url: `${origin}/admin/bookings`,
+          }),
+        }
+      )
+
+      if (!res.ok) {
+        console.error('create-checkout error:', res.status, await res.text())
+        alert('Failed to create payment session')
+        setPayingBookingId(null)
+        return
+      }
+
+      const data = (await res.json()) as { checkout_url?: string }
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url
+      } else {
+        alert('Failed to create payment session')
+        setPayingBookingId(null)
+      }
+    } catch (err) {
+      console.error('Pay now error:', err)
+      alert('Failed to create payment session')
+      setPayingBookingId(null)
+    }
+  }, [supabase])
+
   return (
     <>
       {/* Page header */}
@@ -128,21 +173,21 @@ export function BookingsListClient() {
           <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
             Bookings
           </h1>
-          <p className="mt-0.5 text-[13px] text-gray-500">
+          <p className="mt-0.5 text-body-sm text-gray-500">
             {total} bookings
           </p>
         </div>
         <div className="flex items-center gap-2.5">
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-1.5 text-[13px] font-semibold text-gray-700"
+            className="inline-flex items-center gap-1.5 rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-1.5 text-body-sm font-semibold text-gray-700"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Export CSV
           </button>
           <Link
             href="/book"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#293F52] px-4 py-2 text-[13px] font-semibold text-white"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#293F52] px-4 py-2 text-body-sm font-semibold text-white"
           >
             + New Booking
           </Link>
@@ -158,14 +203,16 @@ export function BookingsListClient() {
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(0) }}
             placeholder="Search ref, address, name..."
-            className="w-full border-none bg-transparent text-[13px] text-gray-900 outline-none placeholder:text-gray-300"
+            aria-label="Search bookings"
+            className="w-full border-none bg-transparent text-body-sm text-gray-900 outline-none placeholder:text-gray-300"
           />
         </div>
 
         <select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(0) }}
-          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-[13px] text-gray-700"
+          aria-label="Filter by status"
+          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-body-sm text-gray-700"
         >
           <option value="">All Statuses</option>
           {STATUS_OPTIONS.map((s) => (
@@ -176,7 +223,8 @@ export function BookingsListClient() {
         <select
           value={areaFilter}
           onChange={(e) => { setAreaFilter(e.target.value); setPage(0) }}
-          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-[13px] text-gray-700"
+          aria-label="Filter by area"
+          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-body-sm text-gray-700"
         >
           <option value="">All Areas</option>
           {(areas ?? []).map((a) => (
@@ -187,7 +235,8 @@ export function BookingsListClient() {
         <select
           value={typeFilter}
           onChange={(e) => { setTypeFilter(e.target.value); setPage(0) }}
-          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-[13px] text-gray-700"
+          aria-label="Filter by type"
+          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-body-sm text-gray-700"
         >
           <option value="">All Types</option>
           {TYPE_OPTIONS.map((t) => (
@@ -221,7 +270,11 @@ export function BookingsListClient() {
             </thead>
             <tbody>
               {isLoading && (
-                <tr><td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-400">Loading...</td></tr>
+                <>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <SkeletonRow key={i} columns={9} />
+                  ))}
+                </>
               )}
               {!isLoading && bookings.length === 0 && (
                 <tr><td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-400">No bookings found</td></tr>
@@ -234,10 +287,10 @@ export function BookingsListClient() {
                     key={booking.id}
                     className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50"
                   >
-                    <td className="px-4 py-3 font-[family-name:var(--font-heading)] text-[13px] font-semibold text-[#293F52]">
+                    <td className="px-4 py-3 font-[family-name:var(--font-heading)] text-body-sm font-semibold text-[#293F52]">
                       {booking.ref}
                     </td>
-                    <td className="max-w-[180px] truncate px-4 py-3 text-[13px]">
+                    <td className="max-w-[180px] truncate px-4 py-3 text-body-sm">
                       {getAddress(booking)}
                     </td>
                     <td className="px-4 py-3">
@@ -249,7 +302,7 @@ export function BookingsListClient() {
                     <td className="max-w-[160px] truncate px-4 py-3 text-xs">
                       {getServicesSummary(booking)}
                     </td>
-                    <td className="px-4 py-3 text-[13px]">
+                    <td className="px-4 py-3 text-body-sm">
                       {collDate ? format(new Date(collDate + 'T00:00:00'), 'EEE d MMM yyyy') : '—'}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500">
@@ -262,12 +315,24 @@ export function BookingsListClient() {
                       {format(new Date(booking.created_at), 'd MMM')}
                     </td>
                     <td className="px-4 py-3">
-                      <Link
-                        href={`/admin/bookings/${booking.id}`}
-                        className="inline-flex items-center rounded-md border-[1.5px] border-gray-100 bg-white px-3 py-1 text-xs font-semibold text-[#293F52]"
-                      >
-                        View
-                      </Link>
+                      <div className="flex items-center gap-1.5">
+                        {booking.status === 'Pending Payment' && (
+                          <button
+                            type="button"
+                            onClick={() => handlePayNow(booking.id)}
+                            disabled={payingBookingId === booking.id}
+                            className="inline-flex items-center rounded-md border-[1.5px] border-[#00B864] bg-[#E8FDF0] px-3 py-1 text-xs font-semibold text-[#006A38] disabled:opacity-50"
+                          >
+                            {payingBookingId === booking.id ? 'Loading...' : 'Pay Now'}
+                          </button>
+                        )}
+                        <Link
+                          href={`/admin/bookings/${booking.id}`}
+                          className="inline-flex items-center rounded-md border-[1.5px] border-gray-100 bg-white px-3 py-1 text-xs font-semibold text-[#293F52]"
+                        >
+                          View
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 )

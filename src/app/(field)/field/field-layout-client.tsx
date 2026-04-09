@@ -58,10 +58,10 @@ export function FieldLayoutClient({
   return (
     <div className="flex min-h-screen flex-col bg-gray-50">
       {/* Header */}
-      <div className="shrink-0 bg-[#293F52] px-5 pb-3 pt-3.5">
+      <div className="shrink-0 bg-[var(--brand)] px-5 pb-3 pt-3.5">
         <div className="mb-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="flex size-7 items-center justify-center rounded-[7px] bg-[#00E47C] font-[family-name:var(--font-heading)] text-base font-bold text-[#293F52]">
+            <div className="flex size-7 items-center justify-center rounded-[7px] bg-[var(--brand-accent)] font-[family-name:var(--font-heading)] text-base font-bold text-[var(--brand)]">
               V
             </div>
             <span className="font-[family-name:var(--font-heading)] text-base font-bold text-white">
@@ -73,9 +73,9 @@ export function FieldLayoutClient({
           </span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-[13px] text-[#C7D3DD]">{today}</span>
+          <span className="text-body-sm text-[#C7D3DD]">{today}</span>
           {areaCodes && (
-            <span className="rounded-full bg-[#00E47C]/15 px-2.5 py-0.5 text-[11px] font-semibold text-[#00E47C]">
+            <span className="rounded-full bg-[var(--brand-accent)]/15 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--brand-accent)]">
               {areaCodes}
             </span>
           )}
@@ -100,9 +100,9 @@ export function FieldLayoutClient({
               key={tab.href}
               href={tab.href}
               className={cn(
-                'flex flex-1 flex-col items-center gap-1 pb-3.5 pt-2.5 text-[10px] font-medium',
+                'flex flex-1 flex-col items-center gap-1 pb-3.5 pt-2.5 text-2xs font-medium',
                 isActive
-                  ? 'text-[#293F52] [&_svg]:stroke-[#293F52]'
+                  ? 'text-[var(--brand)] [&_svg]:stroke-[var(--brand)]'
                   : 'text-gray-500 [&_svg]:stroke-gray-300'
               )}
             >

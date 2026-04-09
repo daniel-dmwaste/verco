@@ -9,6 +9,7 @@ interface ClientBranding {
   slug: string
   logo_light_url: string | null
   primary_colour: string | null
+  accent_colour: string | null
   service_name: string | null
   show_powered_by: boolean
 }
@@ -22,7 +23,7 @@ async function getClientBranding(): Promise<ClientBranding | null> {
   const supabase = await createClient()
   const { data } = await supabase
     .from('client')
-    .select('name, slug, logo_light_url, primary_colour, service_name, show_powered_by')
+    .select('name, slug, logo_light_url, primary_colour, accent_colour, service_name, show_powered_by')
     .eq('id', clientId)
     .single()
 
@@ -58,14 +59,22 @@ export default async function PublicLayout({
     getClientBranding(),
     getIsStaff(),
   ])
-  const primaryColour = branding?.primary_colour ?? '#293F52'
+  const rawPrimary = branding?.primary_colour ?? '#293F52'
+  const rawAccent = branding?.accent_colour ?? '#00E47C'
+  const primaryColour = rawPrimary.startsWith('#') ? rawPrimary : `#${rawPrimary}`
+  const accentColour = rawAccent.startsWith('#') ? rawAccent : `#${rawAccent}`
 
   return (
     <div
       className="min-h-screen bg-gray-50"
-      style={
-        { '--color-primary': primaryColour } as React.CSSProperties
-      }
+      style={{
+        '--brand': primaryColour,
+        '--brand-light': `color-mix(in srgb, ${primaryColour} 8%, white)`,
+        '--brand-hover': `color-mix(in srgb, ${primaryColour} 85%, black)`,
+        '--brand-accent': accentColour,
+        '--brand-accent-light': `color-mix(in srgb, ${accentColour} 10%, white)`,
+        '--brand-accent-dark': `color-mix(in srgb, ${accentColour} 75%, black)`,
+      } as React.CSSProperties}
     >
       <PublicNav
         serviceName={branding?.service_name ?? 'Verge Collection'}

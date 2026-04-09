@@ -4,16 +4,11 @@ import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
+import { getStatusStyle } from '@/lib/ui/status-styles'
 import Link from 'next/link'
+import { SkeletonRow } from '@/components/ui/skeleton'
 
-const STATUS_OPTIONS = ['pending', 'approved', 'processed', 'rejected'] as const
-
-const STATUS_STYLE: Record<string, { bg: string; text: string; label: string }> = {
-  pending: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'Pending' },
-  approved: { bg: 'bg-blue-50', text: 'text-blue-700', label: 'Approved' },
-  processed: { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'Processed' },
-  rejected: { bg: 'bg-red-50', text: 'text-red-700', label: 'Rejected' },
-}
+const STATUS_OPTIONS = ['Pending', 'Approved', 'Rejected'] as const
 
 const PAGE_SIZE = 20
 
@@ -25,6 +20,8 @@ export function RefundsClient() {
   const [statusFilter, setStatusFilter] = useState('')
   const [search, setSearch] = useState('')
   const [actionMenuId, setActionMenuId] = useState<string | null>(null)
+  const [processingId, setProcessingId] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const { data: refundData, isLoading } = useQuery({
     queryKey: ['admin-refunds', statusFilter, search, page],
@@ -57,19 +54,61 @@ export function RefundsClient() {
 
   async function handleAction(refundId: string, action: 'approve' | 'reject') {
     setActionMenuId(null)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    setActionError(null)
+    setProcessingId(refundId)
 
-    await supabase
-      .from('refund_request')
-      .update({
-        status: action === 'approve' ? 'approved' : 'rejected',
-        reviewed_by: user.id,
-        reviewed_at: new Date().toISOString(),
-      })
-      .eq('id', refundId)
+    try {
+      if (action === 'approve') {
+        // Call process-refund Edge Function — it initiates the Stripe refund
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.access_token) {
+          setActionError('Session expired. Please refresh and try again.')
+          return
+        }
 
-    void queryClient.invalidateQueries({ queryKey: ['admin-refunds'] })
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/process-refund`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ refund_request_id: refundId }),
+          }
+        )
+
+        if (!res.ok) {
+          const errBody = await res.text().catch(() => 'Unknown error')
+          setActionError(`Refund failed: ${errBody}`)
+          return
+        }
+      } else {
+        // Reject — just update the DB status
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        const { error } = await supabase
+          .from('refund_request')
+          .update({
+            status: 'Rejected',
+            reviewed_by: user.id,
+            reviewed_at: new Date().toISOString(),
+          })
+          .eq('id', refundId)
+
+        if (error) {
+          setActionError(`Failed to reject: ${error.message}`)
+          return
+        }
+      }
+
+      void queryClient.invalidateQueries({ queryKey: ['admin-refunds'] })
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'An unexpected error occurred')
+    } finally {
+      setProcessingId(null)
+    }
   }
 
   return (
@@ -80,7 +119,7 @@ export function RefundsClient() {
           <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
             Refund Requests
           </h1>
-          <p className="mt-0.5 text-[13px] text-gray-500">
+          <p className="mt-0.5 text-body-sm text-gray-500">
             {total} requests
           </p>
         </div>
@@ -95,18 +134,20 @@ export function RefundsClient() {
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(0) }}
             placeholder="Search reason..."
-            className="w-full border-none bg-transparent text-[13px] text-gray-900 outline-none placeholder:text-gray-300"
+            aria-label="Search refund requests"
+            className="w-full border-none bg-transparent text-body-sm text-gray-900 outline-none placeholder:text-gray-300"
           />
         </div>
 
         <select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(0) }}
-          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-[13px] text-gray-700"
+          aria-label="Filter by status"
+          className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-[7px] text-body-sm text-gray-700"
         >
           <option value="">All Statuses</option>
           {STATUS_OPTIONS.map((s) => (
-            <option key={s} value={s}>{STATUS_STYLE[s]?.label ?? s}</option>
+            <option key={s} value={s}>{getStatusStyle('refund', s).label}</option>
           ))}
         </select>
 
@@ -115,6 +156,14 @@ export function RefundsClient() {
           Showing {total > 0 ? page * PAGE_SIZE + 1 : 0}&ndash;{Math.min((page + 1) * PAGE_SIZE, total)} of {total}
         </span>
       </div>
+
+      {/* Error banner */}
+      {actionError && (
+        <div role="alert" className="mx-7 mb-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-body-sm text-red-700">
+          {actionError}
+          <button type="button" onClick={() => setActionError(null)} className="ml-2 font-semibold underline">Dismiss</button>
+        </div>
+      )}
 
       {/* Table */}
       <div className="flex-1 px-7 pb-6">
@@ -134,9 +183,9 @@ export function RefundsClient() {
               </tr>
             </thead>
             <tbody>
-              {isLoading && (
-                <tr><td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-400">Loading...</td></tr>
-              )}
+              {isLoading && Array.from({ length: 5 }).map((_, i) => (
+                <SkeletonRow key={i} columns={9} />
+              ))}
               {!isLoading && refunds.length === 0 && (
                 <tr><td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-400">No refund requests found</td></tr>
               )}
@@ -144,23 +193,23 @@ export function RefundsClient() {
                 const booking = refund.booking as unknown as { id: string; ref: string } | null
                 const contact = refund.contact as { full_name: string } | null
                 const reviewer = refund.reviewer as { display_name: string | null } | null
-                const ss = STATUS_STYLE[refund.status] ?? { bg: 'bg-gray-100', text: 'text-gray-600', label: refund.status }
+                const ss = getStatusStyle('refund', refund.status)
                 return (
                   <tr key={refund.id} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
                     <td className="px-4 py-3">
                       {booking ? (
                         <Link
                           href={`/admin/bookings/${booking.id}`}
-                          className="font-[family-name:var(--font-heading)] text-[13px] font-semibold text-[#293F52] hover:underline"
+                          className="font-[family-name:var(--font-heading)] text-body-sm font-semibold text-[#293F52] hover:underline"
                         >
                           {booking.ref}
                         </Link>
                       ) : '—'}
                     </td>
-                    <td className="px-4 py-3 text-[13px] text-gray-600">
+                    <td className="px-4 py-3 text-body-sm text-gray-600">
                       {contact?.full_name ?? '—'}
                     </td>
-                    <td className="px-4 py-3 font-[family-name:var(--font-heading)] text-[13px] font-semibold text-[#293F52]">
+                    <td className="px-4 py-3 font-[family-name:var(--font-heading)] text-body-sm font-semibold text-[#293F52]">
                       ${(refund.amount_cents / 100).toFixed(2)}
                     </td>
                     <td className="max-w-[200px] truncate px-4 py-3 text-xs">
@@ -181,22 +230,29 @@ export function RefundsClient() {
                       {reviewer?.display_name ?? '—'}
                     </td>
                     <td className="relative px-4 py-3">
-                      {refund.status === 'pending' && (
+                      {refund.status === 'Pending' && (
                         <>
-                          <button
-                            type="button"
-                            onClick={() => setActionMenuId(actionMenuId === refund.id ? null : refund.id)}
-                            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-                          >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>
-                            </svg>
-                          </button>
-                          {actionMenuId === refund.id && (
-                            <div className="absolute right-4 top-10 z-10 w-36 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
-                              <button type="button" onClick={() => handleAction(refund.id, 'approve')} className="block w-full px-4 py-2 text-left text-[13px] text-gray-700 hover:bg-gray-50">Approve</button>
-                              <button type="button" onClick={() => handleAction(refund.id, 'reject')} className="block w-full px-4 py-2 text-left text-[13px] text-red-600 hover:bg-gray-50">Reject</button>
-                            </div>
+                          {processingId === refund.id ? (
+                            <span className="text-xs text-gray-400">Processing...</span>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => setActionMenuId(actionMenuId === refund.id ? null : refund.id)}
+                                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                                aria-label="Open actions menu"
+                              >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>
+                                </svg>
+                              </button>
+                              {actionMenuId === refund.id && (
+                                <div className="absolute right-4 bottom-full z-10 w-36 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+                                  <button type="button" onClick={() => handleAction(refund.id, 'approve')} className="block w-full px-4 py-2 text-left text-body-sm text-gray-700 hover:bg-gray-50">Approve &amp; Refund</button>
+                                  <button type="button" onClick={() => handleAction(refund.id, 'reject')} className="block w-full px-4 py-2 text-left text-body-sm text-red-600 hover:bg-gray-50">Reject</button>
+                                </div>
+                              )}
+                            </>
                           )}
                         </>
                       )}

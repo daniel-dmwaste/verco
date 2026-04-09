@@ -33,34 +33,80 @@ export default async function DashboardPage() {
     .eq('is_current', true)
     .single()
 
-  // Fetch bookings — RLS policy handles scoping via contact_id OR email fallback
-  const { data: bookings } = await supabase
-    .from('booking')
-    .select(
-      `
-      id,
-      ref,
-      status,
-      type,
-      location,
-      notes,
-      created_at,
-      geo_address,
-      collection_area!inner(name),
-      eligible_properties(formatted_address),
-      booking_item(
+  // Fetch bookings — filter by user's contact_id to show only their own bookings
+  // (RLS allows staff to see all client bookings, but the personal dashboard should be scoped)
+  const contactId = profile?.contact_id
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let bookings: any[] | null = null
+
+  if (contactId) {
+    const { data } = await supabase
+      .from('booking')
+      .select(
+        `
         id,
-        no_services,
-        is_extra,
-        unit_price_cents,
-        service!inner(name),
-        collection_date!inner(date)
+        ref,
+        status,
+        type,
+        location,
+        notes,
+        created_at,
+        geo_address,
+        collection_area!inner(name),
+        eligible_properties(formatted_address),
+        booking_item(
+          id,
+          no_services,
+          is_extra,
+          unit_price_cents,
+          service!inner(name),
+          collection_date!inner(date)
+        )
+      `
       )
-    `
-    )
-    .eq('fy_id', fy?.id ?? '')
-    .not('status', 'eq', 'Pending Payment')
-    .order('created_at', { ascending: false })
+      .eq('fy_id', fy?.id ?? '')
+      .eq('contact_id', contactId)
+      .order('created_at', { ascending: false })
+    bookings = data
+  } else if (user.email) {
+    // Fallback: match by email for users without profile→contact link
+    const { data: contactByEmail } = await supabase
+      .from('contacts')
+      .select('id')
+      .eq('email', user.email)
+      .maybeSingle()
+
+    if (contactByEmail) {
+      const { data } = await supabase
+        .from('booking')
+        .select(
+          `
+          id,
+          ref,
+          status,
+          type,
+          location,
+          notes,
+          created_at,
+          geo_address,
+          collection_area!inner(name),
+          eligible_properties(formatted_address),
+          booking_item(
+            id,
+            no_services,
+            is_extra,
+            unit_price_cents,
+            service!inner(name),
+            collection_date!inner(date)
+          )
+        `
+        )
+        .eq('fy_id', fy?.id ?? '')
+        .eq('contact_id', contactByEmail.id)
+        .order('created_at', { ascending: false })
+      bookings = data
+    }
+  }
 
   // Fetch all service tickets (RLS scopes to own tickets)
   const { data: tickets } = await supabase

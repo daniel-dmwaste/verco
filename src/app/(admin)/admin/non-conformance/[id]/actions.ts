@@ -28,20 +28,14 @@ export async function updateNcnStatus(
 
   const { supabase, userId } = auth
 
-  // contractor_fault added in migration 20260401110000 — cast until types regen
-  const update: Record<string, unknown> = {
-    status,
-    resolution_notes: resolutionNotes || null,
-    contractor_fault: contractorFault,
-  }
-  if (status === 'Resolved') {
-    update.resolved_at = new Date().toISOString()
-    update.resolved_by = userId
-  }
-
   const { error } = await supabase
     .from('non_conformance_notice')
-    .update(update as never)
+    .update({
+      status,
+      resolution_notes: resolutionNotes || null,
+      contractor_fault: contractorFault,
+      ...(status === 'Resolved' ? { resolved_at: new Date().toISOString(), resolved_by: userId } : {}),
+    })
     .eq('id', ncnId)
 
   if (error) return { ok: false, error: error.message }
@@ -163,19 +157,17 @@ export async function rebookNcn(
     }
   }
 
-  // Update the NCN (contractor_fault not in types yet — cast)
-  const ncnUpdate: Record<string, unknown> = {
-    status: 'Rescheduled',
-    resolution_notes: resolutionNotes || null,
-    contractor_fault: contractorFault,
-    resolved_at: new Date().toISOString(),
-    resolved_by: userId,
-    rescheduled_booking_id: newBooking.id,
-    rescheduled_date: collDate.date,
-  }
   const { error: ncnUpdateError } = await supabase
     .from('non_conformance_notice')
-    .update(ncnUpdate as never)
+    .update({
+      status: 'Rescheduled' as Database['public']['Enums']['ncn_status'],
+      resolution_notes: resolutionNotes || null,
+      contractor_fault: contractorFault,
+      resolved_at: new Date().toISOString(),
+      resolved_by: userId,
+      rescheduled_booking_id: newBooking.id,
+      rescheduled_date: collDate.date,
+    })
     .eq('id', ncnId)
 
   if (ncnUpdateError) {
@@ -200,10 +192,10 @@ export async function resolveWithRefund(
 
   const { supabase, userId } = auth
 
-  // Fetch NCN with booking payment info
+  // Fetch NCN with booking + paid items for refund amount
   const { data: ncn } = await supabase
     .from('non_conformance_notice')
-    .select('id, status, booking_id')
+    .select('id, status, booking_id, booking:booking_id(id, contact_id, client_id, booking_item(unit_price_cents, no_services, is_extra))')
     .eq('id', ncnId)
     .single()
 
@@ -213,40 +205,69 @@ export async function resolveWithRefund(
     return { ok: false, error: `NCN is already ${ncn.status}.` }
   }
 
-  // Resolve the NCN (contractor_fault not in types yet — cast)
-  const resolveUpdate: Record<string, unknown> = {
-    status: 'Resolved',
-    resolution_notes: resolutionNotes || null,
-    contractor_fault: true,
-    resolved_at: new Date().toISOString(),
-    resolved_by: userId,
-  }
   const { error: updateError } = await supabase
     .from('non_conformance_notice')
-    .update(resolveUpdate as never)
+    .update({
+      status: 'Resolved' as Database['public']['Enums']['ncn_status'],
+      resolution_notes: resolutionNotes || null,
+      contractor_fault: true,
+      resolved_at: new Date().toISOString(),
+      resolved_by: userId,
+    })
     .eq('id', ncnId)
 
   if (updateError) return { ok: false, error: updateError.message }
 
-  // Trigger refund via process-refund Edge Function
-  const { data: { session } } = await supabase.auth.getSession()
-  if (session?.access_token) {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/process-refund`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ booking_id: ncn.booking_id, reason: 'Contractor fault — NCN resolution' }),
-      }
-    )
+  // Calculate refund amount from paid (extra) booking items
+  const booking = ncn.booking as unknown as {
+    id: string
+    contact_id: string
+    client_id: string
+    booking_item: Array<{ unit_price_cents: number; no_services: number; is_extra: boolean }>
+  }
+  const paidItems = booking.booking_item.filter((i) => i.is_extra && i.unit_price_cents > 0)
+  const refundAmountCents = paidItems.reduce((sum, i) => sum + i.unit_price_cents * i.no_services, 0)
 
-    if (!res.ok) {
-      const errText = await res.text().catch(() => 'Unknown error')
-      // NCN is already resolved — log the refund failure but don't fail the action
-      console.error(`Refund trigger failed for booking ${ncn.booking_id}: ${errText}`)
+  if (refundAmountCents > 0) {
+    // Create refund_request record
+    const { data: refundReq, error: refundInsertError } = await supabase
+      .from('refund_request')
+      .insert({
+        booking_id: booking.id,
+        contact_id: booking.contact_id,
+        client_id: booking.client_id,
+        amount_cents: refundAmountCents,
+        reason: 'Contractor fault — NCN resolution',
+        status: 'Pending',
+      })
+      .select('id')
+      .single()
+
+    if (refundInsertError || !refundReq) {
+      console.error('Failed to create refund_request:', refundInsertError?.message)
+      return { ok: true, data: undefined } // NCN resolved, refund creation failed — staff can retry from refunds page
+    }
+
+    // Trigger refund via process-refund Edge Function
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.access_token) {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/process-refund`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ refund_request_id: refundReq.id }),
+        }
+      )
+
+      if (!res.ok) {
+        const errText = await res.text().catch(() => 'Unknown error')
+        // NCN is already resolved, refund_request created — staff can approve from refunds page
+        console.error(`Refund trigger failed for booking ${booking.id}: ${errText}`)
+      }
     }
   }
 

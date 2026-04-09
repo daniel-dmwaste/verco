@@ -2,10 +2,19 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/* Dark mode: not implemented in v2. See docs/UI_UX_AUDIT.md */
 
 @theme inline {
   --breakpoint-tablet: 1024px;
+
+  /* Custom type scale — replaces arbitrary text-[Xpx] values */
+  --text-2xs: 10px;           /* bottom nav labels, tiny badges */
+  /* text-[11px] kept as arbitrary — can't redefine text-xs (12px, used 215+ places) */
+  --text-body-sm: 13px;       /* descriptions, secondary text, table cells */
+  --text-body: 15px;          /* buttons, inputs, primary body */
+  --text-subtitle: 17px;      /* card headings */
+  --text-title: 22px;         /* page headings */
+  --text-display: 28px;       /* large section headings */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-dm-sans), sans-serif;
@@ -83,41 +92,16 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* White-label brand colours — overridden per-tenant in layout.tsx */
+  --brand: #293F52;
+  --brand-light: color-mix(in srgb, #293F52 8%, white);
+  --brand-hover: color-mix(in srgb, #293F52 85%, black);
+  --brand-accent: #00E47C;
+  --brand-accent-light: color-mix(in srgb, #00E47C 10%, white);
+  --brand-accent-dark: color-mix(in srgb, #00E47C 75%, black);
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-}
 
 @layer base {
   * {

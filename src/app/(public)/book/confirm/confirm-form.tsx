@@ -8,6 +8,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { BookingStepper } from '@/components/booking/booking-stepper'
+import { BookingCancelLink } from '@/components/booking/booking-cancel-link'
+import { VercoButton } from '@/components/ui/verco-button'
 import { decodeItems } from '@/lib/booking/search-params'
 import {
   ContactSchema,
@@ -58,9 +60,21 @@ export function ConfirmForm() {
     resolver: zodResolver(ContactSchema),
   })
 
-  // Pre-fill contact fields if user is logged in (skip for on-behalf bookings)
+  // Pre-fill contact fields from URL params (on-behalf edit) or from profile (resident)
   useEffect(() => {
-    if (onBehalf) return
+    if (onBehalf) {
+      // On-behalf: prefill from URL params if available (edit flow passes these)
+      const contactName = searchParams.get('contact_name')
+      const contactEmail = searchParams.get('contact_email')
+      const contactMobile = searchParams.get('contact_mobile')
+      if (contactName) setValue('full_name', contactName)
+      if (contactEmail) setValue('email', contactEmail)
+      if (contactMobile) {
+        setValue('mobile', contactMobile)
+        setMobileDisplay(formatAuMobileDisplay(contactMobile))
+      }
+      return
+    }
 
     async function prefill() {
       const {
@@ -482,9 +496,9 @@ export function ConfirmForm() {
       return `${base} border-red-500 bg-red-50 text-red-500`
     }
     if (otpDigits[index]) {
-      return `${base} border-[#293F52] bg-white text-[#293F52]`
+      return `${base} border-[var(--brand)] bg-white text-[var(--brand)]`
     }
-    return `${base} border-gray-100 bg-gray-50 text-[#293F52] focus:border-[#293F52] focus:border-2 focus:bg-white`
+    return `${base} border-gray-100 bg-gray-50 text-[var(--brand)] focus:border-[var(--brand)] focus:border-2 focus:bg-white`
   }
 
   // Form submit handler — checks session, triggers OTP if guest
@@ -522,6 +536,10 @@ export function ConfirmForm() {
   }
 
   function handleBack() {
+    const contactName = searchParams.get('contact_name')
+    const contactEmail = searchParams.get('contact_email')
+    const contactMobile = searchParams.get('contact_mobile')
+    const returnUrl = searchParams.get('return_url')
     const params = new URLSearchParams({
       property_id: propertyId,
       collection_area_id: collectionAreaId,
@@ -529,7 +547,13 @@ export function ConfirmForm() {
       items: itemsParam,
       total_cents: totalCents.toString(),
       collection_date_id: collectionDateId,
+      location,
+      ...(notes ? { notes } : {}),
       ...(onBehalf ? { on_behalf: 'true' } : {}),
+      ...(contactName ? { contact_name: contactName } : {}),
+      ...(contactEmail ? { contact_email: contactEmail } : {}),
+      ...(contactMobile ? { contact_mobile: contactMobile } : {}),
+      ...(returnUrl ? { return_url: returnUrl } : {}),
     })
     router.push(`/book/details?${params.toString()}`)
   }
@@ -548,10 +572,10 @@ export function ConfirmForm() {
       {/* Content */}
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto pb-24 pt-6">
         <div>
-          <h1 className="font-[family-name:var(--font-heading)] text-[22px] font-bold leading-tight text-[#293F52]">
+          <h1 className="font-[family-name:var(--font-heading)] text-title font-bold leading-tight text-[var(--brand)]">
             Confirm Your Booking
           </h1>
-          <p className="mt-1 text-[13px] leading-relaxed text-gray-500">
+          <p className="mt-1 text-body-sm leading-relaxed text-gray-500">
             Review your booking details and provide contact information.
           </p>
         </div>
@@ -562,7 +586,7 @@ export function ConfirmForm() {
           onSubmit={handleSubmit(onSubmit)}
           className="rounded-xl bg-white p-6 shadow-sm"
         >
-          <h2 className="mb-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52]">
+          <h2 className="mb-3.5 font-[family-name:var(--font-heading)] text-body font-semibold text-[var(--brand)]">
             Contact Information
           </h2>
           <div className="flex flex-col gap-2.5">
@@ -574,7 +598,7 @@ export function ConfirmForm() {
                 type="text"
                 placeholder="Full name"
                 {...register('full_name')}
-                className="w-full rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-300 focus:border-[#293F52] focus:bg-white"
+                className="w-full rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-300 focus:border-[var(--brand)] focus:bg-white"
               />
               {errors.full_name && (
                 <p className="mt-1 text-[11px] text-red-500">
@@ -590,7 +614,7 @@ export function ConfirmForm() {
                 type="email"
                 placeholder="Email address"
                 {...register('email')}
-                className="w-full rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-300 focus:border-[#293F52] focus:bg-white"
+                className="w-full rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-300 focus:border-[var(--brand)] focus:bg-white"
               />
               {errors.email && (
                 <p className="mt-1 text-[11px] text-red-500">
@@ -607,7 +631,7 @@ export function ConfirmForm() {
                 placeholder="Mobile number (e.g. 0412 345 678)"
                 value={mobileDisplay}
                 onChange={handleMobileChange}
-                className="w-full rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-300 focus:border-[#293F52] focus:bg-white"
+                className="w-full rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-300 focus:border-[var(--brand)] focus:bg-white"
               />
               {/* Hidden field for react-hook-form */}
               <input type="hidden" {...register('mobile')} />
@@ -622,7 +646,7 @@ export function ConfirmForm() {
 
         {/* Booking Summary */}
         <div className="rounded-xl bg-white p-6 shadow-sm">
-          <h2 className="mb-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52]">
+          <h2 className="mb-3.5 font-[family-name:var(--font-heading)] text-body font-semibold text-[var(--brand)]">
             Booking Summary
           </h2>
           <div className="flex flex-col">
@@ -630,13 +654,13 @@ export function ConfirmForm() {
               <span className="w-[90px] shrink-0 text-xs font-medium text-gray-500">
                 Address
               </span>
-              <span className="text-[13px] text-gray-900">{address}</span>
+              <span className="text-body-sm text-gray-900">{address}</span>
             </div>
             <div className="flex border-b border-gray-100 py-3">
               <span className="w-[90px] shrink-0 text-xs font-medium text-gray-500">
                 Date
               </span>
-              <span className="text-[13px] text-gray-900">
+              <span className="text-body-sm text-gray-900">
                 {collectionDateFormatted}
               </span>
             </div>
@@ -644,7 +668,7 @@ export function ConfirmForm() {
               <span className="w-[90px] shrink-0 text-xs font-medium text-gray-500">
                 Location
               </span>
-              <span className="text-[13px] text-gray-900">{location}</span>
+              <span className="text-body-sm text-gray-900">{location}</span>
             </div>
           </div>
         </div>
@@ -652,19 +676,19 @@ export function ConfirmForm() {
         {/* Services breakdown */}
         {summaryData && (
           <div className="rounded-xl bg-white p-6 shadow-sm">
-            <h2 className="mb-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52]">
+            <h2 className="mb-3.5 font-[family-name:var(--font-heading)] text-body font-semibold text-[var(--brand)]">
               Services
             </h2>
 
             {summaryData.included.length > 0 && (
               <>
-                <div className="mb-2 text-[10px] font-medium uppercase tracking-wide text-gray-500">
+                <div className="mb-2 text-2xs font-medium uppercase tracking-wide text-gray-500">
                   Included in Allocation
                 </div>
                 {summaryData.included.map((item) => (
                   <div
                     key={item.name}
-                    className="flex items-center justify-between py-1.5 text-[13px]"
+                    className="flex items-center justify-between py-1.5 text-body-sm"
                   >
                     <span className="text-gray-900">
                       {item.name} &times; {item.qty}
@@ -682,19 +706,19 @@ export function ConfirmForm() {
                 {summaryData.included.length > 0 && (
                   <div className="my-2.5 h-px bg-gray-100" />
                 )}
-                <div className="mb-2 text-[10px] font-medium uppercase tracking-wide text-gray-500">
+                <div className="mb-2 text-2xs font-medium uppercase tracking-wide text-gray-500">
                   Extra Services
                 </div>
                 {summaryData.extras.map((item) => (
                   <div
                     key={item.name}
-                    className="flex items-center justify-between py-1.5 text-[13px]"
+                    className="flex items-center justify-between py-1.5 text-body-sm"
                   >
                     <span className="text-gray-900">
                       {item.name} &times; {item.qty} @ $
                       {item.unitPrice.toFixed(2)}
                     </span>
-                    <span className="font-semibold text-[#293F52]">
+                    <span className="font-semibold text-[var(--brand)]">
                       ${item.lineTotal.toFixed(2)}
                     </span>
                   </div>
@@ -705,11 +729,11 @@ export function ConfirmForm() {
         )}
 
         {/* Total block */}
-        <div className="flex items-center justify-between rounded-xl bg-[#293F52] px-5 py-4">
+        <div className="flex items-center justify-between rounded-xl bg-[var(--brand)] px-5 py-4">
           <span className="font-[family-name:var(--font-heading)] text-base font-semibold text-white">
             Total
           </span>
-          <span className="font-[family-name:var(--font-heading)] text-2xl font-bold text-[#00E47C]">
+          <span className="font-[family-name:var(--font-heading)] text-2xl font-bold text-[var(--brand-accent)]">
             {totalCents > 0
               ? `$${(totalCents / 100).toFixed(2)}`
               : 'Free'}
@@ -724,7 +748,7 @@ export function ConfirmForm() {
         )}
 
         {submitError && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
+          <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-body-sm text-red-700">
             {submitError}
           </div>
         )}
@@ -733,13 +757,13 @@ export function ConfirmForm() {
         {otpStep && (
           <div className="flex flex-col gap-4 rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
             <div>
-              <h2 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
+              <h2 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[var(--brand)]">
                 Verify Email
               </h2>
-              <p className="mt-1.5 text-[13px] leading-relaxed text-gray-500">
+              <p className="mt-1.5 text-body-sm leading-relaxed text-gray-500">
                 We sent a 6-digit code to
                 <br />
-                <strong className="text-[#293F52]">{otpEmail}</strong>
+                <strong className="text-[var(--brand)]">{otpEmail}</strong>
               </p>
             </div>
 
@@ -765,7 +789,7 @@ export function ConfirmForm() {
               </div>
 
               {otpState === 'error' && otpError && (
-                <p className="flex items-center justify-center gap-1 text-[11px] text-red-500">
+                <p role="alert" className="flex items-center justify-center gap-1 text-[11px] text-red-500">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="10" />
                     <line x1="12" y1="8" x2="12" y2="12" />
@@ -776,31 +800,30 @@ export function ConfirmForm() {
               )}
 
               {otpState !== 'error' && (
-                <p className="text-center text-[13px] text-gray-500">
+                <p className="text-center text-body-sm text-gray-500">
                   Enter the 6-digit code from your email
                 </p>
               )}
             </div>
 
             {/* Verify button */}
-            <button
-              type="button"
+            <VercoButton
+              className="w-full"
               disabled={otpState === 'verifying' || otpDigits.join('').length < OTP_LENGTH}
               onClick={() => {
                 const code = otpDigits.join('')
                 if (code.length === OTP_LENGTH) void verifyOtp(code)
               }}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#293F52] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               {otpState === 'verifying' ? 'Verifying...' : otpState === 'error' ? 'Try Again' : 'Verify Code'}
-            </button>
+            </VercoButton>
 
             {/* Resend */}
-            <div className="text-center text-[13px] text-gray-500">
+            <div className="text-center text-body-sm text-gray-500">
               {resendCooldown > 0 ? (
                 <>
                   Code expires in{' '}
-                  <strong className="text-[#293F52]">
+                  <strong className="text-[var(--brand)]">
                     {Math.floor(resendCooldown / 60)}:{(resendCooldown % 60).toString().padStart(2, '0')}
                   </strong>
                   {' · '}
@@ -811,7 +834,7 @@ export function ConfirmForm() {
                   type="button"
                   onClick={handleOtpResend}
                   disabled={isResending}
-                  className="font-semibold text-[#00B864] hover:underline disabled:text-gray-300"
+                  className="font-semibold text-[var(--brand-accent-dark)] hover:underline disabled:text-gray-300"
                 >
                   {isResending ? 'Sending...' : 'Request a new code'}
                 </button>
@@ -824,29 +847,27 @@ export function ConfirmForm() {
       {/* Bottom nav */}
       {!otpStep && (
         <div className="sticky bottom-0 flex gap-2.5 pb-5 pt-3">
-          <button
-            type="button"
+          <VercoButton
+            variant="secondary"
+            className="flex-1"
             onClick={handleBack}
-            className="flex h-[52px] flex-1 items-center justify-center rounded-xl border-[1.5px] border-gray-100 bg-white font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52] transition-opacity hover:opacity-90"
           >
             &larr; Back
-          </button>
-          <button
+          </VercoButton>
+          <BookingCancelLink />
+          <VercoButton
             type="submit"
             form="confirm-form"
+            variant={totalCents > 0 ? 'accent' : 'primary'}
+            className="flex-1"
             disabled={isSubmitting}
-            className={`flex h-[52px] flex-1 items-center justify-center rounded-xl font-[family-name:var(--font-heading)] text-[15px] font-semibold transition-opacity hover:opacity-90 disabled:opacity-50 ${
-              totalCents > 0
-                ? 'bg-[#00E47C] text-[#293F52]'
-                : 'bg-[#293F52] text-white'
-            }`}
           >
             {isSubmitting
               ? 'Sending code...'
               : totalCents > 0
                 ? 'Proceed to Payment'
                 : 'Confirm Booking'}
-          </button>
+          </VercoButton>
         </div>
       )}
     </div>

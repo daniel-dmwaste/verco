@@ -16,7 +16,7 @@ export default async function NpDetailPage({ params }: NpDetailPageProps) {
   const { data: npBase } = await supabase
     .from('nothing_presented')
     .select(
-      `id, status, notes, photos, reported_at, resolved_at,
+      `id, status, contractor_fault, notes, photos, reported_at, resolved_at,
        resolution_notes,
        rescheduled_date,
        booking:booking!nothing_presented_booking_id_fkey(
@@ -35,8 +35,7 @@ export default async function NpDetailPage({ params }: NpDetailPageProps) {
 
   if (!npBase) redirect('/admin/nothing-presented')
 
-  // contractor_fault renamed from dm_fault in migration 20260401120000 — default until types regen
-  const np = { ...npBase, contractor_fault: false } as typeof npBase & { contractor_fault: boolean }
+  const np = npBase
 
   // Fetch available collection dates for rebook dialog (same area, future, open)
   const booking = np.booking as unknown as {

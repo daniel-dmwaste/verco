@@ -1,7 +1,3 @@
--- Recovered from live DB migration history on 2026-04-08.
--- This migration was applied directly via Supabase Studio and never committed
--- to git. Reconstructed verbatim from supabase_migrations.schema_migrations.
-
 -- Change default status for new records from 'Open' to 'Issued'
 ALTER TABLE non_conformance_notice ALTER COLUMN status SET DEFAULT 'Issued';
 ALTER TABLE nothing_presented ALTER COLUMN status SET DEFAULT 'Issued';

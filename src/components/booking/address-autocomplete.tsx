@@ -165,10 +165,10 @@ export function AddressAutocomplete({
             onKeyDown={handleKeyDown}
             onFocus={() => suggestions.length > 0 && setIsOpen(true)}
             placeholder={placeholder}
-            className="flex-1 border-none bg-transparent text-[15px] text-gray-900 outline-none placeholder:text-gray-300"
+            className="flex-1 border-none bg-transparent text-body text-gray-900 outline-none placeholder:text-gray-300"
           />
           {isSearching && (
-            <div className="size-5 shrink-0 animate-spin rounded-full border-2 border-gray-200 border-t-[#293F52]" />
+            <div className="size-5 shrink-0 animate-spin rounded-full border-2 border-gray-200 border-t-[var(--brand)]" />
           )}
         </div>
 
@@ -181,9 +181,9 @@ export function AddressAutocomplete({
                 type="button"
                 onClick={() => handleSelect(s)}
                 className={cn(
-                  'flex w-full items-center gap-2.5 px-5 py-3 text-left text-[13px] transition-colors',
+                  'flex w-full items-center gap-2.5 px-5 py-3 text-left text-body-sm transition-colors',
                   i === selectedIndex
-                    ? 'bg-[#E8FDF0] font-medium text-[#293F52]'
+                    ? 'bg-[var(--brand-accent-light)] font-medium text-[var(--brand)]'
                     : 'text-gray-700 hover:bg-gray-50'
                 )}
               >
@@ -192,7 +192,7 @@ export function AddressAutocomplete({
                   height="14"
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke={i === selectedIndex ? '#00B864' : '#B0B0B0'}
+                  stroke={i === selectedIndex ? 'var(--brand-accent-dark)' : '#B0B0B0'}
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -223,13 +223,13 @@ export function AddressAutocomplete({
         className={cn(
           'w-full rounded-[10px] border-[1.5px] bg-gray-50 px-3.5 py-3 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-300',
           isOpen || query
-            ? 'border-[#293F52] border-2 bg-white'
+            ? 'border-[var(--brand)] border-2 bg-white'
             : 'border-gray-100'
         )}
       />
 
       {isSearching && (
-        <div className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin rounded-full border-2 border-gray-200 border-t-[#293F52]" />
+        <div className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin rounded-full border-2 border-gray-200 border-t-[var(--brand)]" />
       )}
 
       {/* Suggestions dropdown */}
@@ -241,9 +241,9 @@ export function AddressAutocomplete({
               type="button"
               onClick={() => handleSelect(s)}
               className={cn(
-                'rounded-lg px-3.5 py-3 text-left text-[13px] transition-colors',
+                'rounded-lg px-3.5 py-3 text-left text-body-sm transition-colors',
                 i === selectedIndex || i === 0
-                  ? 'border border-[#00B864] bg-[#E8FDF0] font-medium text-[#293F52]'
+                  ? 'border border-[var(--brand-accent-dark)] bg-[var(--brand-accent-light)] font-medium text-[var(--brand)]'
                   : 'bg-white text-gray-700 hover:bg-gray-50'
               )}
             >

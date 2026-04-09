@@ -4,12 +4,16 @@ import { BookingDetailClient } from './booking-detail-client'
 
 interface BookingDetailPageProps {
   params: Promise<{ ref: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
 export default async function BookingDetailPage({
   params,
+  searchParams,
 }: BookingDetailPageProps) {
   const { ref } = await params
+  const resolvedSearchParams = await searchParams
+  const paymentSuccess = resolvedSearchParams.success === 'true'
   const supabase = await createClient()
 
   const {
@@ -32,11 +36,15 @@ export default async function BookingDetailPage({
       location,
       notes,
       created_at,
+      property_id,
+      collection_area_id,
       collection_area!inner(name),
       contact:contact_id(full_name, email, mobile_e164),
       property:property_id(formatted_address, address),
       booking_item(
         id,
+        service_id,
+        collection_date_id,
         no_services,
         is_extra,
         unit_price_cents,
@@ -78,20 +86,18 @@ export default async function BookingDetailPage({
   if (booking.status === 'Nothing Presented' || booking.status === 'Rebooked') {
     const { data: npRaw } = await supabase
       .from('nothing_presented')
-      .select('id, status, photos, reported_at, dm_fault, rescheduled_booking:booking!nothing_presented_rescheduled_booking_id_fkey(ref)')
+      .select('id, status, photos, reported_at, contractor_fault, rescheduled_booking:booking!nothing_presented_rescheduled_booking_id_fkey(ref)')
       .eq('booking_id', booking.id)
       .maybeSingle()
 
     if (npRaw) {
-      // dm_fault renamed to contractor_fault in migration 20260401120000
-      const np = npRaw as unknown as Record<string, unknown>
       npData = {
-        id: np.id as string,
-        status: np.status as string,
-        photos: np.photos as string[],
-        reported_at: np.reported_at as string,
-        contractor_fault: (np.contractor_fault ?? np.dm_fault ?? false) as boolean,
-        rescheduled_booking: np.rescheduled_booking as { ref: string } | null,
+        id: npRaw.id,
+        status: npRaw.status,
+        photos: npRaw.photos,
+        reported_at: npRaw.reported_at,
+        contractor_fault: npRaw.contractor_fault,
+        rescheduled_booking: npRaw.rescheduled_booking as { ref: string } | null,
       }
     }
   }
@@ -114,7 +120,7 @@ export default async function BookingDetailPage({
 
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-8">
-      <BookingDetailClient booking={booking} tickets={tickets ?? []} receiptUrl={receiptUrl} ncn={ncnData} np={npData} />
+      <BookingDetailClient booking={booking} tickets={tickets ?? []} receiptUrl={receiptUrl} ncn={ncnData} np={npData} paymentSuccess={paymentSuccess} />
     </main>
   )
 }

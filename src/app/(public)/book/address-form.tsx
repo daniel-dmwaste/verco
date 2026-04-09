@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic'
 import { createClient } from '@/lib/supabase/client'
 import { BookingStepper } from '@/components/booking/booking-stepper'
 import { AddressAutocomplete } from '@/components/booking/address-autocomplete'
+import { Spinner } from '@/components/ui/spinner'
 import { stripAddressPrefix } from '@/lib/mud/address-strip'
 import { decideMudRedirect, type MudLookupCandidate } from '@/lib/mud/mud-lookup'
 import type { Database } from '@/lib/supabase/types'
@@ -112,7 +113,7 @@ export function AddressForm() {
   }, [initialAddress, hasAutoResolved, lookupProperty])
 
   // Fetch FY allocation at category level when a property is selected
-  const { data: allocationData } = useQuery({
+  const { data: allocationData, isLoading: allocationLoading } = useQuery({
     queryKey: ['allocations', selectedProperty?.id],
     enabled: !!selectedProperty,
     queryFn: async () => {
@@ -131,7 +132,7 @@ export function AddressForm() {
       const { data: rules } = await supabase
         .from('allocation_rules')
         .select('max_collections, category!inner(name, code)')
-        .eq('collection_area_id', selectedProperty.collection_area_id)
+        .eq('collection_area_id', selectedProperty.collection_area_id!)
 
       const { data: usageItems } = await supabase
         .from('booking_item')
@@ -203,10 +204,10 @@ export function AddressForm() {
       {/* Content */}
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto pb-24 pt-6">
         <div>
-          <h1 className="font-[family-name:var(--font-heading)] text-[22px] font-bold leading-tight text-[#293F52]">
+          <h1 className="font-[family-name:var(--font-heading)] text-title font-bold leading-tight text-[var(--brand)]">
             Book a Collection
           </h1>
-          <p className="mt-1 text-[13px] leading-relaxed text-gray-500">
+          <p className="mt-1 text-body-sm leading-relaxed text-gray-500">
             Enter your property address to check eligibility and view
             allocations.
           </p>
@@ -227,8 +228,8 @@ export function AddressForm() {
 
           {/* Property found banner */}
           {selectedProperty && (
-            <div className="mt-3 flex items-center gap-2.5 rounded-[10px] border border-[#00B864] bg-[#E8FDF0] px-4 py-3 text-[13px] font-medium text-[#006A38]">
-              <span className="shrink-0 text-base">&#10003;</span>
+            <div role="alert" className="mt-3 flex items-center gap-2.5 rounded-[10px] border border-[var(--brand-accent-dark)] bg-[var(--brand-accent-light)] px-4 py-3 text-body-sm font-medium text-[#006A38]">
+              <span className="shrink-0 text-base" aria-hidden="true">&#10003;</span>
               <div>
                 <div className="font-semibold">Property found!</div>
                 <div className="mt-px text-xs font-normal">
@@ -240,8 +241,8 @@ export function AddressForm() {
 
           {/* Not found */}
           {notFound && (
-            <div className="mt-3 flex items-center gap-2.5 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] font-medium text-red-700">
-              <span className="shrink-0 text-base">&#10007;</span>
+            <div role="alert" className="mt-3 flex items-center gap-2.5 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-body-sm font-medium text-red-700">
+              <span className="shrink-0 text-base" aria-hidden="true">&#10007;</span>
               <div>
                 <div className="font-semibold">Address not eligible</div>
                 <div className="mt-px text-xs font-normal">
@@ -283,18 +284,26 @@ export function AddressForm() {
           )}
         </div>
 
+        {/* Loading state for allocation data */}
+        {selectedProperty && allocationLoading && (
+          <div className="flex flex-col items-center justify-center gap-3 rounded-xl bg-white px-4 py-12 shadow-sm">
+            <Spinner size="md" />
+            <p className="text-sm text-gray-500">Loading allocation data...</p>
+          </div>
+        )}
+
         {/* Two-column grid: Map (left) + Allocations (right) */}
-        {selectedProperty && allocationData && (
+        {selectedProperty && allocationData && !allocationLoading && (
           <div className="grid gap-4 md:grid-cols-2">
             {/* Left: Property location + map */}
             <div className="overflow-hidden rounded-xl bg-white shadow-sm">
               <div className="flex items-center gap-2.5 px-4 py-3.5">
-                <span className="text-base text-[#00B864]">&#x1F4CD;</span>
+                <span className="text-base text-[var(--brand-accent-dark)]" aria-hidden="true">&#x1F4CD;</span>
                 <div>
-                  <div className="text-[13px] font-semibold text-[#293F52]">
+                  <div className="text-body-sm font-semibold text-[var(--brand)]">
                     Property Location
                   </div>
-                  <div className="mt-px text-xs text-[#00B864]">
+                  <div className="mt-px text-xs text-[var(--brand-accent-dark)]">
                     {selectedProperty.formatted_address ??
                       selectedProperty.address}
                   </div>
@@ -336,8 +345,8 @@ export function AddressForm() {
             {/* Right: Allocation tiles + Book button */}
             <div className="rounded-xl bg-white p-6 shadow-sm">
               <div className="mb-3.5 flex items-center gap-2">
-                <span className="text-base">&#x1F4E6;</span>
-                <span className="font-[family-name:var(--font-heading)] text-sm font-semibold text-[#293F52]">
+                <span className="text-base" aria-hidden="true">&#x1F4E6;</span>
+                <span className="font-[family-name:var(--font-heading)] text-sm font-semibold text-[var(--brand)]">
                   Service Allocations &mdash; {allocationData.fy.label}
                 </span>
               </div>
@@ -359,7 +368,7 @@ export function AddressForm() {
                     <div
                       className={`whitespace-nowrap rounded-full border px-3 py-1 text-[11px] font-medium ${
                         alloc.remaining > 0
-                          ? 'border-[#00B864] bg-[#E8FDF0] text-[#006A38]'
+                          ? 'border-[var(--brand-accent-dark)] bg-[var(--brand-accent-light)] text-[#006A38]'
                           : 'border-[#E53E3E] bg-[#FFF0F0] text-[#E53E3E]'
                       }`}
                     >
@@ -372,7 +381,7 @@ export function AddressForm() {
               <button
                 type="button"
                 onClick={handleContinue}
-                className="mt-4 flex h-12 w-full items-center justify-center rounded-xl bg-[#293F52] font-[family-name:var(--font-heading)] text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                className="mt-4 flex h-12 w-full items-center justify-center rounded-xl bg-[var(--brand)] font-[family-name:var(--font-heading)] text-sm font-semibold text-white transition-opacity hover:opacity-90"
               >
                 Book New Collection &rarr;
               </button>
@@ -381,19 +390,19 @@ export function AddressForm() {
         )}
 
         {/* Booking history — full width below the grid */}
-        {selectedProperty && allocationData && (
+        {selectedProperty && allocationData && !allocationLoading && (
           <div className="rounded-xl bg-white p-6 shadow-sm">
             <div className="mb-3 flex items-center gap-2">
-              <span className="text-base">&#x1F550;</span>
-              <span className="font-[family-name:var(--font-heading)] text-sm font-semibold text-[#293F52]">
+              <span className="text-base" aria-hidden="true">&#x1F550;</span>
+              <span className="font-[family-name:var(--font-heading)] text-sm font-semibold text-[var(--brand)]">
                 Booking History &mdash; {allocationData.fy.label}
               </span>
             </div>
 
             {allocationData.bookings.length === 0 ? (
               <div className="flex items-center gap-2.5">
-                <span className="text-base text-[#00B864]">&#10003;</span>
-                <span className="text-[13px] text-gray-500">
+                <span className="text-base text-[var(--brand-accent-dark)]" aria-hidden="true">&#10003;</span>
+                <span className="text-body-sm text-gray-500">
                   No bookings yet for this financial year.
                 </span>
               </div>
@@ -405,7 +414,7 @@ export function AddressForm() {
                     className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2.5"
                   >
                     <div>
-                      <div className="text-[13px] font-medium text-gray-900">
+                      <div className="text-body-sm font-medium text-gray-900">
                         {booking.ref}
                       </div>
                       <div className="text-[11px] text-gray-500">

@@ -279,7 +279,7 @@ export function UserFormDialog({ callerRole, editData, open, onOpenChange }: Use
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="mt-2 w-full rounded-xl bg-[#293F52] px-3.5 py-3 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-white transition-opacity hover:opacity-90"
+                  className="mt-2 w-full rounded-xl bg-[#293F52] px-3.5 py-3 font-[family-name:var(--font-heading)] text-body font-semibold text-white transition-opacity hover:opacity-90"
                 >
                   Done
                 </button>
@@ -365,7 +365,7 @@ export function UserFormDialog({ callerRole, editData, open, onOpenChange }: Use
 
                   {/* Error banner */}
                   {submitError && (
-                    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
+                    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-body-sm text-red-700">
                       {submitError}
                     </div>
                   )}
@@ -374,7 +374,7 @@ export function UserFormDialog({ callerRole, editData, open, onOpenChange }: Use
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-[#293F52] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                    className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-[#293F52] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-body font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                   >
                     {isSubmitting
                       ? (isEdit ? 'Saving...' : 'Creating...')

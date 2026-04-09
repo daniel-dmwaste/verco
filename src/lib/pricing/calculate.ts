@@ -25,6 +25,14 @@ export interface PricedLineItem {
 export interface PriceCalculationResult {
   line_items: PricedLineItem[]
   total_cents: number
+  override_applied: boolean
+  override_reason?: string
+}
+
+export interface AllocationOverride {
+  service_id: string
+  extra_allocations: number
+  reason: string
 }
 
 export interface ServiceRule {
@@ -36,11 +44,15 @@ export interface ServiceRule {
  * Pure pricing calculation implementing the dual-limit free unit model.
  *
  * A unit becomes paid (extra) when EITHER limit is exhausted:
- *   category_remaining = categoryMaxMap[cat] - categoryUsageMap[cat] - categoryFormUsed[cat]
- *   service_remaining  = serviceRule.max_collections - serviceUsageMap[svc]
+ *   effective_service_max  = service_rules.max_collections + SUM(overrides.extra_allocations for this service)
+ *   effective_category_max = allocation_rules.max_collections + SUM(overrides.extra_allocations for all services in category)
+ *   service_remaining  = effective_service_max - serviceUsageMap[svc]
+ *   category_remaining = effective_category_max - categoryUsageMap[cat] - categoryFormUsed[cat]
  *   free_units         = MIN(requested_qty, category_remaining, service_remaining)
  *
  * Only free_units consume category budget — paid units do not reduce the remaining count.
+ *
+ * Overrides are purely additive — no date boundary logic needed.
  */
 export function computeLineItems(
   items: PricingItem[],
@@ -49,23 +61,47 @@ export function computeLineItems(
   serviceCategoryMap: Map<string, string>,
   serviceUsageMap: Map<string, number>,
   categoryUsageMap: Map<string, number>,
+  overrides?: AllocationOverride[],
 ): PriceCalculationResult {
+  // Build override maps: service_id → SUM(extra_allocations), category_code → SUM(extra_allocations)
+  const serviceExtraMap = new Map<string, number>()
+  const categoryExtraMap = new Map<string, number>()
+  let firstOverrideReason: string | undefined
+  if (overrides) {
+    for (const override of overrides) {
+      serviceExtraMap.set(
+        override.service_id,
+        (serviceExtraMap.get(override.service_id) ?? 0) + override.extra_allocations,
+      )
+      const catCode = serviceCategoryMap.get(override.service_id)
+      if (catCode) {
+        categoryExtraMap.set(
+          catCode,
+          (categoryExtraMap.get(catCode) ?? 0) + override.extra_allocations,
+        )
+      }
+      if (!firstOverrideReason) {
+        firstOverrideReason = override.reason
+      }
+    }
+  }
+
   const categoryFormUsed = new Map<string, number>()
 
   const line_items: PricedLineItem[] = items.map((item) => {
     const rule = rulesMap.get(item.service_id)
     const catCode = serviceCategoryMap.get(item.service_id) ?? ''
 
-    // Service-level remaining
+    // Service-level remaining (with additive extra allocations)
     const serviceUsed = serviceUsageMap.get(item.service_id) ?? 0
     const serviceMax = rule?.max_collections ?? 0
-    const serviceRemaining = Math.max(0, serviceMax - serviceUsed)
+    const serviceRemaining = Math.max(0, (serviceMax + (serviceExtraMap.get(item.service_id) ?? 0)) - serviceUsed)
 
-    // Category-level remaining (minus what earlier items consumed)
+    // Category-level remaining (with additive extra allocations)
     const catMax = categoryMaxMap.get(catCode) ?? 0
     const catFyUsed = categoryUsageMap.get(catCode) ?? 0
     const catAlreadyConsumedByForm = categoryFormUsed.get(catCode) ?? 0
-    const categoryRemaining = Math.max(0, catMax - catFyUsed - catAlreadyConsumedByForm)
+    const categoryRemaining = Math.max(0, (catMax + (categoryExtraMap.get(catCode) ?? 0)) - catFyUsed - catAlreadyConsumedByForm)
 
     // Dual-limit: free_units = MIN(quantity, category_remaining, service_remaining)
     const freeUnits = Math.min(item.quantity, categoryRemaining, serviceRemaining)
@@ -91,5 +127,12 @@ export function computeLineItems(
 
   const total_cents = line_items.reduce((sum, l) => sum + l.line_charge_cents, 0)
 
-  return { line_items, total_cents }
+  const overrideApplied = serviceExtraMap.size > 0
+
+  return {
+    line_items,
+    total_cents,
+    override_applied: overrideApplied,
+    override_reason: overrideApplied ? firstOverrideReason : undefined,
+  }
 }

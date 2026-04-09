@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Dialog } from '@base-ui/react/dialog'
@@ -12,7 +12,10 @@ import {
   setMinutes,
 } from 'date-fns'
 import { BookingStatusBadge } from '@/components/booking/booking-status-badge'
+import { VercoButton } from '@/components/ui/verco-button'
+import { createClient } from '@/lib/supabase/client'
 import { cancelBooking, disputeNcn, disputeNp } from './actions'
+import { getStatusStyle } from '@/lib/ui/status-styles'
 import type { Database } from '@/lib/supabase/types'
 
 type BookingStatus = Database['public']['Enums']['booking_status']
@@ -21,6 +24,8 @@ type TicketCategory = Database['public']['Enums']['ticket_category']
 
 interface BookingItem {
   id: string
+  service_id: string
+  collection_date_id: string
   no_services: number
   is_extra: boolean
   unit_price_cents: number
@@ -45,6 +50,8 @@ interface Booking {
   location: string | null
   notes: string | null
   created_at: string
+  property_id: string | null
+  collection_area_id: string | null
   collection_area: { name: string }
   contact: { full_name: string; email: string; mobile_e164: string | null } | null
   property: { formatted_address: string | null; address: string } | null
@@ -75,15 +82,9 @@ interface BookingDetailClientProps {
   receiptUrl: string | null
   ncn: NcnInfo | null
   np: NpInfo | null
+  paymentSuccess?: boolean
 }
 
-const TICKET_STATUS_COLORS: Record<TicketStatus, { dot: string; bg: string; text: string; label: string }> = {
-  open: { dot: 'bg-amber-400', bg: 'bg-amber-50', text: 'text-amber-700', label: 'Open' },
-  in_progress: { dot: 'bg-blue-500', bg: 'bg-blue-50', text: 'text-blue-700', label: 'In Progress' },
-  waiting_on_customer: { dot: 'bg-purple-500', bg: 'bg-purple-50', text: 'text-purple-700', label: 'Awaiting Reply' },
-  resolved: { dot: 'bg-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'Resolved' },
-  closed: { dot: 'bg-gray-400', bg: 'bg-gray-100', text: 'text-gray-600', label: 'Closed' },
-}
 
 const CATEGORY_LABELS: Record<TicketCategory, string> = {
   general: 'General',
@@ -114,17 +115,95 @@ function formatMobile(e164: string): string {
   return e164
 }
 
-const CANCELLABLE_STATUSES: BookingStatus[] = ['Submitted', 'Confirmed']
+const CANCELLABLE_STATUSES: BookingStatus[] = ['Pending Payment', 'Submitted', 'Confirmed']
 const TERMINAL_STATUSES: BookingStatus[] = [
   'Completed', 'Cancelled', 'Non-conformance', 'Nothing Presented', 'Rebooked', 'Missed Collection',
 ]
 
-export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: BookingDetailClientProps) {
+export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np, paymentSuccess }: BookingDetailClientProps) {
   const router = useRouter()
   const [isCancelling, setIsCancelling] = useState(false)
   const [cancelError, setCancelError] = useState<string | null>(null)
   const [showCancelDialog, setShowCancelDialog] = useState(false)
   const [isDisputing, setIsDisputing] = useState(false)
+  const [isPaying, setIsPaying] = useState(false)
+  const [payError, setPayError] = useState<string | null>(null)
+  const [isPolling, setIsPolling] = useState(paymentSuccess && booking.status === 'Pending Payment')
+
+  // Poll for status change after Stripe redirect
+  useEffect(() => {
+    if (!isPolling) return
+    let attempts = 0
+    const maxAttempts = 8
+    const supabase = createClient()
+    const interval = setInterval(async () => {
+      attempts++
+      const { data } = await supabase
+        .from('booking')
+        .select('status')
+        .eq('id', booking.id)
+        .single()
+      if (data && data.status !== 'Pending Payment') {
+        clearInterval(interval)
+        setIsPolling(false)
+        router.refresh()
+      } else if (attempts >= maxAttempts) {
+        clearInterval(interval)
+        setIsPolling(false)
+      }
+    }, 2500)
+    return () => clearInterval(interval)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  async function handlePayNow() {
+    setIsPaying(true)
+    setPayError(null)
+    try {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+      const origin = window.location.origin
+      const bookingPath = `/booking/${booking.ref}`
+
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-checkout`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            booking_id: booking.id,
+            success_url: `${origin}${bookingPath}?success=true`,
+            cancel_url: `${origin}${bookingPath}?cancelled=true`,
+          }),
+        }
+      )
+
+      if (!res.ok) {
+        const errorBody = await res.text()
+        console.error('create-checkout error:', res.status, errorBody)
+        setPayError('Failed to create payment session. Please try again.')
+        setIsPaying(false)
+        return
+      }
+
+      const data = (await res.json()) as { checkout_url?: string }
+      if (!data.checkout_url) {
+        setPayError('Failed to create payment session. Please try again.')
+        setIsPaying(false)
+        return
+      }
+
+      window.location.href = data.checkout_url
+    } catch {
+      setPayError('An unexpected error occurred. Please try again.')
+      setIsPaying(false)
+    }
+  }
 
   const collectionDateStr = getCollectionDate(booking)
   const collectionDateObj = collectionDateStr
@@ -167,7 +246,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
       <div className="shrink-0 border-b border-gray-100 bg-white px-5 py-4">
         <Link
           href="/dashboard"
-          className="mb-2.5 flex items-center gap-1.5 text-[13px] font-medium text-[#8FA5B8]"
+          className="mb-2.5 flex items-center gap-1.5 text-body-sm font-medium text-[#8FA5B8]"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
@@ -176,10 +255,10 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
         </Link>
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="font-[family-name:var(--font-heading)] text-[17px] font-bold text-[#293F52] md:text-lg">
+            <h1 className="font-[family-name:var(--font-heading)] text-subtitle font-bold text-[var(--brand)] md:text-lg">
               {booking.ref}
             </h1>
-            <p className="mt-0.5 text-[13px] text-gray-500 md:text-sm">
+            <p className="mt-0.5 text-body-sm text-gray-500 md:text-sm">
               {booking.property?.formatted_address ?? booking.property?.address ?? '—'}
             </p>
           </div>
@@ -189,11 +268,43 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
 
       {/* Content */}
       <div className="flex flex-1 flex-col gap-3 px-5 pb-24 pt-4 md:pb-8">
+        {/* Payment pending banner */}
+        {booking.status === 'Pending Payment' && !isPolling && (
+          <div className="rounded-[10px] border border-[#8B4000]/30 bg-[#FFF3EA] px-3.5 py-3">
+            <div className="mb-0.5 flex items-center gap-1.5 text-body-sm font-semibold text-[#8B4000]">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8B4000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              Payment required
+            </div>
+            <div className="text-xs leading-snug text-[#8B4000]/80">
+              This booking is awaiting payment. Complete payment to confirm your collection.
+            </div>
+          </div>
+        )}
+
+        {/* Payment processing banner */}
+        {isPolling && (
+          <div className="rounded-[10px] border border-[var(--brand-accent-dark)] bg-[var(--brand-accent-light)] px-3.5 py-3">
+            <div className="mb-0.5 flex items-center gap-1.5 text-body-sm font-semibold text-[#006A38]">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#006A38" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin">
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+              </svg>
+              Payment received — confirming your booking...
+            </div>
+            <div className="text-xs leading-snug text-[#006A38]/80">
+              This may take a few moments. The page will refresh automatically.
+            </div>
+          </div>
+        )}
+
         {/* Place-out reminder — full width */}
         {showPlaceOut && collectionDateStr && (
-          <div className="rounded-[10px] border border-[#00B864] bg-gradient-to-br from-[#E8FDF0] to-[#d4f5e6] px-3.5 py-3">
-            <div className="mb-0.5 flex items-center gap-1.5 text-[13px] font-semibold text-[#293F52]">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00B864" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <div className="rounded-[10px] border border-[var(--brand-accent-dark)] bg-gradient-to-br from-[var(--brand-accent-light)] to-[#d4f5e6] px-3.5 py-3">
+            <div className="mb-0.5 flex items-center gap-1.5 text-body-sm font-semibold text-[var(--brand)]">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--brand-accent-dark)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
                 <polyline points="12 6 12 12 16 14" />
               </svg>
@@ -213,20 +324,20 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {/* Contact details */}
           <div className="rounded-xl bg-white p-4 shadow-sm">
-            <div className="mb-2.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+            <div className="mb-2.5 text-2xs font-semibold uppercase tracking-wide text-gray-500">
               Contact Details
             </div>
             {booking.contact ? (
               <div className="flex flex-col">
-                <div className="flex items-center justify-between border-b border-gray-100 py-2 text-[13px]">
+                <div className="flex items-center justify-between border-b border-gray-100 py-2 text-body-sm">
                   <span className="text-xs text-gray-500">Name</span>
                   <span className="font-medium text-gray-900">{booking.contact.full_name}</span>
                 </div>
-                <div className="flex items-center justify-between border-b border-gray-100 py-2 text-[13px]">
+                <div className="flex items-center justify-between border-b border-gray-100 py-2 text-body-sm">
                   <span className="text-xs text-gray-500">Email</span>
                   <span className="font-medium text-gray-900">{booking.contact.email}</span>
                 </div>
-                <div className="flex items-center justify-between py-2 text-[13px]">
+                <div className="flex items-center justify-between py-2 text-body-sm">
                   <span className="text-xs text-gray-500">Mobile</span>
                   <span className="font-medium text-gray-900">
                     {booking.contact.mobile_e164 ? formatMobile(booking.contact.mobile_e164) : '—'}
@@ -234,17 +345,17 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
                 </div>
               </div>
             ) : (
-              <p className="py-2 text-[13px] italic text-gray-400">No contact details available</p>
+              <p className="py-2 text-body-sm italic text-gray-400">No contact details available</p>
             )}
           </div>
 
           {/* Collection details */}
           <div className="rounded-xl bg-white p-4 shadow-sm">
-            <div className="mb-2.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+            <div className="mb-2.5 text-2xs font-semibold uppercase tracking-wide text-gray-500">
               Collection Details
             </div>
             <div className="flex flex-col">
-              <div className="flex items-center justify-between border-b border-gray-100 py-2 text-[13px]">
+              <div className="flex items-center justify-between border-b border-gray-100 py-2 text-body-sm">
                 <span className="text-xs text-gray-500">Date</span>
                 <span className="font-medium text-gray-900">
                   {collectionDateObj
@@ -252,19 +363,19 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
                     : '—'}
                 </span>
               </div>
-              <div className="flex items-center justify-between border-b border-gray-100 py-2 text-[13px]">
+              <div className="flex items-center justify-between border-b border-gray-100 py-2 text-body-sm">
                 <span className="text-xs text-gray-500">Area</span>
                 <span className="font-medium text-gray-900">
                   {(booking.collection_area as { name: string }).name}
                 </span>
               </div>
-              <div className="flex items-center justify-between border-b border-gray-100 py-2 text-[13px]">
+              <div className="flex items-center justify-between border-b border-gray-100 py-2 text-body-sm">
                 <span className="text-xs text-gray-500">Location</span>
                 <span className="font-medium text-gray-900">
                   {booking.location ?? '—'}
                 </span>
               </div>
-              <div className="flex items-center justify-between py-2 text-[13px]">
+              <div className="flex items-center justify-between py-2 text-body-sm">
                 <span className="text-xs text-gray-500">Notes</span>
                 <span className="font-medium text-gray-500 italic">
                   {booking.notes ?? '—'}
@@ -278,7 +389,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {/* Included services */}
           <div className="rounded-xl bg-white p-4 shadow-sm">
-            <div className="mb-2.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+            <div className="mb-2.5 text-2xs font-semibold uppercase tracking-wide text-gray-500">
               Included Services
             </div>
             <div className="flex flex-col gap-1.5">
@@ -286,7 +397,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
                 includedItems.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between rounded-lg bg-[#E8FDF0] px-2.5 py-2 text-[13px]"
+                    className="flex items-center justify-between rounded-lg bg-[var(--brand-accent-light)] px-2.5 py-2 text-body-sm"
                   >
                     <span className="text-gray-900">
                       {(item.service as { name: string }).name} &times; {item.no_services}
@@ -295,14 +406,14 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
                   </div>
                 ))
               ) : (
-                <p className="py-2 text-[13px] italic text-gray-400">None</p>
+                <p className="py-2 text-body-sm italic text-gray-400">None</p>
               )}
             </div>
           </div>
 
           {/* Extra services */}
           <div className="rounded-xl bg-white p-4 shadow-sm">
-            <div className="mb-2.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+            <div className="mb-2.5 text-2xs font-semibold uppercase tracking-wide text-gray-500">
               Extra Services
             </div>
             <div className="flex flex-col gap-1.5">
@@ -311,7 +422,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
                   {extraItems.map((item) => (
                     <div
                       key={item.id}
-                      className="flex items-center justify-between rounded-lg bg-[#FFF3EA] px-2.5 py-2 text-[13px]"
+                      className="flex items-center justify-between rounded-lg bg-[#FFF3EA] px-2.5 py-2 text-body-sm"
                     >
                       <span className="text-gray-900">
                         {(item.service as { name: string }).name} &times; {item.no_services}
@@ -326,7 +437,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
                       href={receiptUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="mt-1 flex items-center gap-1.5 text-[12px] font-medium text-[#293F52] hover:underline"
+                      className="mt-1 flex items-center gap-1.5 text-[12px] font-medium text-[var(--brand)] hover:underline"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -339,7 +450,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
                   )}
                 </>
               ) : (
-                <p className="py-2 text-[13px] italic text-gray-400">None</p>
+                <p className="py-2 text-body-sm italic text-gray-400">None</p>
               )}
             </div>
           </div>
@@ -347,7 +458,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
 
         {/* Cancellation cutoff — full width */}
         {canCancel && collectionDateStr && (
-          <div className="rounded-[10px] bg-[#E8EEF2] px-3.5 py-3 text-xs text-[#293F52]">
+          <div className="rounded-[10px] bg-[#E8EEF2] px-3.5 py-3 text-xs text-[var(--brand)]">
             <div className="mb-1 flex items-center gap-1.5 font-semibold">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
@@ -364,9 +475,9 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
           </div>
         )}
 
-        {cancelError && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
-            {cancelError}
+        {(cancelError || payError) && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-body-sm text-red-700">
+            {cancelError || payError}
           </div>
         )}
 
@@ -374,7 +485,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
         {ncn && (
           <div className="rounded-xl border border-red-100 bg-white p-4 shadow-sm">
             <div className="mb-2.5 flex items-center gap-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+              <span className="text-2xs font-semibold uppercase tracking-wide text-gray-500">
                 Non-Conformance Notice
               </span>
               <span className={`inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
@@ -389,22 +500,22 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
               </span>
             </div>
             <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between text-[13px]">
+              <div className="flex items-center justify-between text-body-sm">
                 <span className="text-gray-500">Reason</span>
                 <span className="font-medium text-gray-900">{ncn.reason}</span>
               </div>
-              <div className="flex items-center justify-between text-[13px]">
+              <div className="flex items-center justify-between text-body-sm">
                 <span className="text-gray-500">Reported</span>
                 <span className="font-medium text-gray-900">
                   {format(new Date(ncn.reported_at), 'd MMM yyyy')}
                 </span>
               </div>
               {ncn.rescheduled_booking && (
-                <div className="flex items-center justify-between text-[13px]">
+                <div className="flex items-center justify-between text-body-sm">
                   <span className="text-gray-500">Rebooked As</span>
                   <Link
                     href={`/booking/${ncn.rescheduled_booking.ref}`}
-                    className="font-semibold text-[#293F52] hover:underline"
+                    className="font-semibold text-[var(--brand)] hover:underline"
                   >
                     {ncn.rescheduled_booking.ref} &rarr;
                   </Link>
@@ -435,7 +546,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
                   await disputeNcn(ncn.id)
                   router.refresh()
                 }}
-                className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border-[1.5px] border-[#E53E3E] bg-[#FFF0F0] px-3.5 py-2.5 text-[13px] font-semibold text-[#E53E3E] disabled:opacity-50"
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border-[1.5px] border-[#E53E3E] bg-[#FFF0F0] px-3.5 py-2.5 text-body-sm font-semibold text-[#E53E3E] disabled:opacity-50"
               >
                 {isDisputing ? 'Submitting...' : 'Dispute this Notice'}
               </button>
@@ -453,7 +564,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
         {np && (
           <div className="rounded-xl border border-amber-100 bg-white p-4 shadow-sm">
             <div className="mb-2.5 flex items-center gap-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+              <span className="text-2xs font-semibold uppercase tracking-wide text-gray-500">
                 Nothing Presented
               </span>
               <span className={`inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
@@ -468,18 +579,18 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
               </span>
             </div>
             <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between text-[13px]">
+              <div className="flex items-center justify-between text-body-sm">
                 <span className="text-gray-500">Reported</span>
                 <span className="font-medium text-gray-900">
                   {format(new Date(np.reported_at), 'd MMM yyyy')}
                 </span>
               </div>
               {np.rescheduled_booking && (
-                <div className="flex items-center justify-between text-[13px]">
+                <div className="flex items-center justify-between text-body-sm">
                   <span className="text-gray-500">Rebooked As</span>
                   <Link
                     href={`/booking/${np.rescheduled_booking.ref}`}
-                    className="font-semibold text-[#293F52] hover:underline"
+                    className="font-semibold text-[var(--brand)] hover:underline"
                   >
                     {np.rescheduled_booking.ref} &rarr;
                   </Link>
@@ -510,7 +621,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
                   await disputeNp(np.id)
                   router.refresh()
                 }}
-                className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border-[1.5px] border-[#E53E3E] bg-[#FFF0F0] px-3.5 py-2.5 text-[13px] font-semibold text-[#E53E3E] disabled:opacity-50"
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border-[1.5px] border-[#E53E3E] bg-[#FFF0F0] px-3.5 py-2.5 text-body-sm font-semibold text-[#E53E3E] disabled:opacity-50"
               >
                 {isDisputing ? 'Submitting...' : 'Dispute this Notice'}
               </button>
@@ -528,21 +639,21 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
           <div className="grid grid-cols-1 md:grid-cols-2">
             <div className="rounded-xl bg-white p-4 shadow-sm">
               <div className="mb-2.5 flex items-center gap-2">
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                <span className="text-2xs font-semibold uppercase tracking-wide text-gray-500">
                   Enquiries
                 </span>
-                <span className="flex size-5 items-center justify-center rounded-full bg-[#E8EEF2] text-[10px] font-bold text-[#293F52]">
+                <span className="flex size-5 items-center justify-center rounded-full bg-[#E8EEF2] text-2xs font-bold text-[var(--brand)]">
                   {tickets.length}
                 </span>
               </div>
               <div className="flex flex-col gap-2">
                 {tickets.map((ticket) => {
-                  const statusStyle = TICKET_STATUS_COLORS[ticket.status]
+                  const statusStyle = getStatusStyle('ticket', ticket.status)
                   return (
                     <Link
                       key={ticket.id}
                       href={`/contact/tickets/${ticket.display_id}`}
-                      className="block rounded-lg border border-gray-100 px-3 py-2.5 transition-colors hover:border-[#293F52]/20 hover:bg-gray-50"
+                      className="block rounded-lg border border-gray-100 px-3 py-2.5 transition-colors hover:border-[var(--brand)]/20 hover:bg-gray-50"
                     >
                       <div className="mb-1 flex items-center justify-between">
                         <span className="font-mono text-[11px] text-gray-400">
@@ -555,7 +666,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
                           {statusStyle.label}
                         </span>
                       </div>
-                      <div className="text-[13px] font-semibold text-[#293F52]">
+                      <div className="text-body-sm font-semibold text-[var(--brand)]">
                         {ticket.subject}
                       </div>
                       <div className="mt-1 flex items-center gap-2">
@@ -576,9 +687,24 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
 
         {/* Action buttons — single row on desktop */}
         <div className="flex flex-col gap-2 md:flex-row md:gap-3">
+          {booking.status === 'Pending Payment' && (
+            <button
+              type="button"
+              onClick={handlePayNow}
+              disabled={isPaying}
+              className="flex items-center justify-center gap-2 rounded-xl border-[1.5px] border-[var(--brand-accent-dark)] bg-[var(--brand-accent-light)] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-body font-semibold text-[#006A38] disabled:opacity-50 md:px-5 md:py-3 md:text-[14px]"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+                <line x1="1" y1="10" x2="23" y2="10" />
+              </svg>
+              {isPaying ? 'Redirecting to payment...' : 'Pay Now'}
+            </button>
+          )}
+
           <Link
             href={`/contact?booking_ref=${encodeURIComponent(booking.ref)}&booking_id=${encodeURIComponent(booking.id)}`}
-            className="flex items-center justify-center gap-2 rounded-xl border-[1.5px] border-[#293F52] bg-white px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52] md:px-5 md:py-3 md:text-[14px]"
+            className="flex items-center justify-center gap-2 rounded-xl border-[1.5px] border-[var(--brand)] bg-white px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-body font-semibold text-[var(--brand)] md:px-5 md:py-3 md:text-[14px]"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -589,8 +715,24 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
           {canCancel && (
             <>
               <Link
-                href={`/book?edit=${booking.ref}`}
-                className="flex items-center justify-center gap-2 rounded-xl border-[1.5px] border-gray-100 bg-white px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52] md:px-5 md:py-3 md:text-[14px]"
+                href={booking.property_id && booking.collection_area_id
+                  ? `/book/services?${new URLSearchParams({
+                      property_id: booking.property_id,
+                      collection_area_id: booking.collection_area_id,
+                      address: booking.property?.formatted_address ?? booking.property?.address ?? '',
+                      items: booking.booking_item
+                        .filter((i) => i.no_services > 0)
+                        .map((i) => `${i.service_id}:${i.no_services}`)
+                        .join(','),
+                      total_cents: extraItems.reduce((s, i) => s + i.unit_price_cents * i.no_services, 0).toString(),
+                      ...(booking.booking_item[0]?.collection_date_id ? { collection_date_id: booking.booking_item[0].collection_date_id } : {}),
+                      ...(booking.location ? { location: booking.location } : {}),
+                      ...(booking.notes ? { notes: booking.notes } : {}),
+                      return_url: `/booking/${booking.ref}`,
+                    }).toString()}`
+                  : `/book?address=${encodeURIComponent(booking.property?.formatted_address ?? booking.property?.address ?? '')}`
+                }
+                className="flex items-center justify-center gap-2 rounded-xl border-[1.5px] border-gray-100 bg-white px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-body font-semibold text-[var(--brand)] md:px-5 md:py-3 md:text-[14px]"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -602,7 +744,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
                 type="button"
                 onClick={() => setShowCancelDialog(true)}
                 disabled={isCancelling}
-                className="flex items-center justify-center gap-2 rounded-xl border-[1.5px] border-[#E53E3E] bg-[#FFF0F0] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#E53E3E] disabled:opacity-50 md:px-5 md:py-3 md:text-[14px]"
+                className="flex items-center justify-center gap-2 rounded-xl border-[1.5px] border-[#E53E3E] bg-[#FFF0F0] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-body font-semibold text-[#E53E3E] disabled:opacity-50 md:px-5 md:py-3 md:text-[14px]"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10" />
@@ -616,7 +758,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
           {isTerminal && rebookAddress && (
             <Link
               href={`/book?address=${encodeURIComponent(rebookAddress)}`}
-              className="flex items-center justify-center gap-2 rounded-xl border-[1.5px] border-[#00B864] bg-[#E8FDF0] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#006A38] md:px-5 md:py-3 md:text-[14px]"
+              className="flex items-center justify-center gap-2 rounded-xl border-[1.5px] border-[var(--brand-accent-dark)] bg-[var(--brand-accent-light)] px-3.5 py-3.5 font-[family-name:var(--font-heading)] text-body font-semibold text-[#006A38] md:px-5 md:py-3 md:text-[14px]"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="23 4 23 10 17 10" />
@@ -641,23 +783,25 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np }: B
                   <line x1="12" y1="17" x2="12.01" y2="17" />
                 </svg>
               </div>
-              <Dialog.Title className="font-[family-name:var(--font-heading)] text-lg font-bold text-[#293F52]">
+              <Dialog.Title className="font-[family-name:var(--font-heading)] text-lg font-bold text-[var(--brand)]">
                 Cancel this booking?
               </Dialog.Title>
-              <p className="mt-1.5 text-[13px] leading-relaxed text-gray-500">
+              <p className="mt-1.5 text-body-sm leading-relaxed text-gray-500">
                 This action cannot be undone. Any payment will be refunded to the original payment method.
               </p>
               <div className="mt-5 flex gap-2.5">
-                <Dialog.Close className="flex-1 rounded-xl border-[1.5px] border-gray-100 bg-white px-3.5 py-3 font-[family-name:var(--font-heading)] text-[14px] font-semibold text-[#293F52]">
+                <Dialog.Close className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border-[1.5px] border-gray-100 bg-white px-3.5 py-2.5 font-[family-name:var(--font-heading)] text-sm font-semibold text-[var(--brand)] transition-opacity hover:opacity-90">
                   Keep Booking
                 </Dialog.Close>
-                <button
+                <VercoButton
+                  variant="destructive"
+                  size="sm"
                   type="button"
                   onClick={handleCancel}
-                  className="flex-1 rounded-xl bg-[#E53E3E] px-3.5 py-3 font-[family-name:var(--font-heading)] text-[14px] font-semibold text-white"
+                  className="flex-1"
                 >
                   Cancel Booking
-                </button>
+                </VercoButton>
               </div>
             </div>
           </Dialog.Popup>

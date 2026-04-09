@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import { Dialog } from '@base-ui/react/dialog'
 import { updateNcnStatus, rebookNcn, resolveWithRefund } from './actions'
+import { getStatusStyle } from '@/lib/ui/status-styles'
 import type { Database } from '@/lib/supabase/types'
 
 type NcnStatus = Database['public']['Enums']['ncn_status']
@@ -50,16 +51,6 @@ interface NcnDetailClientProps {
   availableDates: { id: string; date: string }[]
 }
 
-const STATUS_STYLE: Record<string, { bg: string; text: string }> = {
-  Issued: { bg: 'bg-gray-100', text: 'text-gray-600' },
-  Open: { bg: 'bg-red-50', text: 'text-red-700' },
-  Disputed: { bg: 'bg-red-50', text: 'text-red-700' },
-  'Under Review': { bg: 'bg-amber-50', text: 'text-amber-700' },
-  Resolved: { bg: 'bg-emerald-50', text: 'text-emerald-700' },
-  Rescheduled: { bg: 'bg-blue-50', text: 'text-blue-700' },
-  Closed: { bg: 'bg-gray-50', text: 'text-gray-400' },
-}
-
 export function NcnDetailClient({ ncn, availableDates }: NcnDetailClientProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -76,7 +67,7 @@ export function NcnDetailClient({ ncn, availableDates }: NcnDetailClientProps) {
   const status = ncn.status as string
   const isActionable = status === 'Disputed' || status === 'Under Review'
   const isIssued = status === 'Issued'
-  const ss = STATUS_STYLE[ncn.status]
+  const ss = getStatusStyle('ncn', ncn.status)
 
   // Calculate paid amount for refund dialog
   const paidItems = booking?.booking_item.filter((i) => i.is_extra) ?? []
@@ -134,7 +125,7 @@ export function NcnDetailClient({ ncn, availableDates }: NcnDetailClientProps) {
       <div className="border-b border-gray-100 bg-white px-7 pb-5 pt-6">
         <Link
           href="/admin/non-conformance"
-          className="mb-2.5 flex items-center gap-1.5 text-[13px] font-medium text-[#8FA5B8]"
+          className="mb-2.5 flex items-center gap-1.5 text-body-sm font-medium text-[#8FA5B8]"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
@@ -146,7 +137,7 @@ export function NcnDetailClient({ ncn, availableDates }: NcnDetailClientProps) {
             <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
               NCN — {booking?.ref ?? 'Unknown'}
             </h1>
-            <p className="mt-0.5 text-[13px] text-gray-500">{address}</p>
+            <p className="mt-0.5 text-body-sm text-gray-500">{address}</p>
           </div>
           <span className={`inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${ss.bg} ${ss.text}`}>
             {ncn.status}
@@ -157,7 +148,7 @@ export function NcnDetailClient({ ncn, availableDates }: NcnDetailClientProps) {
       {/* Content */}
       <div className="flex-1 px-7 py-5">
         {error && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-body-sm text-red-700">
             {error}
           </div>
         )}
@@ -166,41 +157,41 @@ export function NcnDetailClient({ ncn, availableDates }: NcnDetailClientProps) {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {/* NCN info */}
           <div className="rounded-xl bg-white p-5 shadow-sm">
-            <div className="mb-3 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+            <div className="mb-3 text-2xs font-semibold uppercase tracking-wide text-gray-500">
               Non-Conformance Details
             </div>
             <div className="flex flex-col gap-2.5">
-              <div className="flex items-center justify-between text-[13px]">
+              <div className="flex items-center justify-between text-body-sm">
                 <span className="text-gray-500">Reason</span>
                 <span className="font-medium text-gray-900">{ncn.reason}</span>
               </div>
-              <div className="flex items-center justify-between text-[13px]">
+              <div className="flex items-center justify-between text-body-sm">
                 <span className="text-gray-500">Reported</span>
                 <span className="font-medium text-gray-900">
                   {format(new Date(ncn.reported_at), 'd MMM yyyy, h:mmaaa')}
                 </span>
               </div>
-              <div className="flex items-center justify-between text-[13px]">
+              <div className="flex items-center justify-between text-body-sm">
                 <span className="text-gray-500">Reported By</span>
                 <span className="font-medium text-gray-900">
                   {(ncn.reporter as { display_name: string | null } | null)?.display_name ?? '—'}
                 </span>
               </div>
               {ncn.notes && (
-                <div className="text-[13px]">
+                <div className="text-body-sm">
                   <span className="text-gray-500">Field Notes</span>
                   <p className="mt-1 rounded-lg bg-gray-50 px-3 py-2 text-gray-700">{ncn.notes}</p>
                 </div>
               )}
               {ncn.resolved_at && (
                 <>
-                  <div className="flex items-center justify-between text-[13px]">
+                  <div className="flex items-center justify-between text-body-sm">
                     <span className="text-gray-500">Resolved</span>
                     <span className="font-medium text-gray-900">
                       {format(new Date(ncn.resolved_at), 'd MMM yyyy, h:mmaaa')}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between text-[13px]">
+                  <div className="flex items-center justify-between text-body-sm">
                     <span className="text-gray-500">Resolved By</span>
                     <span className="font-medium text-gray-900">
                       {(ncn.resolver as { display_name: string | null } | null)?.display_name ?? '—'}
@@ -219,7 +210,7 @@ export function NcnDetailClient({ ncn, availableDates }: NcnDetailClientProps) {
                 </div>
               )}
               {ncn.rescheduled_booking && (
-                <div className="flex items-center justify-between text-[13px]">
+                <div className="flex items-center justify-between text-body-sm">
                   <span className="text-gray-500">Rebooked As</span>
                   <Link
                     href={`/admin/bookings/${(ncn.rescheduled_booking as { id: string }).id}`}
@@ -234,11 +225,11 @@ export function NcnDetailClient({ ncn, availableDates }: NcnDetailClientProps) {
 
           {/* Booking info */}
           <div className="rounded-xl bg-white p-5 shadow-sm">
-            <div className="mb-3 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+            <div className="mb-3 text-2xs font-semibold uppercase tracking-wide text-gray-500">
               Booking Details
             </div>
             <div className="flex flex-col gap-2.5">
-              <div className="flex items-center justify-between text-[13px]">
+              <div className="flex items-center justify-between text-body-sm">
                 <span className="text-gray-500">Reference</span>
                 {booking ? (
                   <Link href={`/admin/bookings/${booking.id}`} className="font-semibold text-[#293F52] hover:underline">
@@ -246,33 +237,33 @@ export function NcnDetailClient({ ncn, availableDates }: NcnDetailClientProps) {
                   </Link>
                 ) : '—'}
               </div>
-              <div className="flex items-center justify-between text-[13px]">
+              <div className="flex items-center justify-between text-body-sm">
                 <span className="text-gray-500">Area</span>
                 <span className="font-medium text-gray-900">{booking?.collection_area.name ?? '—'}</span>
               </div>
-              <div className="flex items-center justify-between text-[13px]">
+              <div className="flex items-center justify-between text-body-sm">
                 <span className="text-gray-500">Type</span>
                 <span className="font-medium text-gray-900">{booking?.type ?? '—'}</span>
               </div>
               {booking?.contact && (
                 <>
-                  <div className="flex items-center justify-between text-[13px]">
+                  <div className="flex items-center justify-between text-body-sm">
                     <span className="text-gray-500">Contact</span>
                     <span className="font-medium text-gray-900">{booking.contact.full_name}</span>
                   </div>
-                  <div className="flex items-center justify-between text-[13px]">
+                  <div className="flex items-center justify-between text-body-sm">
                     <span className="text-gray-500">Email</span>
                     <span className="font-medium text-gray-900">{booking.contact.email}</span>
                   </div>
                 </>
               )}
-              <div className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+              <div className="mt-1 text-2xs font-semibold uppercase tracking-wide text-gray-500">
                 Services
               </div>
               {booking?.booking_item.map((item) => (
                 <div
                   key={item.id}
-                  className={`flex items-center justify-between rounded-lg px-2.5 py-2 text-[13px] ${
+                  className={`flex items-center justify-between rounded-lg px-2.5 py-2 text-body-sm ${
                     item.is_extra ? 'bg-[#FFF3EA]' : 'bg-[#E8FDF0]'
                   }`}
                 >
@@ -293,7 +284,7 @@ export function NcnDetailClient({ ncn, availableDates }: NcnDetailClientProps) {
         {/* Photos */}
         {ncn.photos.length > 0 && (
           <div className="mt-4 rounded-xl bg-white p-5 shadow-sm">
-            <div className="mb-3 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+            <div className="mb-3 text-2xs font-semibold uppercase tracking-wide text-gray-500">
               Photos ({ncn.photos.length})
             </div>
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -318,7 +309,7 @@ export function NcnDetailClient({ ncn, availableDates }: NcnDetailClientProps) {
         {/* Resolution section */}
         {isActionable && (
           <div className="mt-4 rounded-xl bg-white p-5 shadow-sm">
-            <div className="mb-3 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+            <div className="mb-3 text-2xs font-semibold uppercase tracking-wide text-gray-500">
               Resolution
             </div>
 
@@ -329,7 +320,7 @@ export function NcnDetailClient({ ncn, availableDates }: NcnDetailClientProps) {
                 onChange={(e) => setContractorFault(e.target.checked)}
                 className="size-4 rounded border-gray-300 text-[#293F52] focus:ring-[#293F52]"
               />
-              <span className="text-[13px] font-medium text-gray-900">Contractor fault</span>
+              <span className="text-body-sm font-medium text-gray-900">Contractor fault</span>
               <span className="text-[11px] text-gray-400">
                 — allocations restored, paid items refunded if not rebooked
               </span>
@@ -340,7 +331,7 @@ export function NcnDetailClient({ ncn, availableDates }: NcnDetailClientProps) {
               onChange={(e) => setResolutionNotes(e.target.value)}
               placeholder="Resolution notes (internal only)..."
               rows={3}
-              className="mb-4 w-full rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-2.5 text-[13px] text-gray-900 outline-none placeholder:text-gray-300 focus:border-[#293F52]"
+              className="mb-4 w-full rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-2.5 text-body-sm text-gray-900 outline-none placeholder:text-gray-300 focus:border-[#293F52]"
             />
 
             <div className="flex flex-wrap gap-2.5">
@@ -349,7 +340,7 @@ export function NcnDetailClient({ ncn, availableDates }: NcnDetailClientProps) {
                   type="button"
                   onClick={() => handleStatusUpdate('Under Review')}
                   disabled={isSubmitting}
-                  className="rounded-lg border-[1.5px] border-amber-200 bg-amber-50 px-4 py-2.5 text-[13px] font-semibold text-amber-700 disabled:opacity-50"
+                  className="rounded-lg border-[1.5px] border-amber-200 bg-amber-50 px-4 py-2.5 text-body-sm font-semibold text-amber-700 disabled:opacity-50"
                 >
                   Mark Under Review
                 </button>
@@ -358,7 +349,7 @@ export function NcnDetailClient({ ncn, availableDates }: NcnDetailClientProps) {
                 type="button"
                 onClick={() => handleStatusUpdate('Resolved')}
                 disabled={isSubmitting}
-                className="rounded-lg border-[1.5px] border-emerald-200 bg-emerald-50 px-4 py-2.5 text-[13px] font-semibold text-emerald-700 disabled:opacity-50"
+                className="rounded-lg border-[1.5px] border-emerald-200 bg-emerald-50 px-4 py-2.5 text-body-sm font-semibold text-emerald-700 disabled:opacity-50"
               >
                 {isSubmitting ? 'Saving...' : 'Resolve'}
               </button>
@@ -366,7 +357,7 @@ export function NcnDetailClient({ ncn, availableDates }: NcnDetailClientProps) {
                 type="button"
                 onClick={() => setShowRebookDialog(true)}
                 disabled={isSubmitting || availableDates.length === 0}
-                className="rounded-lg border-[1.5px] border-blue-200 bg-blue-50 px-4 py-2.5 text-[13px] font-semibold text-blue-700 disabled:opacity-50"
+                className="rounded-lg border-[1.5px] border-blue-200 bg-blue-50 px-4 py-2.5 text-body-sm font-semibold text-blue-700 disabled:opacity-50"
               >
                 Rebook
               </button>
@@ -377,7 +368,7 @@ export function NcnDetailClient({ ncn, availableDates }: NcnDetailClientProps) {
         {/* Issued — awaiting resident response */}
         {isIssued && (
           <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 p-5">
-            <div className="flex items-center gap-2 text-[13px] font-medium text-gray-500">
+            <div className="flex items-center gap-2 text-body-sm font-medium text-gray-500">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
                 <polyline points="12 6 12 12 16 14" />
@@ -393,10 +384,10 @@ export function NcnDetailClient({ ncn, availableDates }: NcnDetailClientProps) {
         {/* Resolved resolution notes (read-only) */}
         {!isActionable && !isIssued && ncn.resolution_notes && (
           <div className="mt-4 rounded-xl bg-white p-5 shadow-sm">
-            <div className="mb-3 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+            <div className="mb-3 text-2xs font-semibold uppercase tracking-wide text-gray-500">
               Resolution Notes
             </div>
-            <p className="rounded-lg bg-gray-50 px-3 py-2.5 text-[13px] text-gray-700">
+            <p className="rounded-lg bg-gray-50 px-3 py-2.5 text-body-sm text-gray-700">
               {ncn.resolution_notes}
             </p>
           </div>
@@ -412,13 +403,13 @@ export function NcnDetailClient({ ncn, availableDates }: NcnDetailClientProps) {
               <Dialog.Title className="font-[family-name:var(--font-heading)] text-lg font-bold text-[#293F52]">
                 Rebook Collection
               </Dialog.Title>
-              <p className="mt-1.5 text-[13px] text-gray-500">
+              <p className="mt-1.5 text-body-sm text-gray-500">
                 Select a new collection date for {address}.
               </p>
               <select
                 value={selectedDateId}
                 onChange={(e) => setSelectedDateId(e.target.value)}
-                className="mt-4 w-full rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-2.5 text-[13px] text-gray-900"
+                className="mt-4 w-full rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-2.5 text-body-sm text-gray-900"
               >
                 <option value="">Select a date...</option>
                 {availableDates.map((d) => (
@@ -461,7 +452,7 @@ export function NcnDetailClient({ ncn, availableDates }: NcnDetailClientProps) {
               <Dialog.Title className="font-[family-name:var(--font-heading)] text-lg font-bold text-[#293F52]">
                 Resolve with Refund
               </Dialog.Title>
-              <p className="mt-1.5 text-[13px] leading-relaxed text-gray-500">
+              <p className="mt-1.5 text-body-sm leading-relaxed text-gray-500">
                 This booking has <strong>${(paidAmountCents / 100).toFixed(2)}</strong> in paid services.
                 A refund will be issued automatically because contractor fault is selected.
               </p>

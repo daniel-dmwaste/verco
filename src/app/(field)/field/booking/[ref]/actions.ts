@@ -123,7 +123,7 @@ export async function raiseNcn(
       photos: photoUrls,
       reported_by: user?.id ?? null,
       reported_at: new Date().toISOString(),
-      status: 'Issued' as never, // Issued added in migration 20260401130000 — cast until types regen
+      status: 'Issued',
     })
 
   if (ncnError) return { ok: false, error: ncnError.message }
@@ -171,20 +171,18 @@ export async function raiseNothingPresented(
     data: { user },
   } = await supabase.auth.getUser()
 
-  // contractor_fault renamed from dm_fault in migration 20260401120000 — cast until types regen
-  const npInsert: Record<string, unknown> = {
-    booking_id: bookingId,
-    client_id: clientId,
-    notes: notes || null,
-    photos: photoUrls,
-    contractor_fault: dmFault,
-    reported_by: user?.id ?? null,
-    reported_at: new Date().toISOString(),
-    status: 'Issued' as never, // Issued added in migration 20260401130000 — cast until types regen
-  }
   const { error: npError } = await supabase
     .from('nothing_presented')
-    .insert(npInsert as never)
+    .insert({
+      booking_id: bookingId,
+      client_id: clientId,
+      notes: notes || null,
+      photos: photoUrls,
+      contractor_fault: dmFault,
+      reported_by: user?.id ?? null,
+      reported_at: new Date().toISOString(),
+      status: 'Issued',
+    })
 
   if (npError) return { ok: false, error: npError.message }
 

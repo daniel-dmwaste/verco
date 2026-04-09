@@ -50,6 +50,9 @@ const ICON = {
   bug: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2l1.88 1.88M14.12 3.88 16 2M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/></svg>
   ),
+  allocations: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+  ),
 }
 
 interface AdminSidebarProps {
@@ -88,6 +91,7 @@ export function AdminSidebar({ counts }: AdminSidebarProps) {
           icon: ICON.calendar,
         },
         { label: 'Properties', href: '/admin/properties', icon: ICON.properties },
+        { label: 'Allocations', href: '/admin/allocations', icon: ICON.allocations },
       ],
     },
     {
@@ -151,7 +155,7 @@ export function AdminSidebar({ counts }: AdminSidebarProps) {
     <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-gray-100 bg-white py-4">
       {sections.map((section) => (
         <div key={section.title} className="mb-1">
-          <div className="px-5 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.8px] text-gray-300">
+          <div className="px-5 pb-1 pt-2 text-2xs font-semibold uppercase tracking-[0.8px] text-gray-300">
             {section.title}
           </div>
           {section.items.map((item) => {
@@ -161,7 +165,7 @@ export function AdminSidebar({ counts }: AdminSidebarProps) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'relative flex items-center gap-2.5 px-5 py-2.5 text-[13px] font-medium text-gray-700 transition-colors hover:bg-gray-50',
+                  'relative flex items-center gap-2.5 px-5 py-2.5 text-body-sm font-medium text-gray-700 transition-colors hover:bg-gray-50',
                   active &&
                     'bg-[#E8FDF0] font-semibold text-[#293F52] before:absolute before:bottom-1 before:left-0 before:top-1 before:w-[3px] before:rounded-r before:bg-[#00E47C]'
                 )}
@@ -173,7 +177,7 @@ export function AdminSidebar({ counts }: AdminSidebarProps) {
                 {item.badge && (
                   <span
                     className={cn(
-                      'ml-auto min-w-[18px] rounded-full px-1.5 py-px text-center text-[10px] font-semibold text-white',
+                      'ml-auto min-w-[18px] rounded-full px-1.5 py-px text-center text-2xs font-semibold text-white',
                       BADGE_COLORS[item.badge.color ?? 'red']
                     )}
                   >

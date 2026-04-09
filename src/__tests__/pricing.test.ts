@@ -3,6 +3,7 @@ import {
   computeLineItems,
   type PricingItem,
   type ServiceRule,
+  type AllocationOverride,
 } from '@/lib/pricing/calculate'
 
 // Helpers to build maps concisely
@@ -460,6 +461,109 @@ describe('computeLineItems', () => {
         empty(),
       )
       expect(result.line_items[0]!.category_code).toBe('')
+    })
+  })
+
+  // ── Allocation overrides (additive extra_allocations) ──
+
+  describe('allocation overrides (additive)', () => {
+    it('extra adds to both service and category limits', () => {
+      const overrides: AllocationOverride[] = [
+        { service_id: SVC_GENERAL, extra_allocations: 2, reason: 'Admin granted extra' },
+      ]
+
+      const result = computeLineItems(
+        [{ service_id: SVC_GENERAL, quantity: 4 }],
+        rules([[SVC_GENERAL, { max_collections: 3, extra_unit_price: 50 }]]),
+        catMax([[CAT_BULK, 3]]),
+        svcCat([[SVC_GENERAL, CAT_BULK]]),
+        usage([[SVC_GENERAL, 3]]),  // service fully used
+        usage([[CAT_BULK, 3]]),     // category fully used
+        overrides,
+      )
+
+      // effective_service_max = 3 + 2 = 5, used = 3 → remaining = 2
+      // effective_category_max = 3 + 2 = 5, used = 3 → remaining = 2
+      // free = MIN(4, 2, 2) = 2, paid = 2
+      expect(result.line_items[0]!.free_units).toBe(2)
+      expect(result.line_items[0]!.paid_units).toBe(2)
+      expect(result.override_applied).toBe(true)
+      expect(result.override_reason).toBe('Admin granted extra')
+    })
+
+    it('no override = standard calculation (regression)', () => {
+      const result = computeLineItems(
+        [{ service_id: SVC_GENERAL, quantity: 3 }],
+        rules([[SVC_GENERAL, { max_collections: 5, extra_unit_price: 50 }]]),
+        catMax([[CAT_BULK, 5]]),
+        svcCat([[SVC_GENERAL, CAT_BULK]]),
+        usage([[SVC_GENERAL, 2]]),
+        usage([[CAT_BULK, 2]]),
+        undefined,
+      )
+
+      expect(result.line_items[0]!.free_units).toBe(3)
+      expect(result.line_items[0]!.paid_units).toBe(0)
+      expect(result.override_applied).toBe(false)
+      expect(result.override_reason).toBeUndefined()
+      expect(result.total_cents).toBe(0)
+    })
+
+    it('override on one service rolls up to category but not other services', () => {
+      const overrides: AllocationOverride[] = [
+        { service_id: SVC_GENERAL, extra_allocations: 3, reason: 'Bulk extra' },
+      ]
+
+      const result = computeLineItems(
+        [
+          { service_id: SVC_GENERAL, quantity: 3 },
+          { service_id: SVC_GREEN, quantity: 3 },
+        ],
+        rules([
+          [SVC_GENERAL, { max_collections: 2, extra_unit_price: 50 }],
+          [SVC_GREEN, { max_collections: 2, extra_unit_price: 40 }],
+        ]),
+        catMax([[CAT_BULK, 2]]),
+        svcCat([
+          [SVC_GENERAL, CAT_BULK],
+          [SVC_GREEN, CAT_BULK],
+        ]),
+        empty(),
+        empty(),
+        overrides,
+      )
+
+      // General: effective_service = 2+3 = 5, remaining = 5. Cat = 2+3 = 5, remaining = 5.
+      // free = MIN(3, 5, 5) = 3
+      expect(result.line_items[0]!.free_units).toBe(3)
+      expect(result.line_items[0]!.paid_units).toBe(0)
+      // Green: effective_service = 2+0 = 2, remaining = 2. Cat = 5 - 3(form) = 2.
+      // free = MIN(3, 2, 2) = 2, paid = 1
+      expect(result.line_items[1]!.free_units).toBe(2)
+      expect(result.line_items[1]!.paid_units).toBe(1)
+    })
+
+    it('multiple overrides for same service sum their extras', () => {
+      const overrides: AllocationOverride[] = [
+        { service_id: SVC_GENERAL, extra_allocations: 1, reason: 'First' },
+        { service_id: SVC_GENERAL, extra_allocations: 2, reason: 'Second' },
+      ]
+
+      const result = computeLineItems(
+        [{ service_id: SVC_GENERAL, quantity: 5 }],
+        rules([[SVC_GENERAL, { max_collections: 2, extra_unit_price: 50 }]]),
+        catMax([[CAT_BULK, 2]]),
+        svcCat([[SVC_GENERAL, CAT_BULK]]),
+        empty(),
+        empty(),
+        overrides,
+      )
+
+      // effective_service = 2 + 1 + 2 = 5, effective_category = 2 + 1 + 2 = 5
+      // free = MIN(5, 5, 5) = 5
+      expect(result.line_items[0]!.free_units).toBe(5)
+      expect(result.line_items[0]!.paid_units).toBe(0)
+      expect(result.override_reason).toBe('First')
     })
   })
 })

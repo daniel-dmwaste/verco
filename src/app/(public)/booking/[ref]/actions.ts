@@ -32,7 +32,7 @@ export async function cancelBooking(bookingId: string): Promise<Result<void>> {
   }
 
   // Only allow cancellation from pre-Scheduled statuses
-  const cancellableStatuses = ['Submitted', 'Confirmed']
+  const cancellableStatuses = ['Pending Payment', 'Submitted', 'Confirmed']
   if (!cancellableStatuses.includes(booking.status)) {
     return {
       ok: false,
@@ -94,7 +94,7 @@ export async function disputeNcn(ncnId: string): Promise<Result<void>> {
   // RLS policy ncn_resident_update_dispute enforces: status must be 'Issued' + own booking
   const { error } = await supabase
     .from('non_conformance_notice')
-    .update({ status: 'Disputed' as never })
+    .update({ status: 'Disputed' })
     .eq('id', ncnId)
 
   if (error) return { ok: false, error: error.message }
@@ -111,7 +111,7 @@ export async function disputeNp(npId: string): Promise<Result<void>> {
 
   const { error } = await supabase
     .from('nothing_presented')
-    .update({ status: 'Disputed' as never })
+    .update({ status: 'Disputed' })
     .eq('id', npId)
 
   if (error) return { ok: false, error: error.message }

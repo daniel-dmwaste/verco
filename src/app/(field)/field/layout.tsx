@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { FieldLayoutClient } from './field-layout-client'
 
@@ -35,9 +36,37 @@ export default async function FieldLayout({
 
   const areaCodes = (areas ?? []).map((a) => a.code).join(' · ')
 
+  // Fetch tenant branding for white-label CSS variables
+  const headerStore = await headers()
+  const clientId = headerStore.get('x-client-id')
+  let primaryColour = '#293F52'
+  let accentColour = '#00E47C'
+
+  if (clientId) {
+    const { data: client } = await supabase
+      .from('client')
+      .select('primary_colour, accent_colour')
+      .eq('id', clientId)
+      .single()
+
+    if (client?.primary_colour) primaryColour = client.primary_colour.startsWith('#') ? client.primary_colour : `#${client.primary_colour}`
+    if (client?.accent_colour) accentColour = client.accent_colour.startsWith('#') ? client.accent_colour : `#${client.accent_colour}`
+  }
+
   return (
-    <FieldLayoutClient roleLabel={roleLabel} areaCodes={areaCodes}>
-      {children}
-    </FieldLayoutClient>
+    <div
+      style={{
+        '--brand': primaryColour,
+        '--brand-light': `color-mix(in srgb, ${primaryColour} 8%, white)`,
+        '--brand-hover': `color-mix(in srgb, ${primaryColour} 85%, black)`,
+        '--brand-accent': accentColour,
+        '--brand-accent-light': `color-mix(in srgb, ${accentColour} 10%, white)`,
+        '--brand-accent-dark': `color-mix(in srgb, ${accentColour} 75%, black)`,
+      } as React.CSSProperties}
+    >
+      <FieldLayoutClient roleLabel={roleLabel} areaCodes={areaCodes}>
+        {children}
+      </FieldLayoutClient>
+    </div>
   )
 }

@@ -6,6 +6,9 @@ import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { BookingStepper } from '@/components/booking/booking-stepper'
+import { BookingCancelLink } from '@/components/booking/booking-cancel-link'
+import { VercoButton } from '@/components/ui/verco-button'
+import { Spinner } from '@/components/ui/spinner'
 import { decodeItems } from '@/lib/booking/search-params'
 import { cn } from '@/lib/utils'
 
@@ -21,12 +24,14 @@ export function DateForm() {
 
   const selectedItems = decodeItems(itemsParam)
 
-  const [selectedDateId, setSelectedDateId] = useState<string | null>(null)
+  const [selectedDateId, setSelectedDateId] = useState<string | null>(
+    searchParams.get('collection_date_id') ?? null
+  )
 
   const supabase = createClient()
 
   // Determine which buckets are needed based on selected items
-  const { data: neededBuckets } = useQuery({
+  const { data: neededBuckets, isLoading: neededBucketsLoading } = useQuery({
     queryKey: ['needed-buckets', itemsParam],
     enabled: selectedItems.size > 0,
     queryFn: async () => {
@@ -52,7 +57,7 @@ export function DateForm() {
   })
 
   // Fetch available collection dates
-  const { data: dates } = useQuery({
+  const { data: dates, isLoading: datesLoading } = useQuery({
     queryKey: ['collection-dates', collectionAreaId],
     enabled: !!collectionAreaId,
     queryFn: async () => {
@@ -69,6 +74,9 @@ export function DateForm() {
     },
   })
 
+  // Show loading state if any critical query is loading
+  const isLoadingData = neededBucketsLoading || datesLoading
+
   // Filter dates based on needed capacity buckets
   const availableDates = (dates ?? []).filter((d) => {
     if (!neededBuckets) return true
@@ -77,6 +85,18 @@ export function DateForm() {
     if (buckets.has('anc') && d.anc_is_closed) return false
     return true
   })
+
+  // Carry params through for edit flow
+  const contactName = searchParams.get('contact_name')
+  const contactEmail = searchParams.get('contact_email')
+  const contactMobile = searchParams.get('contact_mobile')
+  const returnUrl = searchParams.get('return_url')
+  const carryParams = {
+    ...(contactName ? { contact_name: contactName } : {}),
+    ...(contactEmail ? { contact_email: contactEmail } : {}),
+    ...(contactMobile ? { contact_mobile: contactMobile } : {}),
+    ...(returnUrl ? { return_url: returnUrl } : {}),
+  }
 
   function handleContinue() {
     if (!selectedDateId) return
@@ -88,6 +108,7 @@ export function DateForm() {
       total_cents: totalCents,
       collection_date_id: selectedDateId,
       ...(onBehalf ? { on_behalf: 'true' } : {}),
+      ...carryParams,
     })
     router.push(`/book/details?${params.toString()}`)
   }
@@ -97,7 +118,10 @@ export function DateForm() {
       property_id: propertyId,
       collection_area_id: collectionAreaId,
       address,
+      items: itemsParam,
+      total_cents: totalCents,
       ...(onBehalf ? { on_behalf: 'true' } : {}),
+      ...carryParams,
     })
     router.push(`/book/services?${params.toString()}`)
   }
@@ -109,17 +133,17 @@ export function DateForm() {
       {/* Content */}
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto pb-24 pt-6">
         <div>
-          <h1 className="font-[family-name:var(--font-heading)] text-[22px] font-bold leading-tight text-[#293F52]">
+          <h1 className="font-[family-name:var(--font-heading)] text-title font-bold leading-tight text-[var(--brand)]">
             Select Collection Date
           </h1>
-          <p className="mt-1 text-[13px] leading-relaxed text-gray-500">
+          <p className="mt-1 text-body-sm leading-relaxed text-gray-500">
             Choose a date for your collection at{' '}
             {address.split(',')[0] ?? address}.
           </p>
         </div>
 
         {/* Selected services chips */}
-        {neededBuckets && neededBuckets.serviceChips.length > 0 && (
+        {!isLoadingData && neededBuckets && neededBuckets.serviceChips.length > 0 && (
           <div className="rounded-xl bg-white px-4 py-3.5 shadow-sm">
             <div className="mb-2 text-xs font-medium text-gray-500">
               Selected Services
@@ -137,91 +161,101 @@ export function DateForm() {
           </div>
         )}
 
-        {/* Date grid */}
-        <div>
-          <h2 className="mb-3 font-[family-name:var(--font-heading)] text-base font-semibold text-[#293F52]">
-            Available Dates
-          </h2>
-          <div className="grid grid-cols-3 gap-2">
-            {availableDates.map((d) => {
-              const isSelected = d.id === selectedDateId
-              const spotsRemaining = Math.max(
-                0,
-                d.bulk_capacity_limit - d.bulk_units_booked
-              )
-              const isAlmostFull = spotsRemaining <= 10 && spotsRemaining > 0
-              const dateObj = new Date(d.date + 'T00:00:00')
-
-              return (
-                <button
-                  key={d.id}
-                  type="button"
-                  onClick={() => setSelectedDateId(d.id)}
-                  className={cn(
-                    'flex flex-col gap-1 rounded-xl border-[1.5px] px-2.5 py-3 shadow-sm transition-colors',
-                    isSelected
-                      ? 'border-[#00E47C] border-2 bg-[#293F52]'
-                      : 'border-gray-100 bg-white hover:border-gray-200'
-                  )}
-                >
-                  <span
-                    className={cn(
-                      'text-xs font-semibold',
-                      isSelected ? 'text-white' : 'text-[#293F52]'
-                    )}
-                  >
-                    {format(dateObj, 'EEE d MMM')}
-                  </span>
-                  <span
-                    className={cn(
-                      'text-[11px]',
-                      isSelected
-                        ? 'text-green-200/85'
-                        : 'text-gray-500'
-                    )}
-                  >
-                    {spotsRemaining} spots
-                  </span>
-                  {isSelected && (
-                    <span className="text-[10px] font-medium text-[#00E47C]">
-                      Selected &#10003;
-                    </span>
-                  )}
-                  {!isSelected && isAlmostFull && (
-                    <span className="text-[10px] font-medium text-[#FF8C42]">
-                      Almost full
-                    </span>
-                  )}
-                </button>
-              )
-            })}
+        {/* Loading state */}
+        {isLoadingData && (
+          <div className="flex flex-col items-center justify-center gap-3 rounded-xl bg-white px-4 py-12 shadow-sm">
+            <Spinner size="md" />
+            <p className="text-sm text-gray-500">Loading available dates...</p>
           </div>
+        )}
 
-          {availableDates.length === 0 && (
-            <p className="py-8 text-center text-sm text-gray-500">
-              No available dates for this collection area.
-            </p>
-          )}
-        </div>
+        {/* Date grid */}
+        {!isLoadingData && (
+          <div>
+            <h2 className="mb-3 font-[family-name:var(--font-heading)] text-base font-semibold text-[var(--brand)]">
+              Available Dates
+            </h2>
+            <div className="grid grid-cols-3 gap-2">
+              {availableDates.map((d) => {
+                const isSelected = d.id === selectedDateId
+                const spotsRemaining = Math.max(
+                  0,
+                  d.bulk_capacity_limit - d.bulk_units_booked
+                )
+                const isAlmostFull = spotsRemaining <= 10 && spotsRemaining > 0
+                const dateObj = new Date(d.date + 'T00:00:00')
+
+                return (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => setSelectedDateId(d.id)}
+                    className={cn(
+                      'flex flex-col gap-1 rounded-xl border-[1.5px] px-2.5 py-3 shadow-sm transition-colors',
+                      isSelected
+                        ? 'border-[var(--brand-accent)] border-2 bg-[var(--brand)]'
+                        : 'border-gray-100 bg-white hover:border-gray-200'
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'text-xs font-semibold',
+                        isSelected ? 'text-white' : 'text-[var(--brand)]'
+                      )}
+                    >
+                      {format(dateObj, 'EEE d MMM')}
+                    </span>
+                    <span
+                      className={cn(
+                        'text-[11px]',
+                        isSelected
+                          ? 'text-green-200/85'
+                          : 'text-gray-500'
+                      )}
+                    >
+                      {spotsRemaining} spots
+                    </span>
+                    {isSelected && (
+                      <span className="text-2xs font-medium text-[var(--brand-accent)]">
+                        Selected &#10003;
+                      </span>
+                    )}
+                    {!isSelected && isAlmostFull && (
+                      <span className="text-2xs font-medium text-[#FF8C42]">
+                        Almost full
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+
+            {availableDates.length === 0 && (
+              <p className="py-8 text-center text-sm text-gray-500">
+                No available dates for this collection area.
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Bottom nav */}
       <div className="sticky bottom-0 flex gap-2.5 pb-5 pt-3">
-        <button
-          type="button"
+        <VercoButton
+          variant="secondary"
+          className="flex-1"
           onClick={handleBack}
-          className="flex h-[52px] flex-1 items-center justify-center rounded-xl border-[1.5px] border-gray-100 bg-white font-[family-name:var(--font-heading)] text-[15px] font-semibold text-[#293F52] transition-opacity hover:opacity-90"
         >
           &larr; Back
-        </button>
-        <button
-          type="button"
+        </VercoButton>
+        <BookingCancelLink />
+        <VercoButton
+          className="flex-1"
           onClick={handleContinue}
-          disabled={!selectedDateId}
-          className="flex h-[52px] flex-1 items-center justify-center rounded-xl bg-[#293F52] font-[family-name:var(--font-heading)] text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          disabled={!selectedDateId || isLoadingData}
         >
           Next Step &rarr;
-        </button>
+        </VercoButton>
       </div>
     </div>
   )

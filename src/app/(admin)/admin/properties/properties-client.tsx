@@ -1,9 +1,11 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { SkeletonRow } from '@/components/ui/skeleton'
+import { AllocationFormModal } from '@/app/(admin)/admin/allocations/allocation-form-modal'
 import { SetMudModal } from './set-mud-modal'
 
 const PAGE_SIZE = 50
@@ -36,6 +38,18 @@ export function PropertiesClient() {
   const [geocodeResult, setGeocodeResult] = useState<string | null>(null)
   const [setMudOpen, setSetMudOpen] = useState(false)
   const [setMudProperty, setSetMudProperty] = useState<ModalProperty | null>(null)
+  const [overridePropertyId, setOverridePropertyId] = useState<string | null>(null)
+  const [overridePropertyAddress, setOverridePropertyAddress] = useState('')
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+
+  // Close menu on click outside
+  const closeMenu = useCallback(() => setOpenMenuId(null), [])
+  useEffect(() => {
+    if (!openMenuId) return
+    const handler = () => closeMenu()
+    document.addEventListener('click', handler)
+    return () => document.removeEventListener('click', handler)
+  }, [openMenuId, closeMenu])
 
   // CSV import state
   const [csvRows, setCsvRows] = useState<ParsedRow[]>([])
@@ -75,7 +89,7 @@ export function PropertiesClient() {
       let query = supabase
         .from('eligible_properties')
         .select(
-          'id, address, formatted_address, collection_area_id, is_mud, mud_code, mud_onboarding_status, unit_count, has_geocode, latitude, longitude, collection_area!inner(name, code)',
+          'id, address, formatted_address, collection_area_id, is_mud, is_eligible, mud_code, mud_onboarding_status, unit_count, has_geocode, latitude, longitude, collection_area!inner(name, code)',
           { count: 'exact' }
         )
         .order('formatted_address', { ascending: true, nullsFirst: false })
@@ -133,7 +147,7 @@ export function PropertiesClient() {
   }
 
   async function handleSetResidential(id: string) {
-    await supabase
+    const { error } = await supabase
       .from('eligible_properties')
       .update({
         is_mud: false,
@@ -146,6 +160,16 @@ export function PropertiesClient() {
         waste_location_notes: null,
       })
       .eq('id', id)
+    if (error) { alert(`Failed to update: ${error.message}`); return }
+    void queryClient.invalidateQueries({ queryKey: ['admin-properties'] })
+  }
+
+  async function handleToggleEligible(id: string, currentValue: boolean) {
+    const { error } = await supabase
+      .from('eligible_properties')
+      .update({ is_eligible: !currentValue })
+      .eq('id', id)
+    if (error) { alert(`Failed to update: ${error.message}`); return }
     void queryClient.invalidateQueries({ queryKey: ['admin-properties'] })
   }
 
@@ -280,15 +304,15 @@ export function PropertiesClient() {
   }
 
   return (
-    <div className="p-6">
+    <>
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="flex items-center justify-between border-b border-gray-100 bg-white px-7 pb-5 pt-6">
         <div>
           <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
             Eligible Properties
           </h1>
-          <p className="mt-0.5 text-sm text-gray-500">
-            Manage property addresses and geocoding
+          <p className="mt-0.5 text-body-sm text-gray-500">
+            {total} propert{total !== 1 ? 'ies' : 'y'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -296,14 +320,14 @@ export function PropertiesClient() {
             type="button"
             onClick={handleGeocodeAll}
             disabled={isGeocoding || (ungeocodedCount ?? 0) === 0}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-[13px] font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-body-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
           >
             {isGeocoding ? 'Geocoding...' : `Geocode All (${ungeocodedCount ?? 0} pending)`}
           </button>
           <button
             type="button"
             onClick={() => setShowImport((p) => !p)}
-            className="rounded-lg bg-[#00E47C] px-4 py-2 text-[13px] font-semibold text-[#293F52]"
+            className="rounded-lg bg-[#00E47C] px-4 py-2 text-body-sm font-semibold text-[#293F52]"
           >
             Import Properties
           </button>
@@ -311,14 +335,14 @@ export function PropertiesClient() {
       </div>
 
       {geocodeResult && (
-        <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700">
+        <div className="mx-7 mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700">
           {geocodeResult}
         </div>
       )}
 
       {/* CSV Import */}
       {showImport && (
-        <div className="mb-4 rounded-xl border border-gray-200 bg-white p-5">
+        <div className="mx-7 mt-4 rounded-xl border border-gray-200 bg-white p-5">
           <h3 className="mb-3 text-sm font-semibold text-[#293F52]">Import Properties from CSV</h3>
           <p className="mb-3 text-xs text-gray-500">
             CSV must have columns: <code className="rounded bg-gray-100 px-1">address</code>, <code className="rounded bg-gray-100 px-1">collection_area_code</code>, <code className="rounded bg-gray-100 px-1">is_mud</code> (optional, true/false)
@@ -381,19 +405,21 @@ export function PropertiesClient() {
       )}
 
       {/* Filters */}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="mb-4 flex flex-wrap items-center gap-3 px-7 pt-6">
         <div className="flex-1">
           <input
             type="text"
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search by address..."
+            aria-label="Search properties"
             className="w-full max-w-sm rounded-lg border border-gray-200 px-3.5 py-2 text-sm outline-none placeholder:text-gray-400 focus:border-[#293F52]"
           />
         </div>
         <select
           value={areaFilter}
           onChange={(e) => { setAreaFilter(e.target.value); setPage(0) }}
+          aria-label="Filter by area"
           className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
         >
           <option value="">All areas</option>
@@ -404,6 +430,7 @@ export function PropertiesClient() {
         <select
           value={mudFilter}
           onChange={(e) => { setMudFilter(e.target.value as typeof mudFilter); setPage(0) }}
+          aria-label="Filter by type"
           className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
         >
           <option value="all">All types</option>
@@ -413,44 +440,46 @@ export function PropertiesClient() {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+      <div className="mx-7 overflow-x-auto rounded-xl border border-gray-200 bg-white">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500">
               <th className="px-4 py-3">Address</th>
               <th className="px-4 py-3">Area</th>
               <th className="px-4 py-3 text-center">Type</th>
-              <th className="px-4 py-3 text-center">Geocoded</th>
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+              <>{Array.from({ length: 5 }).map((_, i) => (
+                <SkeletonRow key={i} columns={4} />
+              ))}</>
             ) : properties.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">No properties found</td></tr>
+              <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400">No properties found</td></tr>
             ) : (
-              properties.map((p) => {
+              properties.map((p, rowIndex) => {
                 const area = p.collection_area as { name: string; code: string }
+                const menuAbove = rowIndex >= 3
                 return (
-                  <tr key={p.id} className="border-b border-gray-50">
+                  <tr key={p.id} className={`border-b border-gray-50 ${!p.is_eligible ? 'opacity-60' : ''}`}>
                     <td className="px-4 py-2.5">
-                      <Link href={`/admin/properties/${p.id}`} className="font-medium text-[#293F52] hover:underline">
-                        {p.formatted_address ?? p.address}
-                      </Link>
-                      {p.formatted_address && p.formatted_address !== p.address && (
-                        <div className="text-[11px] text-gray-400">{p.address}</div>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <Link href={`/admin/properties/${p.id}`} className="font-medium text-[#293F52] hover:underline">{p.formatted_address ?? p.address}</Link>
+                        {!p.is_eligible && (
+                          <span className="rounded-full bg-[#FFF0F0] px-2 py-0.5 text-2xs font-semibold text-[#E53E3E]">Ineligible</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-2.5 text-gray-600">{area.code}</td>
                     <td className="px-4 py-2.5 text-center">
                       {p.is_mud ? (
                         <div className="flex flex-col items-center gap-0.5">
-                          <span className="rounded-full bg-[#F3EEFF] px-2 py-0.5 text-[10px] font-semibold text-[#805AD5]">
+                          <span className="rounded-full bg-[#F3EEFF] px-2 py-0.5 text-2xs font-semibold text-[#805AD5]">
                             {p.mud_code ?? 'MUD'}
                           </span>
                           {p.mud_onboarding_status && (
-                            <span className={`text-[10px] font-medium ${
+                            <span className={`text-2xs font-medium ${
                               p.mud_onboarding_status === 'Registered'
                                 ? 'text-emerald-600'
                                 : p.mud_onboarding_status === 'Inactive'
@@ -465,35 +494,53 @@ export function PropertiesClient() {
                         <span className="text-[11px] text-gray-400">Residential</span>
                       )}
                     </td>
-                    <td className="px-4 py-2.5 text-center">
-                      {p.has_geocode ? (
-                        <span className="text-emerald-500" title="Geocoded">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                        </span>
-                      ) : (
-                        <span className="text-amber-400" title="Pending geocode">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                        </span>
-                      )}
-                    </td>
                     <td className="px-4 py-2.5 text-right">
-                      {p.is_mud ? (
+                      <div className="relative inline-block">
                         <button
                           type="button"
-                          onClick={() => handleSetResidential(p.id)}
-                          className="mr-2 text-xs font-medium text-[#293F52] hover:underline"
+                          onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === p.id ? null : p.id) }}
+                          className="inline-flex items-center justify-center rounded-md border-[1.5px] border-gray-100 bg-white px-2 py-1 text-gray-500 hover:bg-gray-50"
+                          aria-label="Property actions"
                         >
-                          Set Residential
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
                         </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleOpenSetMudModal(p)}
-                          className="mr-2 text-xs font-medium text-[#293F52] hover:underline"
-                        >
-                          Set MUD
-                        </button>
-                      )}
+                        {openMenuId === p.id && (
+                          <div className={`absolute right-0 z-10 w-44 rounded-lg border border-gray-100 bg-white py-1 shadow-lg ${menuAbove ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOverridePropertyId(p.id)
+                                setOverridePropertyAddress(p.formatted_address ?? p.address)
+                                setOpenMenuId(null)
+                              }}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-body-sm text-gray-700 hover:bg-gray-50"
+                            >
+                              Add Allocations
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (p.is_mud) {
+                                  void handleSetResidential(p.id)
+                                } else {
+                                  handleOpenSetMudModal(p)
+                                }
+                                setOpenMenuId(null)
+                              }}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-body-sm text-gray-700 hover:bg-gray-50"
+                            >
+                              {p.is_mud ? 'Set Residential' : 'Set MUD'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { void handleToggleEligible(p.id, p.is_eligible); setOpenMenuId(null) }}
+                              className={`flex w-full items-center gap-2 px-3 py-2 text-left text-body-sm hover:bg-gray-50 ${p.is_eligible ? 'text-[#E53E3E]' : 'text-emerald-600'}`}
+                            >
+                              {p.is_eligible ? 'Mark Ineligible' : 'Mark Eligible'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )
@@ -505,7 +552,7 @@ export function PropertiesClient() {
 
       {/* Pagination */}
       {total > 0 && (
-        <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
+        <div className="mx-7 mt-4 flex items-center justify-between text-sm text-gray-500">
           <span>
             Showing {page * PAGE_SIZE + 1}&ndash;{Math.min((page + 1) * PAGE_SIZE, total)} of {total}
           </span>
@@ -528,6 +575,19 @@ export function PropertiesClient() {
           void queryClient.invalidateQueries({ queryKey: ['admin-properties'] })
         }}
       />
-    </div>
+
+      {overridePropertyId && (
+        <AllocationFormModal
+          open={!!overridePropertyId}
+          onOpenChange={(open) => { if (!open) setOverridePropertyId(null) }}
+          onSave={() => {
+            void queryClient.invalidateQueries({ queryKey: ['allocation_overrides'] })
+            setOverridePropertyId(null)
+          }}
+          propertyId={overridePropertyId}
+          propertyAddress={overridePropertyAddress}
+        />
+      )}
+    </>
   )
 }

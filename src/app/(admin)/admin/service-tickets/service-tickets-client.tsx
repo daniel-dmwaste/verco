@@ -4,7 +4,9 @@ import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
+import { getStatusStyle } from '@/lib/ui/status-styles'
 import Link from 'next/link'
+import { SkeletonRow } from '@/components/ui/skeleton'
 import type { Database } from '@/lib/supabase/types'
 
 type TicketStatus = Database['public']['Enums']['ticket_status']
@@ -40,13 +42,6 @@ const CATEGORY_OPTIONS: { value: TicketCategory | ''; label: string }[] = [
   { value: 'other', label: 'Other' },
 ]
 
-const STATUS_STYLE: Record<TicketStatus, { bg: string; text: string; label: string }> = {
-  open: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'Open' },
-  in_progress: { bg: 'bg-blue-50', text: 'text-blue-700', label: 'In Progress' },
-  waiting_on_customer: { bg: 'bg-purple-50', text: 'text-purple-700', label: 'Awaiting Reply' },
-  resolved: { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'Resolved' },
-  closed: { bg: 'bg-gray-100', text: 'text-gray-600', label: 'Closed' },
-}
 
 const PRIORITY_STYLE: Record<TicketPriority, { bg: string; text: string; label: string }> = {
   low: { bg: 'bg-gray-100', text: 'text-gray-600', label: 'Low' },
@@ -142,39 +137,42 @@ export function ServiceTicketsClient() {
   }
 
   return (
-    <div className="p-6">
+    <>
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
-          Service Tickets
-        </h1>
-        <p className="mt-0.5 text-sm text-gray-500">
-          Manage customer enquiries and support requests
-        </p>
+      <div className="flex items-center justify-between border-b border-gray-100 bg-white px-7 pb-5 pt-6">
+        <div>
+          <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
+            Service Tickets
+          </h1>
+          <p className="mt-0.5 text-body-sm text-gray-500">
+            {total} ticket{total !== 1 ? 's' : ''}
+          </p>
+        </div>
       </div>
 
       {/* Filters */}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="mb-4 flex flex-wrap items-center gap-3 px-7 pt-6">
         <input
           type="text"
           value={search}
           onChange={(e) => handleSearchChange(e.target.value)}
           placeholder="Search by subject..."
+          aria-label="Search service tickets"
           className="w-full max-w-xs rounded-lg border border-gray-200 px-3.5 py-2 text-sm outline-none placeholder:text-gray-400 focus:border-[#293F52]"
         />
-        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(0) }} className="rounded-lg border border-gray-200 px-3 py-2 text-sm">
+        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(0) }} aria-label="Filter by status" className="rounded-lg border border-gray-200 px-3 py-2 text-sm">
           {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
-        <select value={priorityFilter} onChange={(e) => { setPriorityFilter(e.target.value); setPage(0) }} className="rounded-lg border border-gray-200 px-3 py-2 text-sm">
+        <select value={priorityFilter} onChange={(e) => { setPriorityFilter(e.target.value); setPage(0) }} aria-label="Filter by priority" className="rounded-lg border border-gray-200 px-3 py-2 text-sm">
           {PRIORITY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
-        <select value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setPage(0) }} className="rounded-lg border border-gray-200 px-3 py-2 text-sm">
+        <select value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setPage(0) }} aria-label="Filter by category" className="rounded-lg border border-gray-200 px-3 py-2 text-sm">
           {CATEGORY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+      <div className="mx-7 overflow-x-auto rounded-xl border border-gray-200 bg-white">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -191,14 +189,16 @@ export function ServiceTicketsClient() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+              <>{Array.from({ length: 5 }).map((_, i) => (
+                <SkeletonRow key={i} columns={9} />
+              ))}</>
             ) : tickets.length === 0 ? (
               <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">No tickets found</td></tr>
             ) : (
               tickets.map((t) => {
                 const contact = t.contact as { full_name: string } | null
                 const assignedProfile = t.assigned_profile as { display_name: string | null } | null
-                const ss = STATUS_STYLE[t.status as TicketStatus]
+                const ss = getStatusStyle('ticket', t.status)
                 const ps = PRIORITY_STYLE[t.priority as TicketPriority]
 
                 return (
@@ -229,10 +229,10 @@ export function ServiceTicketsClient() {
                         {ss.label}
                       </span>
                     </td>
-                    <td className="px-4 py-2.5 text-[13px] text-gray-500">
+                    <td className="px-4 py-2.5 text-body-sm text-gray-500">
                       {assignedProfile?.display_name ?? '—'}
                     </td>
-                    <td className="px-4 py-2.5 text-[13px] text-gray-500">
+                    <td className="px-4 py-2.5 text-body-sm text-gray-500">
                       {formatDistanceToNow(new Date(t.created_at), { addSuffix: true })}
                     </td>
                     <td className="relative px-4 py-2.5 text-right">
@@ -240,6 +240,7 @@ export function ServiceTicketsClient() {
                         type="button"
                         onClick={() => setActionMenuId(actionMenuId === t.id ? null : t.id)}
                         className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                        aria-label="Open actions menu"
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>
@@ -247,9 +248,9 @@ export function ServiceTicketsClient() {
                       </button>
                       {actionMenuId === t.id && (
                         <div className="absolute right-4 top-10 z-10 w-44 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
-                          <button type="button" onClick={() => handleQuickAction(t.id, 'assign')} className="block w-full px-4 py-2 text-left text-[13px] text-gray-700 hover:bg-gray-50">Assign to me</button>
-                          <button type="button" onClick={() => handleQuickAction(t.id, 'resolve')} className="block w-full px-4 py-2 text-left text-[13px] text-gray-700 hover:bg-gray-50">Mark resolved</button>
-                          <button type="button" onClick={() => handleQuickAction(t.id, 'close')} className="block w-full px-4 py-2 text-left text-[13px] text-gray-700 hover:bg-gray-50">Mark closed</button>
+                          <button type="button" onClick={() => handleQuickAction(t.id, 'assign')} className="block w-full px-4 py-2 text-left text-body-sm text-gray-700 hover:bg-gray-50">Assign to me</button>
+                          <button type="button" onClick={() => handleQuickAction(t.id, 'resolve')} className="block w-full px-4 py-2 text-left text-body-sm text-gray-700 hover:bg-gray-50">Mark resolved</button>
+                          <button type="button" onClick={() => handleQuickAction(t.id, 'close')} className="block w-full px-4 py-2 text-left text-body-sm text-gray-700 hover:bg-gray-50">Mark closed</button>
                         </div>
                       )}
                     </td>
@@ -263,7 +264,7 @@ export function ServiceTicketsClient() {
 
       {/* Pagination */}
       {total > 0 && (
-        <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
+        <div className="mx-7 mt-4 flex items-center justify-between text-sm text-gray-500">
           <span>Showing {page * PAGE_SIZE + 1}&ndash;{Math.min((page + 1) * PAGE_SIZE, total)} of {total}</span>
           <div className="flex gap-2">
             <button type="button" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0} className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium disabled:opacity-30">Previous</button>
@@ -271,6 +272,6 @@ export function ServiceTicketsClient() {
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }
