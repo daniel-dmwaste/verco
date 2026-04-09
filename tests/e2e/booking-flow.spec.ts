@@ -413,8 +413,8 @@ test.describe('Booking Flow', () => {
     await page.getByPlaceholder('Email address').fill('jane@example.com')
     await page.getByPlaceholder(/Mobile number/).fill('0412345678')
 
-    // Verify total block shows $50.00 (the large green text in the dark total bar)
-    await expect(page.locator('.bg-\\[\\#293F52\\] .text-2xl')).toContainText('$50.00')
+    // Verify total block shows $50.00 (the large accent-coloured text in the brand total bar)
+    await expect(page.getByTestId('booking-total')).toContainText('$50.00')
 
     // Verify button says "Proceed to Payment"
     const payButton = page.getByRole('button', { name: 'Proceed to Payment' })
@@ -479,7 +479,7 @@ test.describe('Booking Flow', () => {
     await expect(page.getByText(/Mattress × 1/)).toBeVisible()
 
     // Verify total block shows $60.00
-    await expect(page.locator('.bg-\\[\\#293F52\\] .text-2xl')).toContainText('$60.00')
+    await expect(page.getByTestId('booking-total')).toContainText('$60.00')
 
     // Verify payment button (not "Confirm Booking")
     await expect(page.getByRole('button', { name: 'Proceed to Payment' })).toBeVisible()

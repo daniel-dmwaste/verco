@@ -7,12 +7,12 @@ import type {
   NotificationType,
   SendEmailParams,
   SendEmailResult,
-} from './templates/types'
-import { renderBookingCreated } from './templates/booking-created'
+} from './templates/types.ts'
+import { renderBookingCreated } from './templates/booking-created.ts'
 import {
   renderBookingCancelled,
   type RenderBookingCancelledOptions,
-} from './templates/booking-cancelled'
+} from './templates/booking-cancelled.ts'
 
 // Re-export the shared types so callers can continue importing them from
 // '@/lib/notifications/dispatch' (single import point for the dispatcher
@@ -25,7 +25,7 @@ export type {
   NotificationLogRow,
   SendEmailParams,
   SendEmailResult,
-} from './templates/types'
+} from './templates/types.ts'
 
 /**
  * Notification dispatcher — pure orchestration logic with dependency

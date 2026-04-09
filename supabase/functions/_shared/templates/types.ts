@@ -21,7 +21,8 @@
  *     type: NotificationType,
  *     duration_ms: number,
  *     sendgrid_status: number | null,  // HTTP status from SendGrid, null if never reached
- *     error?: string,                   // only set when result is 'failed'
+ *     status: 'sent' | 'failed' | 'skipped',
+ *     error?: string,                   // only set when status = 'failed'
  *   }))
  *
  * Supabase log drain picks this up for downstream analysis. Do NOT log
@@ -107,4 +108,66 @@ export interface ClientBranding {
   logo_light_url: string | null
   primary_colour: string | null
   email_footer_html: string | null
+}
+
+// ── Data shapes the dispatcher loads from Supabase ─────────────────────────
+
+export interface BookingContactForDispatch {
+  id: string
+  full_name: string
+  email: string
+  mobile_e164: string | null
+}
+
+export interface BookingClientForDispatch extends ClientBranding {
+  slug: string
+  reply_to_email: string | null
+  email_from_name: string | null
+}
+
+export interface BookingItemForDispatch {
+  service_name: string
+  no_services: number
+  is_extra: boolean
+  line_charge_cents: number
+}
+
+export interface BookingForDispatch {
+  id: string
+  ref: string
+  type: string
+  client_id: string
+  address: string
+  collection_date: string
+  total_charge_cents: number
+  items: BookingItemForDispatch[]
+  client: BookingClientForDispatch
+  /** Nullable — edge case when a booking is missing a contact */
+  contact: BookingContactForDispatch | null
+}
+
+// ── SendEmail contract ─────────────────────────────────────────────────────
+
+export interface SendEmailParams {
+  to: { email: string; name?: string }
+  from: { email: string; name?: string }
+  subject: string
+  htmlBody: string
+}
+
+export type SendEmailResult =
+  | { ok: true }
+  | { ok: false; error: string; status?: number }
+
+// ── notification_log row shape ─────────────────────────────────────────────
+
+export interface NotificationLogRow {
+  booking_id: string
+  contact_id: string | null
+  client_id: string
+  channel: 'email'
+  notification_type: NotificationType
+  to_address: string
+  status: NotificationLogStatus
+  error_message?: string
 }

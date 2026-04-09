@@ -1,35 +1,78 @@
-import { describe, it } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { dispatch } from '@/lib/notifications/dispatch'
+import {
+  createMockDispatchDeps,
+  makePiiLoadedBooking,
+  PII_STRINGS,
+} from './fixtures'
 
 /**
- * PII regression test — activated in Phase 1 (VER-119) when `dispatch.ts`
- * is implemented.
+ * PII regression test — activated in Phase 1 (VER-119) per the tech review
+ * note on VER-118.
  *
- * ## Purpose
+ * ## What this catches
  *
- * Asserts that for any booking dispatched as a `field` or `ranger` user,
- * the rendered template HTML does NOT contain `contacts.full_name`,
- * `contacts.email`, or `contacts.mobile_e164` strings from the fixture.
+ * Someone adds a contact field to a field-accessible template path six
+ * months from now, and the PII contract from CLAUDE.md §4 silently breaks.
+ * A pure-function unit test on templates won't catch it if the template is
+ * written with the PII field in the body; only an integration-level check
+ * of the rendered HTML can guarantee none of the 3 PII values leak through.
  *
- * This is defence in depth against someone adding a contact field to a
- * field-accessible template path six months from now and silently breaking
- * the absolute PII contract from CLAUDE.md §4.
+ * ## What it does NOT cover
  *
- * ## Why skipped in Phase 0
+ *   1. Whether the DB RLS denies field users from selecting contacts
+ *      directly — that's covered by `rls.test.ts`
+ *   2. Whether the EF auth layer accepts/rejects field users — that's
+ *      covered by smoke testing Phase 1 staging
  *
- * Cannot run yet because `dispatch.ts` is a throwing skeleton. When VER-119
- * implements the real dispatcher, remove the `.skip` below and wire up the
- * assertion per the tech review note on VER-118.
+ * This test is complementary: it guarantees the TEMPLATE-rendered HTML
+ * does not mention contact PII, which is the single worst place a leak
+ * could hide (because the HTML is sent directly to a human inbox).
  *
- * ## Activation checklist (Phase 1)
+ * ## Extension for later types
  *
- * 1. Remove the `.skip` below
- * 2. Import `dispatch` from `@/lib/notifications/dispatch`
- * 3. Build a fixture booking with contact `{ full_name: 'Jane PII', email: 'jane@pii.test', mobile_e164: '+61412345678' }`
- * 4. Dispatch `{ type: 'ncn_raised', booking_id, ncn_id }` (field-triggered path)
- * 5. Assert the returned HTML contains none of the 3 PII strings
+ * When Phase 3 lands ncn_raised/np_raised templates (VER-121), add cases
+ * here that dispatch those types against a `makePiiLoadedBooking()` and
+ * assert the same "no PII in HTML" invariant.
  */
-describe.skip('PII leak regression — activated in VER-119 Phase 1', () => {
-  it('ncn_raised template does not contain contact PII when rendered', () => {
-    // TODO VER-119: implement once dispatch.ts has real logic
+describe('PII leak regression', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'log').mockImplementation(() => {})
+  })
+
+  it('booking_created template does not contain contact full_name, email, or mobile', async () => {
+    const booking = makePiiLoadedBooking()
+    const deps = createMockDispatchDeps({ bookings: { [booking.id]: booking } })
+
+    await dispatch(deps, { type: 'booking_created', booking_id: booking.id })
+
+    expect(deps.sendEmailMock).toHaveBeenCalledTimes(1)
+    const call = deps.sendEmailMock.mock.calls[0]![0]
+    const html: string = call.htmlBody
+
+    // The 3 PII values live on the contact record and MUST NOT appear in
+    // the rendered email body. (The contact email IS allowed as the `to`
+    // address — that's its purpose — but it must not leak into htmlBody.)
+    expect(html).not.toContain(PII_STRINGS.full_name)
+    expect(html).not.toContain(PII_STRINGS.email)
+    expect(html).not.toContain(PII_STRINGS.mobile_e164)
+  })
+
+  it('booking_cancelled template does not contain contact full_name, email, or mobile', async () => {
+    const booking = makePiiLoadedBooking()
+    const deps = createMockDispatchDeps({ bookings: { [booking.id]: booking } })
+
+    await dispatch(deps, {
+      type: 'booking_cancelled',
+      booking_id: booking.id,
+      reason: 'Test cancel reason',
+    })
+
+    const call = deps.sendEmailMock.mock.calls[0]![0]
+    const html: string = call.htmlBody
+
+    expect(html).not.toContain(PII_STRINGS.full_name)
+    expect(html).not.toContain(PII_STRINGS.email)
+    expect(html).not.toContain(PII_STRINGS.mobile_e164)
   })
 })

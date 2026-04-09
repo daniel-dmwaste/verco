@@ -733,7 +733,10 @@ export function ConfirmForm() {
           <span className="font-[family-name:var(--font-heading)] text-base font-semibold text-white">
             Total
           </span>
-          <span className="font-[family-name:var(--font-heading)] text-2xl font-bold text-[var(--brand-accent)]">
+          <span
+            data-testid="booking-total"
+            className="font-[family-name:var(--font-heading)] text-2xl font-bold text-[var(--brand-accent)]"
+          >
             {totalCents > 0
               ? `$${(totalCents / 100).toFixed(2)}`
               : 'Free'}
