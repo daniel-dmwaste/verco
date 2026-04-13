@@ -63,7 +63,7 @@ export type NotificationLogStatus = 'queued' | 'sent' | 'failed'
  */
 export type NotificationPayload =
   | { type: 'booking_created'; booking_id: string }
-  | { type: 'booking_cancelled'; booking_id: string; reason?: string }
+  | { type: 'booking_cancelled'; booking_id: string; reason?: string; refund_status?: 'processed' | 'pending_review' }
   | { type: 'payment_reminder'; booking_id: string }
   | { type: 'payment_expired'; booking_id: string }
   | { type: 'ncn_raised'; booking_id: string; ncn_id: string }
