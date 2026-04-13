@@ -72,6 +72,15 @@ export interface DispatchDeps {
   writeLog: (row: NotificationLogRow) => Promise<string | null>
   /** Send an email via SendGrid (or a mock). Never throws. */
   sendEmail: (params: SendEmailParams) => Promise<SendEmailResult>
+  /** Load a notification_log row by ID for the resume path. Returns null if not found. */
+  loadNotificationLog: (id: string) => Promise<{
+    booking_id: string
+    notification_type: NotificationType
+    status: 'queued' | 'sent' | 'failed'
+    to_address: string
+  } | null>
+  /** Update an existing notification_log row's status (for the resume path). */
+  updateLogStatus: (id: string, status: 'sent' | 'failed', errorMessage?: string, toAddress?: string) => Promise<void>
   /** Base app URL for building CTA links — e.g. `https://verco.au` */
   appUrl: string
   /** Fallback from-address when the client has no reply_to_email configured */

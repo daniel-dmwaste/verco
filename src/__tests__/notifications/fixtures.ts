@@ -150,6 +150,16 @@ export interface MockDispatchState {
    * What `sendEmail` should return. Default: `{ ok: true }`.
    */
   sendResult?: SendEmailResult
+  /**
+   * Queued notification_log rows for the resume-by-log-id path.
+   * Keyed by log id.
+   */
+  queuedLogs?: Record<string, {
+    booking_id: string
+    notification_type: NotificationType
+    status: 'queued' | 'sent' | 'failed'
+    to_address: string
+  }>
 }
 
 export interface MockDispatchDeps extends DispatchDeps {
@@ -159,6 +169,8 @@ export interface MockDispatchDeps extends DispatchDeps {
   writeLogMock: ReturnType<typeof vi.fn>
   /** All notification_log rows that would have been written in this run. */
   writtenLogs: NotificationLogRow[]
+  /** Spy on all updateLogStatus calls. */
+  updateLogStatusMock: ReturnType<typeof vi.fn>
 }
 
 export function createMockDispatchDeps(
@@ -174,6 +186,8 @@ export function createMockDispatchDeps(
   const sendEmailMock = vi.fn(async (_params: SendEmailParams) => {
     return state.sendResult ?? { ok: true as const }
   })
+
+  const updateLogStatusMock = vi.fn(async () => {})
 
   return {
     loadBooking: async (booking_id: string) => {
@@ -191,10 +205,15 @@ export function createMockDispatchDeps(
     },
     writeLog: writeLogMock,
     sendEmail: sendEmailMock,
+    loadNotificationLog: async (id: string) => {
+      return state.queuedLogs?.[id] ?? null
+    },
+    updateLogStatus: updateLogStatusMock,
     appUrl: 'https://verco.test',
     defaultFromEmail: 'noreply@verco.test',
     writtenLogs,
     writeLogMock,
     sendEmailMock,
+    updateLogStatusMock,
   }
 }
