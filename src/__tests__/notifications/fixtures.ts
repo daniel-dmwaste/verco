@@ -73,13 +73,13 @@ export function makeMockBooking(
     id: 'booking-fixture-1',
     ref: 'VV-ABC123',
     type: 'Residential',
-    client_id: mockClientFull.id,
+    client_id: mockClientMinimal.id,
     address: '23 Leda Blvd, Wellard WA 6170',
     client: {
       slug: 'mock-tenant',
       reply_to_email: 'noreply@mock.wa.gov.au',
       email_from_name: 'City of Mock — Verge Collection',
-      ...mockClientFull,
+      ...mockClientMinimal,
     },
     contact: {
       id: 'contact-fixture-1',
