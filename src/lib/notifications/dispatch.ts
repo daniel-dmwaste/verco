@@ -22,6 +22,8 @@ import {
   type RenderNpRaisedOptions,
 } from './templates/np-raised'
 import { renderCompletionSurvey } from './templates/completion-survey'
+import { renderPaymentReminder } from './templates/payment-reminder'
+import { renderPaymentExpired } from './templates/payment-expired'
 
 // Re-export the shared types so callers can continue importing them from
 // '@/lib/notifications/dispatch' (single import point for the dispatcher
@@ -315,10 +317,9 @@ function renderTemplate(
       return renderBookingCancelled(booking, appUrl, opts)
     }
     case 'payment_reminder':
+      return renderPaymentReminder(booking, appUrl)
     case 'payment_expired':
-      throw new Error(
-        `Template not yet implemented for type: ${payload.type} (lands in later phase)`
-      )
+      return renderPaymentExpired(booking, appUrl)
     case 'ncn_raised': {
       const opts: RenderNcnRaisedOptions = {
         reason: payload.reason,

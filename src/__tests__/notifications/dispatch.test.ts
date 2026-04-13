@@ -257,6 +257,36 @@ describe('dispatch', () => {
     expect(emailCall?.htmlBody).toContain('unable to attend')
   })
 
+  it('routes payment_reminder to the reminder template', async () => {
+    const booking = makeMockBooking({ id: 'b-remind', total_charge_cents: 5500 })
+    const deps = createMockDispatchDeps({ bookings: { 'b-remind': booking } })
+
+    const result = await dispatch(deps, {
+      type: 'payment_reminder',
+      booking_id: 'b-remind',
+    })
+
+    expect(result).toMatchObject({ ok: true, sent: true })
+    const emailCall = deps.sendEmailMock.mock.calls[0]?.[0] as { subject: string; htmlBody: string } | undefined
+    expect(emailCall?.subject).toContain('Complete your booking')
+    expect(emailCall?.htmlBody).toContain('$55.00')
+  })
+
+  it('routes payment_expired to the expired template', async () => {
+    const booking = makeMockBooking({ id: 'b-expire', total_charge_cents: 5500 })
+    const deps = createMockDispatchDeps({ bookings: { 'b-expire': booking } })
+
+    const result = await dispatch(deps, {
+      type: 'payment_expired',
+      booking_id: 'b-expire',
+    })
+
+    expect(result).toMatchObject({ ok: true, sent: true })
+    const emailCall = deps.sendEmailMock.mock.calls[0]?.[0] as { subject: string; htmlBody: string } | undefined
+    expect(emailCall?.subject).toContain('Booking expired')
+    expect(emailCall?.htmlBody).toContain('No charge has been made')
+  })
+
   it('routes completion_survey to the survey template with token in CTA', async () => {
     const booking = makeMockBooking({ id: 'b-survey' })
     const deps = createMockDispatchDeps({ bookings: { 'b-survey': booking } })
