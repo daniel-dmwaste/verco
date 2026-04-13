@@ -321,6 +321,39 @@ serve(async (req) => {
       return data.id as string
     },
 
+    loadNotificationLog: async (id: string) => {
+      const { data, error } = await supabaseService
+        .from('notification_log')
+        .select('booking_id, notification_type, status, to_address')
+        .eq('id', id)
+        .maybeSingle()
+      if (error || !data) return null
+      return {
+        booking_id: data.booking_id as string,
+        notification_type: data.notification_type as NotificationType,
+        status: data.status as 'queued' | 'sent' | 'failed',
+        to_address: data.to_address as string,
+      }
+    },
+
+    updateLogStatus: async (
+      id: string,
+      status: 'sent' | 'failed',
+      errorMessage?: string,
+      toAddress?: string
+    ) => {
+      const updateData: Record<string, unknown> = { status }
+      if (errorMessage !== undefined) updateData.error_message = errorMessage
+      if (toAddress !== undefined) updateData.to_address = toAddress
+      const { error } = await supabaseService
+        .from('notification_log')
+        .update(updateData)
+        .eq('id', id)
+      if (error) {
+        console.error('updateLogStatus failed:', error.message)
+      }
+    },
+
     sendEmail: async (params: SendEmailParams): Promise<SendEmailResult> => {
       const result = await sendgridSendEmail({
         to: { email: params.to.email, name: params.to.name },
