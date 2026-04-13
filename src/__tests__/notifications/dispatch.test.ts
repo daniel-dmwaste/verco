@@ -202,6 +202,23 @@ describe('dispatch', () => {
       expect(call.subject).toContain('Booking cancelled')
       expect(call.htmlBody).toContain('Contractor broke down')
     })
+
+    it('forwards refund_status to booking_cancelled template', async () => {
+      const booking = makeMockBooking({ id: 'b-refund', total_charge_cents: 5500 })
+      const deps = createMockDispatchDeps({ bookings: { 'b-refund': booking } })
+
+      const result = await dispatch(deps, {
+        type: 'booking_cancelled',
+        booking_id: 'b-refund',
+        refund_status: 'pending_review',
+      })
+
+      expect(result).toMatchObject({ ok: true, sent: true })
+      // Verify the email body contains the "pending review" copy
+      const emailCall = deps.sendEmailMock.mock.calls[0]?.[0] as { htmlBody: string } | undefined
+      expect(emailCall?.htmlBody).toContain('reviewed by our team')
+      expect(emailCall?.htmlBody).not.toContain('has been processed')
+    })
   })
 
   describe('resume-by-log-id variant', () => {

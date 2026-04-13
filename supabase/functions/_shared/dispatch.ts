@@ -224,6 +224,7 @@ function renderTemplate(
     case 'booking_cancelled': {
       const opts: RenderBookingCancelledOptions = {
         reason: payload.reason,
+        refund_status: payload.refund_status,
       }
       return renderBookingCancelled(booking, appUrl, opts)
     }
