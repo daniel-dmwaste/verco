@@ -47,9 +47,8 @@ import { sendEmail as sendgridSendEmail } from '../_shared/sendgrid.ts'
  * role gates the TRIGGER, not the underlying data access.
  *
  * Permitted user roles: contractor-admin, contractor-staff, client-admin,
- * client-staff, field, ranger. (Residents cannot directly invoke the EF —
- * resident cancels go through a server action that the user is already
- * authenticated for, and the server action's role check happens upstream.)
+ * client-staff, field, ranger, resident. Resident callers are server
+ * actions (e.g. resident cancel) that pass the user's own JWT.
  *
  * ## Fire-and-forget discipline
  *
@@ -97,6 +96,7 @@ serve(async (req) => {
     'client-staff',
     'field',
     'ranger',
+    'resident',
   ])
 
   if (!isServiceRole) {
