@@ -274,14 +274,59 @@ describe('dispatch', () => {
     expect(emailCall?.htmlBody).toContain('Complete survey')
   })
 
-  describe('resume-by-log-id variant', () => {
-    it('returns an error stub for the Phase 4 resume path', async () => {
-      const deps = createMockDispatchDeps()
-      const result = await dispatch(deps, { notification_log_id: 'log-1' })
-      expect(result.ok).toBe(false)
-      if (result.ok === false) {
-        expect(result.error).toContain('Phase 4')
-      }
+  describe('resume-by-log-id', () => {
+    it('resumes a queued log row, sends email, and calls updateLogStatus with sent', async () => {
+      const booking = makeMockBooking({ id: 'b-resume', total_charge_cents: 5500 })
+      const deps = createMockDispatchDeps({
+        bookings: { 'b-resume': booking },
+        queuedLogs: {
+          'log-queued-1': {
+            booking_id: 'b-resume',
+            notification_type: 'booking_cancelled',
+            status: 'queued',
+            to_address: 'pending',
+          },
+        },
+      })
+
+      const result = await dispatch(deps, { notification_log_id: 'log-queued-1' })
+
+      expect(result).toMatchObject({ ok: true, sent: true })
+      expect(deps.sendEmailMock).toHaveBeenCalledTimes(1)
+      expect(deps.updateLogStatusMock).toHaveBeenCalledWith(
+        'log-queued-1',
+        'sent',
+        undefined,
+        booking.contact!.email
+      )
+    })
+
+    it('returns error when log row is not found', async () => {
+      const deps = createMockDispatchDeps({})
+
+      const result = await dispatch(deps, { notification_log_id: 'nonexistent' })
+
+      expect(result).toMatchObject({ ok: false })
+      expect(result.ok === false && result.error).toContain('not found')
+      expect(deps.sendEmailMock).not.toHaveBeenCalled()
+    })
+
+    it('skips when log row is already sent', async () => {
+      const deps = createMockDispatchDeps({
+        queuedLogs: {
+          'log-already-sent': {
+            booking_id: 'b-any',
+            notification_type: 'booking_cancelled',
+            status: 'sent',
+            to_address: 'test@example.com',
+          },
+        },
+      })
+
+      const result = await dispatch(deps, { notification_log_id: 'log-already-sent' })
+
+      expect(result).toEqual({ ok: true, skipped: true })
+      expect(deps.sendEmailMock).not.toHaveBeenCalled()
     })
   })
 

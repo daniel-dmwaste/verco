@@ -104,12 +104,80 @@ export async function dispatch(
     )
   }
 
-  // Phase 4 will handle the resume-by-log-id variant. Phase 1 only supports
-  // the primary payload variant.
+  // Resume-by-log-id path — used by Phase 4 expiry flow and Phase 5 retry.
   if ('notification_log_id' in input) {
-    const error = 'Resume-by-log-id path lands in Phase 4 (VER-122)'
-    log({ type: null, status: 'failed', error })
-    return { ok: false, error }
+    const logId = input.notification_log_id
+    try {
+      const logRow = await deps.loadNotificationLog(logId)
+      if (!logRow) {
+        const error = `Notification log row not found: ${logId}`
+        log({ type: null, status: 'failed', error, sendgrid_status: null })
+        return { ok: false, error }
+      }
+      if (logRow.status === 'sent') {
+        log({ type: logRow.notification_type, booking_id: logRow.booking_id, status: 'skipped', sendgrid_status: null })
+        return { ok: true, skipped: true }
+      }
+
+      const booking = await deps.loadBooking(logRow.booking_id)
+      if (!booking) {
+        const error = `Booking not found for log row ${logId}: ${logRow.booking_id}`
+        log({ type: logRow.notification_type, booking_id: logRow.booking_id, status: 'failed', error, sendgrid_status: null })
+        return { ok: false, error }
+      }
+
+      if (!booking.contact || !booking.contact.email) {
+        const error = `Booking ${logRow.booking_id} has no contact email`
+        await deps.updateLogStatus(logId, 'failed', error)
+        log({ type: logRow.notification_type, booking_id: logRow.booking_id, status: 'failed', error, sendgrid_status: null })
+        return { ok: false, error, log_id: logId }
+      }
+
+      const syntheticPayload = { type: logRow.notification_type, booking_id: logRow.booking_id } as NotificationPayload
+
+      let rendered: { subject: string; html: string }
+      try {
+        rendered = renderTemplate(syntheticPayload, booking, deps.appUrl)
+      } catch (renderErr) {
+        const error = renderErr instanceof Error ? renderErr.message : String(renderErr)
+        await deps.updateLogStatus(logId, 'failed', `Template render failed: ${error}`)
+        log({ type: logRow.notification_type, booking_id: logRow.booking_id, status: 'failed', error: `render: ${error}`, sendgrid_status: null })
+        return { ok: false, error, log_id: logId }
+      }
+
+      const fromEmail = booking.client.reply_to_email ?? deps.defaultFromEmail
+      const fromName = booking.client.email_from_name ?? booking.client.name
+      const sendResult = await deps.sendEmail({
+        to: { email: booking.contact.email, name: booking.contact.full_name },
+        from: { email: fromEmail, name: fromName },
+        subject: rendered.subject,
+        htmlBody: rendered.html,
+      })
+
+      await deps.updateLogStatus(
+        logId,
+        sendResult.ok ? 'sent' : 'failed',
+        sendResult.ok ? undefined : sendResult.error,
+        booking.contact.email
+      )
+
+      log({
+        type: logRow.notification_type,
+        booking_id: logRow.booking_id,
+        status: sendResult.ok ? 'sent' : 'failed',
+        sendgrid_status: sendResult.ok ? 202 : ('status' in sendResult ? sendResult.status : null) ?? null,
+        ...(sendResult.ok ? {} : { error: sendResult.error }),
+      })
+
+      if (sendResult.ok) {
+        return { ok: true, sent: true, log_id: logId }
+      }
+      return { ok: false, error: sendResult.error, log_id: logId }
+    } catch (err) {
+      const error = err instanceof Error ? err.message : String(err)
+      log({ type: null, status: 'failed', error: `crashed: ${error}`, sendgrid_status: null })
+      return { ok: false, error }
+    }
   }
 
   const payload: NotificationPayload = input
