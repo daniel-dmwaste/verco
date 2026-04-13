@@ -75,4 +75,63 @@ describe('PII leak regression', () => {
     expect(html).not.toContain(PII_STRINGS.email)
     expect(html).not.toContain(PII_STRINGS.mobile_e164)
   })
+
+  it('ncn_raised template does not contain contact full_name, email, or mobile', async () => {
+    const booking = makePiiLoadedBooking()
+    const deps = createMockDispatchDeps({ bookings: { [booking.id]: booking } })
+
+    await dispatch(deps, {
+      type: 'ncn_raised',
+      booking_id: booking.id,
+      ncn_id: 'ncn-pii-test',
+      reason: 'Building Waste',
+      notes: 'Test notes',
+    })
+
+    expect(deps.sendEmailMock).toHaveBeenCalledTimes(1)
+    const call = deps.sendEmailMock.mock.calls[0]![0]
+    const html: string = call.htmlBody
+
+    expect(html).not.toContain(PII_STRINGS.full_name)
+    expect(html).not.toContain(PII_STRINGS.email)
+    expect(html).not.toContain(PII_STRINGS.mobile_e164)
+  })
+
+  it('np_raised template does not contain contact full_name, email, or mobile', async () => {
+    const booking = makePiiLoadedBooking()
+    const deps = createMockDispatchDeps({ bookings: { [booking.id]: booking } })
+
+    await dispatch(deps, {
+      type: 'np_raised',
+      booking_id: booking.id,
+      np_id: 'np-pii-test',
+    })
+
+    expect(deps.sendEmailMock).toHaveBeenCalledTimes(1)
+    const call = deps.sendEmailMock.mock.calls[0]![0]
+    const html: string = call.htmlBody
+
+    expect(html).not.toContain(PII_STRINGS.full_name)
+    expect(html).not.toContain(PII_STRINGS.email)
+    expect(html).not.toContain(PII_STRINGS.mobile_e164)
+  })
+
+  it('completion_survey template does not contain contact full_name, email, or mobile', async () => {
+    const booking = makePiiLoadedBooking()
+    const deps = createMockDispatchDeps({ bookings: { [booking.id]: booking } })
+
+    await dispatch(deps, {
+      type: 'completion_survey',
+      booking_id: booking.id,
+      survey_token: 'tok-pii-test',
+    })
+
+    expect(deps.sendEmailMock).toHaveBeenCalledTimes(1)
+    const call = deps.sendEmailMock.mock.calls[0]![0]
+    const html: string = call.htmlBody
+
+    expect(html).not.toContain(PII_STRINGS.full_name)
+    expect(html).not.toContain(PII_STRINGS.email)
+    expect(html).not.toContain(PII_STRINGS.mobile_e164)
+  })
 })
