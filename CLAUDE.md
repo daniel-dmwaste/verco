@@ -381,9 +381,6 @@ Public pages: `<main className="mx-auto w-full max-w-5xl px-6 py-8">` at server 
 ### Tailwind v4 breakpoints
 `tablet:` (1024px) for nav/layout switching only. `md:` for text sizing and spacing.
 
-### Supabase MCP migrations — verify DDL executed
-`apply_migration` can register a version without DDL running. Always verify with `execute_sql` (`SELECT EXISTS (...)`) after applying.
-
 ### RLS on new columns — check UPDATE policies exist
 Adding a column doesn't grant UPDATE. If the table lacks an UPDATE policy, writes silently fail. Check `pg_policies` and add if missing.
 
@@ -398,3 +395,6 @@ Every wizard step carries ALL params through back/forward nav via `carryParams`.
 
 ### EFs that access PII accept dual auth (per §20 Red Line #3)
 Server actions MUST NOT use the service role key. EFs needing PII (e.g. `send-notification`) accept EITHER a service role bearer (EF→EF callers) OR a valid user JWT whose `current_user_role()` is in a permitted set. Internal loads always use service role inside the EF — the user's role gates the TRIGGER, not the data access.
+
+### Notification module conventions
+Shared helpers in `templates/template-helpers.ts` — never duplicate. `invokeSendNotification` in `src/lib/notifications/invoke.ts` — never create local copies. Resume-by-log-id only works for `RESUMABLE_TYPES` in `dispatch.ts` — `ncn_raised`/`completion_survey` cannot be retried via log_id.
