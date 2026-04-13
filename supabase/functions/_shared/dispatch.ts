@@ -13,6 +13,9 @@ import {
   renderBookingCancelled,
   type RenderBookingCancelledOptions,
 } from './templates/booking-cancelled.ts'
+import { renderNcnRaised, type RenderNcnRaisedOptions } from './templates/ncn-raised.ts'
+import { renderNpRaised, type RenderNpRaisedOptions } from './templates/np-raised.ts'
+import { renderCompletionSurvey } from './templates/completion-survey.ts'
 
 // Re-export the shared types so callers can continue importing them from
 // '@/lib/notifications/dispatch' (single import point for the dispatcher
@@ -230,11 +233,27 @@ function renderTemplate(
     }
     case 'payment_reminder':
     case 'payment_expired':
-    case 'ncn_raised':
-    case 'np_raised':
-    case 'completion_survey':
       throw new Error(
         `Template not yet implemented for type: ${payload.type} (lands in later phase)`
       )
+    case 'ncn_raised': {
+      const opts: RenderNcnRaisedOptions = {
+        reason: payload.reason,
+        notes: payload.notes,
+        photos: payload.photos,
+        contractor_fault: payload.contractor_fault,
+      }
+      return renderNcnRaised(booking, appUrl, opts)
+    }
+    case 'np_raised': {
+      const opts: RenderNpRaisedOptions = {
+        notes: payload.notes,
+        photos: payload.photos,
+        contractor_fault: payload.contractor_fault,
+      }
+      return renderNpRaised(booking, appUrl, opts)
+    }
+    case 'completion_survey':
+      return renderCompletionSurvey(booking, appUrl, payload.survey_token)
   }
 }

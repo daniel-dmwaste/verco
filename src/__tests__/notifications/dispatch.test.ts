@@ -221,6 +221,59 @@ describe('dispatch', () => {
     })
   })
 
+  it('routes ncn_raised to the NCN template with payload fields', async () => {
+    const booking = makeMockBooking({ id: 'b-ncn' })
+    const deps = createMockDispatchDeps({ bookings: { 'b-ncn': booking } })
+
+    const result = await dispatch(deps, {
+      type: 'ncn_raised',
+      booking_id: 'b-ncn',
+      ncn_id: 'ncn-1',
+      reason: 'Building Waste',
+      notes: 'Behind the fence',
+    })
+
+    expect(result).toMatchObject({ ok: true, sent: true })
+    const emailCall = deps.sendEmailMock.mock.calls[0]?.[0] as { subject: string; htmlBody: string } | undefined
+    expect(emailCall?.subject).toContain('Non-conformance notice')
+    expect(emailCall?.htmlBody).toContain('Building Waste')
+    expect(emailCall?.htmlBody).toContain('Behind the fence')
+  })
+
+  it('routes np_raised to the NP template with payload fields', async () => {
+    const booking = makeMockBooking({ id: 'b-np' })
+    const deps = createMockDispatchDeps({ bookings: { 'b-np': booking } })
+
+    const result = await dispatch(deps, {
+      type: 'np_raised',
+      booking_id: 'b-np',
+      np_id: 'np-1',
+      contractor_fault: true,
+    })
+
+    expect(result).toMatchObject({ ok: true, sent: true })
+    const emailCall = deps.sendEmailMock.mock.calls[0]?.[0] as { subject: string; htmlBody: string } | undefined
+    expect(emailCall?.subject).toContain('Nothing presented')
+    expect(emailCall?.htmlBody).toContain('unable to attend')
+  })
+
+  it('routes completion_survey to the survey template with token in CTA', async () => {
+    const booking = makeMockBooking({ id: 'b-survey' })
+    const deps = createMockDispatchDeps({ bookings: { 'b-survey': booking } })
+
+    const result = await dispatch(deps, {
+      type: 'completion_survey',
+      booking_id: 'b-survey',
+      survey_token: 'tok-xyz',
+    })
+
+    expect(result).toMatchObject({ ok: true, sent: true })
+    const emailCall = deps.sendEmailMock.mock.calls[0]?.[0] as { subject: string; htmlBody: string } | undefined
+    expect(emailCall?.subject).toContain('How was your collection')
+    expect(emailCall?.htmlBody).toContain('tok-xyz')
+    expect(emailCall?.htmlBody).toContain('Complete survey')
+  })
+
   describe('resume-by-log-id variant', () => {
     it('returns an error stub for the Phase 4 resume path', async () => {
       const deps = createMockDispatchDeps()
