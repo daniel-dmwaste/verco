@@ -1975,6 +1975,7 @@ export type Database = {
       is_client_staff: { Args: never; Returns: boolean }
       is_contractor_user: { Args: never; Returns: boolean }
       is_field_user: { Args: never; Returns: boolean }
+      retry_notification_log: { Args: { log_id: string }; Returns: string }
     }
     Enums: {
       app_permission_action: "view" | "create" | "edit" | "delete" | "manage"

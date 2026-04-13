@@ -21,12 +21,10 @@ export async function retryNotification(logId: string): Promise<Result<void>> {
     return { ok: false, error: 'Insufficient permissions.' }
   }
 
-  // Lock the row, validate failed status, set to queued.
-  // RPC not yet in generated types — will be after migration is applied + types regenerated
-  const { error: rpcError } = await (supabase.rpc as Function)(
-    'retry_notification_log',
-    { log_id: logId }
-  )
+  // Lock the row, validate failed status, set to queued
+  const { error: rpcError } = await supabase.rpc('retry_notification_log', {
+    log_id: logId,
+  })
 
   if (rpcError) {
     return { ok: false, error: rpcError.message }
