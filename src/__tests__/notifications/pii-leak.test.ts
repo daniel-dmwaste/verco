@@ -134,4 +134,40 @@ describe('PII leak regression', () => {
     expect(html).not.toContain(PII_STRINGS.email)
     expect(html).not.toContain(PII_STRINGS.mobile_e164)
   })
+
+  it('payment_reminder template does not contain contact full_name, email, or mobile', async () => {
+    const booking = makePiiLoadedBooking()
+    const deps = createMockDispatchDeps({ bookings: { [booking.id]: booking } })
+
+    await dispatch(deps, {
+      type: 'payment_reminder',
+      booking_id: booking.id,
+    })
+
+    expect(deps.sendEmailMock).toHaveBeenCalledTimes(1)
+    const call = deps.sendEmailMock.mock.calls[0]![0]
+    const html: string = call.htmlBody
+
+    expect(html).not.toContain(PII_STRINGS.full_name)
+    expect(html).not.toContain(PII_STRINGS.email)
+    expect(html).not.toContain(PII_STRINGS.mobile_e164)
+  })
+
+  it('payment_expired template does not contain contact full_name, email, or mobile', async () => {
+    const booking = makePiiLoadedBooking()
+    const deps = createMockDispatchDeps({ bookings: { [booking.id]: booking } })
+
+    await dispatch(deps, {
+      type: 'payment_expired',
+      booking_id: booking.id,
+    })
+
+    expect(deps.sendEmailMock).toHaveBeenCalledTimes(1)
+    const call = deps.sendEmailMock.mock.calls[0]![0]
+    const html: string = call.htmlBody
+
+    expect(html).not.toContain(PII_STRINGS.full_name)
+    expect(html).not.toContain(PII_STRINGS.email)
+    expect(html).not.toContain(PII_STRINGS.mobile_e164)
+  })
 })
