@@ -76,6 +76,32 @@ export async function completeBooking(bookingId: string): Promise<Result<void>> 
     .eq('id', bookingId)
 
   if (error) return { ok: false, error: error.message }
+
+  // Create survey + fire completion notification
+  const headerStore = await headers()
+  const clientId = headerStore.get('x-client-id')
+
+  if (clientId) {
+    const surveyToken = crypto.randomUUID()
+    const { error: surveyError } = await supabase
+      .from('booking_survey')
+      .insert({
+        booking_id: bookingId,
+        client_id: clientId,
+        token: surveyToken,
+      })
+
+    if (surveyError) {
+      console.error('Failed to create booking_survey:', surveyError.message)
+    } else {
+      await invokeSendNotification(supabase, {
+        type: 'completion_survey',
+        booking_id: bookingId,
+        survey_token: surveyToken,
+      })
+    }
+  }
+
   return { ok: true, data: undefined }
 }
 
@@ -113,7 +139,7 @@ export async function raiseNcn(
   } = await supabase.auth.getUser()
 
   // Insert non_conformance_notice
-  const { error: ncnError } = await supabase
+  const { data: ncnRow, error: ncnError } = await supabase
     .from('non_conformance_notice')
     .insert({
       booking_id: bookingId,
@@ -125,6 +151,8 @@ export async function raiseNcn(
       reported_at: new Date().toISOString(),
       status: 'Issued',
     })
+    .select('id')
+    .single()
 
   if (ncnError) return { ok: false, error: ncnError.message }
 
@@ -135,6 +163,17 @@ export async function raiseNcn(
     .eq('id', bookingId)
 
   if (updateError) return { ok: false, error: updateError.message }
+
+  // Fire NCN notification — fire-and-forget
+  await invokeSendNotification(supabase, {
+    type: 'ncn_raised',
+    booking_id: bookingId,
+    ncn_id: ncnRow?.id ?? '',
+    reason,
+    notes: notes || undefined,
+    photos: photoUrls.length > 0 ? photoUrls : undefined,
+  })
+
   return { ok: true, data: undefined }
 }
 
@@ -171,7 +210,7 @@ export async function raiseNothingPresented(
     data: { user },
   } = await supabase.auth.getUser()
 
-  const { error: npError } = await supabase
+  const { data: npRow, error: npError } = await supabase
     .from('nothing_presented')
     .insert({
       booking_id: bookingId,
@@ -183,6 +222,8 @@ export async function raiseNothingPresented(
       reported_at: new Date().toISOString(),
       status: 'Issued',
     })
+    .select('id')
+    .single()
 
   if (npError) return { ok: false, error: npError.message }
 
@@ -192,6 +233,17 @@ export async function raiseNothingPresented(
     .eq('id', bookingId)
 
   if (updateError) return { ok: false, error: updateError.message }
+
+  // Fire NP notification — fire-and-forget
+  await invokeSendNotification(supabase, {
+    type: 'np_raised',
+    booking_id: bookingId,
+    np_id: npRow?.id ?? '',
+    notes: notes || undefined,
+    photos: photoUrls.length > 0 ? photoUrls : undefined,
+    contractor_fault: dmFault,
+  })
+
   return { ok: true, data: undefined }
 }
 
@@ -251,4 +303,59 @@ export async function saveMudActualServices(
   }
 
   return { ok: true, data: undefined }
+}
+
+/**
+ * Fire-and-forget POST to the send-notification Edge Function.
+ *
+ * Uses the user's session access token (not service role — CLAUDE.md §20).
+ * The EF accepts field/ranger JWTs and validates the role before dispatching.
+ * Field callers never touch PII — the EF uses service role internally to
+ * resolve the contact.
+ */
+async function invokeSendNotification(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  payload: {
+    type: 'ncn_raised' | 'np_raised' | 'completion_survey'
+    booking_id: string
+    [key: string]: unknown
+  }
+): Promise<void> {
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+    if (!supabaseUrl) {
+      console.error(
+        '[notifications] NEXT_PUBLIC_SUPABASE_URL not set — skipping send-notification'
+      )
+      return
+    }
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    if (!session?.access_token) {
+      console.error(
+        '[notifications] No session access token — skipping send-notification'
+      )
+      return
+    }
+    const res = await fetch(`${supabaseUrl}/functions/v1/send-notification`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) {
+      const body = await res.text().catch(() => '(no body)')
+      console.error(
+        `[notifications] send-notification returned ${res.status} for ${payload.type} ${payload.booking_id}: ${body}`
+      )
+    }
+  } catch (err) {
+    console.error(
+      `[notifications] Failed to invoke send-notification for ${payload.type} ${payload.booking_id}:`,
+      err instanceof Error ? err.message : String(err)
+    )
+  }
 }
