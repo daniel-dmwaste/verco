@@ -168,8 +168,7 @@ export async function cancelBooking(bookingId: string): Promise<Result<void>> {
   await invokeSendNotification(supabase, {
     type: 'booking_cancelled',
     booking_id: bookingId,
-    // No reason field captured in the admin UI yet — Phase 2 (VER-120)
-    // may add a reason prompt to the cancel dialog.
+    refund_status: refundAmountCents > 0 ? 'processed' : undefined,
   })
 
   return { ok: true, data: undefined }
@@ -198,6 +197,7 @@ async function invokeSendNotification(
     type: 'booking_created' | 'booking_cancelled'
     booking_id: string
     reason?: string
+    refund_status?: 'processed' | 'pending_review'
   }
 ): Promise<void> {
   try {
