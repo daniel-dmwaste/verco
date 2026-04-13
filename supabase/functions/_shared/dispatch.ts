@@ -89,6 +89,20 @@ export interface DispatchDeps {
   defaultFromEmail: string
 }
 
+/**
+ * Notification types that can be safely resumed via the log-id path.
+ * These types only need `booking_id` or have all-optional extra fields.
+ * Types NOT in this set require payload fields not stored in notification_log
+ * (e.g. ncn_raised.reason, completion_survey.survey_token).
+ */
+const RESUMABLE_TYPES: ReadonlySet<NotificationType> = new Set([
+  'booking_created',
+  'booking_cancelled',
+  'payment_reminder',
+  'payment_expired',
+  'np_raised',
+])
+
 // ── Dispatch ───────────────────────────────────────────────────────────────
 
 export async function dispatch(
@@ -121,6 +135,13 @@ export async function dispatch(
         return { ok: true, skipped: true }
       }
 
+      if (!RESUMABLE_TYPES.has(logRow.notification_type)) {
+        const error = `Cannot resume notification type '${logRow.notification_type}' — payload fields are not stored in notification_log. Re-trigger from the original action instead.`
+        await deps.updateLogStatus(logId, 'failed', error)
+        log({ type: logRow.notification_type, booking_id: logRow.booking_id, status: 'failed', error, sendgrid_status: null })
+        return { ok: false, error, log_id: logId }
+      }
+
       const booking = await deps.loadBooking(logRow.booking_id)
       if (!booking) {
         const error = `Booking not found for log row ${logId}: ${logRow.booking_id}`
@@ -135,7 +156,7 @@ export async function dispatch(
         return { ok: false, error, log_id: logId }
       }
 
-      const syntheticPayload = { type: logRow.notification_type, booking_id: logRow.booking_id } as NotificationPayload
+      const syntheticPayload: NotificationPayload = buildResumablePayload(logRow.notification_type, logRow.booking_id)
 
       let rendered: { subject: string; html: string }
       try {
@@ -333,5 +354,24 @@ function renderTemplate(
     }
     case 'completion_survey':
       return renderCompletionSurvey(booking, appUrl, payload.survey_token)
+  }
+}
+
+// ── Resume payload builder ────────────────────────────────────────────────
+
+function buildResumablePayload(type: NotificationType, booking_id: string): NotificationPayload {
+  switch (type) {
+    case 'booking_created':
+      return { type: 'booking_created', booking_id }
+    case 'booking_cancelled':
+      return { type: 'booking_cancelled', booking_id }
+    case 'payment_reminder':
+      return { type: 'payment_reminder', booking_id }
+    case 'payment_expired':
+      return { type: 'payment_expired', booking_id }
+    case 'np_raised':
+      return { type: 'np_raised', booking_id, np_id: '' }
+    default:
+      throw new Error(`Type '${type}' is not resumable — guard should have caught this`)
   }
 }

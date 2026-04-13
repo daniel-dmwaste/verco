@@ -358,6 +358,48 @@ describe('dispatch', () => {
       expect(result).toEqual({ ok: true, skipped: true })
       expect(deps.sendEmailMock).not.toHaveBeenCalled()
     })
+
+    it('rejects resume for ncn_raised — requires payload fields not stored in log', async () => {
+      const booking = makeMockBooking({ id: 'b-ncn-resume' })
+      const deps = createMockDispatchDeps({
+        bookings: { 'b-ncn-resume': booking },
+        queuedLogs: {
+          'log-ncn': {
+            booking_id: 'b-ncn-resume',
+            notification_type: 'ncn_raised',
+            status: 'queued',
+            to_address: 'pending',
+          },
+        },
+      })
+
+      const result = await dispatch(deps, { notification_log_id: 'log-ncn' })
+
+      expect(result).toMatchObject({ ok: false })
+      expect(result.ok === false && result.error).toContain('Cannot resume')
+      expect(deps.sendEmailMock).not.toHaveBeenCalled()
+    })
+
+    it('rejects resume for completion_survey — requires survey_token', async () => {
+      const booking = makeMockBooking({ id: 'b-survey-resume' })
+      const deps = createMockDispatchDeps({
+        bookings: { 'b-survey-resume': booking },
+        queuedLogs: {
+          'log-survey': {
+            booking_id: 'b-survey-resume',
+            notification_type: 'completion_survey',
+            status: 'queued',
+            to_address: 'pending',
+          },
+        },
+      })
+
+      const result = await dispatch(deps, { notification_log_id: 'log-survey' })
+
+      expect(result).toMatchObject({ ok: false })
+      expect(result.ok === false && result.error).toContain('Cannot resume')
+      expect(deps.sendEmailMock).not.toHaveBeenCalled()
+    })
   })
 
   describe('structured logging contract', () => {
