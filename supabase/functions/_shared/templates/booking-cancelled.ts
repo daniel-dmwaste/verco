@@ -59,6 +59,8 @@ function escapeHtml(s: string): string {
 export interface RenderBookingCancelledOptions {
   /** Optional cancellation reason — shown in body if set */
   reason?: string | undefined
+  /** Refund status — controls which refund copy variant appears */
+  refund_status?: 'processed' | 'pending_review' | undefined
 }
 
 export function renderBookingCancelled(
@@ -75,10 +77,12 @@ export function renderBookingCancelled(
     ? `<p style="margin:0 0 16px 0;padding:12px 16px;background:#F8F9FA;border-left:3px solid #8FA5B8;color:#293F52;font-size:14px"><strong>Reason:</strong> ${escapeHtml(options.reason)}</p>`
     : ''
 
-  const refundBlock =
-    refundAmount > 0
-      ? `<p style="margin:0 0 16px 0">A refund of <strong>${formatCurrency(refundAmount)}</strong> has been processed to your original payment method. It should appear within 1–3 business days.</p>`
-      : ''
+  let refundBlock = ''
+  if (refundAmount > 0 && options.refund_status === 'processed') {
+    refundBlock = `<p style="margin:0 0 16px 0">A refund of <strong>${formatCurrency(refundAmount)}</strong> has been processed to your original payment method. It should appear within 1–3 business days.</p>`
+  } else if (refundAmount > 0 && options.refund_status === 'pending_review') {
+    refundBlock = `<p style="margin:0 0 16px 0">Your refund of <strong>${formatCurrency(refundAmount)}</strong> will be reviewed by our team. We'll be in touch once it's processed.</p>`
+  }
 
   const bodyHtml = `
     <p style="margin:0 0 16px 0">Your verge collection booking has been cancelled.</p>

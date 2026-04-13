@@ -30,7 +30,9 @@ describe('renderBookingCancelled', () => {
 
   it('renders a refund notice when the booking had paid extras', () => {
     const booking = makeMockPaidBooking()
-    const { html } = renderBookingCancelled(booking, APP_URL)
+    const { html } = renderBookingCancelled(booking, APP_URL, {
+      refund_status: 'processed',
+    })
     expect(html).toContain('refund of')
     expect(html).toContain('$55.00')
     expect(html).toContain('1–3 business days')
@@ -49,5 +51,33 @@ describe('renderBookingCancelled', () => {
     })
     expect(html).not.toContain('<script>alert(1)</script>')
     expect(html).toContain('&lt;script&gt;')
+  })
+
+  it('renders "pending review" copy when refund_status is pending_review on a paid booking', () => {
+    const booking = makeMockPaidBooking()
+    const { html } = renderBookingCancelled(booking, APP_URL, {
+      refund_status: 'pending_review',
+    })
+    expect(html).toContain('reviewed by our team')
+    expect(html).toContain('$55.00')
+    expect(html).not.toContain('has been processed')
+  })
+
+  it('renders "processed" copy when refund_status is processed on a paid booking', () => {
+    const booking = makeMockPaidBooking()
+    const { html } = renderBookingCancelled(booking, APP_URL, {
+      refund_status: 'processed',
+    })
+    expect(html).toContain('has been processed')
+    expect(html).toContain('$55.00')
+    expect(html).not.toContain('reviewed by our team')
+  })
+
+  it('omits refund copy when paid booking has no refund_status (backwards compat)', () => {
+    const booking = makeMockPaidBooking()
+    const { html } = renderBookingCancelled(booking, APP_URL)
+    expect(html).not.toContain('refund of')
+    expect(html).not.toContain('reviewed by our team')
+    expect(html).not.toContain('has been processed')
   })
 })
