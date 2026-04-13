@@ -1,6 +1,6 @@
-import type { BookingForDispatch } from './types'
+import type { BookingForDispatch, RenderedEmail } from './types'
 import { renderEmailLayout } from './_layout'
-import type { RenderedEmail } from './booking-created'
+import { formatCollectionDate, escapeHtml } from './template-helpers'
 
 /**
  * `payment_expired` template — sent when a `Pending Payment` booking is
@@ -15,26 +15,6 @@ import type { RenderedEmail } from './booking-created'
  * `supabase/functions/_shared/templates/payment-expired.ts` — kept in sync
  * by the template-sync CI job.
  */
-
-function formatCollectionDate(iso: string): string {
-  const date = new Date(`${iso}T00:00:00+08:00`)
-  return date.toLocaleDateString('en-AU', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'Australia/Perth',
-  })
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
 
 export function renderPaymentExpired(
   booking: BookingForDispatch,

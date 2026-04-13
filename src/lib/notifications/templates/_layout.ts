@@ -1,4 +1,5 @@
 import type { ClientBranding } from './types'
+import { escapeHtml } from './template-helpers'
 
 /**
  * Shared HTML email wrapper.
@@ -54,19 +55,6 @@ function normaliseHex(colour: string | null): string {
   const trimmed = colour.trim()
   if (!trimmed) return DEFAULT_PRIMARY_COLOUR
   return trimmed.startsWith('#') ? trimmed : `#${trimmed}`
-}
-
-/**
- * HTML-escape a value for safe interpolation into attribute or text content.
- * Use for tenant name, heading, preheader, CTA text, and URLs.
- */
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
 }
 
 export function renderEmailLayout(params: RenderEmailLayoutParams): string {

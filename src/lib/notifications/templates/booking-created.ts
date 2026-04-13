@@ -1,5 +1,6 @@
-import type { BookingForDispatch } from './types'
+import type { BookingForDispatch, RenderedEmail } from './types'
 import { renderEmailLayout } from './_layout'
+import { formatCurrency, formatCollectionDate, escapeHtml } from './template-helpers'
 
 /**
  * `booking_created` template — sent on transition to Submitted.
@@ -27,40 +28,6 @@ import { renderEmailLayout } from './_layout'
  * `supabase/functions/_shared/templates/booking-created.ts` — kept in sync
  * by the template-sync CI job.
  */
-
-export interface RenderedEmail {
-  subject: string
-  html: string
-}
-
-function formatCurrency(cents: number): string {
-  const dollars = cents / 100
-  return dollars.toLocaleString('en-AU', {
-    style: 'currency',
-    currency: 'AUD',
-  })
-}
-
-function formatCollectionDate(iso: string): string {
-  // Treat as date-only in Perth tz — render as "Wed, 15 Apr 2026"
-  const date = new Date(`${iso}T00:00:00+08:00`)
-  return date.toLocaleDateString('en-AU', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'Australia/Perth',
-  })
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
 
 export function renderBookingCreated(
   booking: BookingForDispatch,

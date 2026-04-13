@@ -1,6 +1,6 @@
-import type { BookingForDispatch } from './types'
+import type { BookingForDispatch, RenderedEmail } from './types'
 import { renderEmailLayout } from './_layout'
-import type { RenderedEmail } from './booking-created'
+import { formatCollectionDate, escapeHtml } from './template-helpers'
 
 /**
  * `np_raised` template — sent when a field user records a Nothing Presented notice.
@@ -32,27 +32,6 @@ export interface RenderNpRaisedOptions {
   notes?: string | undefined
   photos?: string[] | undefined
   contractor_fault?: boolean | undefined
-}
-
-function formatCollectionDate(iso: string): string {
-  // Treat as date-only in Perth tz — render as "Wed, 15 Apr 2026"
-  const date = new Date(`${iso}T00:00:00+08:00`)
-  return date.toLocaleDateString('en-AU', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'Australia/Perth',
-  })
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
 }
 
 export function renderNpRaised(

@@ -1,6 +1,6 @@
-import type { BookingForDispatch } from './types'
+import type { BookingForDispatch, RenderedEmail } from './types'
 import { renderEmailLayout } from './_layout'
-import type { RenderedEmail } from './booking-created'
+import { formatCurrency, formatCollectionDate, escapeHtml } from './template-helpers'
 
 /**
  * `booking_cancelled` template — sent when a user or staff member cancels.
@@ -27,34 +27,6 @@ import type { RenderedEmail } from './booking-created'
  * refund mention. Phase 2 (VER-120) adds the residents' and refund-triggered
  * variants if additional template branches are needed.
  */
-
-function formatCurrency(cents: number): string {
-  const dollars = cents / 100
-  return dollars.toLocaleString('en-AU', {
-    style: 'currency',
-    currency: 'AUD',
-  })
-}
-
-function formatCollectionDate(iso: string): string {
-  const date = new Date(`${iso}T00:00:00+08:00`)
-  return date.toLocaleDateString('en-AU', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'Australia/Perth',
-  })
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
 
 export interface RenderBookingCancelledOptions {
   /** Optional cancellation reason — shown in body if set */

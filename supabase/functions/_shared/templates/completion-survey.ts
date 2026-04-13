@@ -1,6 +1,6 @@
-import type { BookingForDispatch } from './types.ts'
+import type { BookingForDispatch, RenderedEmail } from './types.ts'
 import { renderEmailLayout } from './_layout.ts'
-import type { RenderedEmail } from './booking-created.ts'
+import { formatCollectionDate, escapeHtml } from './template-helpers.ts'
 
 /**
  * `completion_survey` template — sent when a field user marks a booking as Complete.
@@ -25,26 +25,6 @@ import type { RenderedEmail } from './booking-created.ts'
  *
  * No reason, notes, photos, or dispute window — just a friendly "how was it?"
  */
-
-function formatCollectionDate(iso: string): string {
-  const date = new Date(`${iso}T00:00:00+08:00`)
-  return date.toLocaleDateString('en-AU', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'Australia/Perth',
-  })
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
 
 export function renderCompletionSurvey(
   booking: BookingForDispatch,

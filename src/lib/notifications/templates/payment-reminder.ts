@@ -1,20 +1,6 @@
-import type { BookingForDispatch } from './types'
+import type { BookingForDispatch, RenderedEmail } from './types'
 import { renderEmailLayout } from './_layout'
-import type { RenderedEmail } from './booking-created'
-
-function formatCurrency(cents: number): string {
-  const dollars = cents / 100
-  return dollars.toLocaleString('en-AU', { style: 'currency', currency: 'AUD' })
-}
-
-function formatCollectionDate(iso: string): string {
-  const date = new Date(`${iso}T00:00:00+08:00`)
-  return date.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Australia/Perth' })
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
-}
+import { formatCurrency, formatCollectionDate, escapeHtml } from './template-helpers'
 
 export function renderPaymentReminder(booking: BookingForDispatch, appUrl: string): RenderedEmail {
   const ref = booking.ref

@@ -171,3 +171,8 @@ export interface NotificationLogRow {
   status: NotificationLogStatus
   error_message?: string
 }
+
+export interface RenderedEmail {
+  subject: string
+  html: string
+}
