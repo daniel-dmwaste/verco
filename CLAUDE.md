@@ -372,12 +372,6 @@ All theme config in `@theme inline` block in `globals.css` (no `tailwind.config.
 ### Booking wizard layout
 `app/(public)/book/layout.tsx` wraps all `/book/*` pages with max-width + padding via inline styles (Tailwind classes were not rendering reliably). Individual step forms use `flex flex-col` only — no `min-h-screen` or `bg-*` (layout handles those).
 
-### Mobile number validation
-AU mobiles only. `normaliseAuMobile()` in `lib/booking/schemas.ts` handles `04XX`/`+614XX`/`614XX` → E.164 `+614XXXXXXXX`.
-
-### Edge Function tsconfig exclusion
-`supabase/functions/` is excluded from `tsconfig.json` — Deno imports conflict with Node/Next.js config.
-
 ### Admin page pattern
 List pages: `<Suspense><Client /></Suspense>`. Client uses `useQuery` + browser Supabase. Header: `border-b border-gray-100 bg-white px-7 pb-5 pt-6`. RLS handles tenant scoping.
 
@@ -401,3 +395,6 @@ Public/field pages use CSS variables (`--brand`, `--brand-accent` + derived `-li
 
 ### Booking wizard state — URL params are the source of truth
 Every wizard step carries ALL params through back/forward nav via `carryParams`. When adding a param, update all steps.
+
+### EFs that access PII accept dual auth (per §20 Red Line #3)
+Server actions MUST NOT use the service role key. EFs needing PII (e.g. `send-notification`) accept EITHER a service role bearer (EF→EF callers) OR a valid user JWT whose `current_user_role()` is in a permitted set. Internal loads always use service role inside the EF — the user's role gates the TRIGGER, not the data access.

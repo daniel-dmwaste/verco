@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { invokeSendNotification } from '@/lib/notifications/invoke'
 
 type Result<T, E = string> =
   | { ok: true; data: T }
@@ -22,7 +23,7 @@ export async function cancelBooking(bookingId: string): Promise<Result<void>> {
   const { data: booking, error: fetchError } = await supabase
     .from('booking')
     .select(
-      'id, status, booking_item(collection_date!inner(date))'
+      'id, status, contact_id, client_id, booking_item(unit_price_cents, no_services, is_extra, collection_date!inner(date))'
     )
     .eq('id', bookingId)
     .single()
@@ -42,6 +43,9 @@ export async function cancelBooking(bookingId: string): Promise<Result<void>> {
 
   // Check cutoff: 3:30pm AWST the day prior to collection
   const items = booking.booking_item as Array<{
+    unit_price_cents: number
+    no_services: number
+    is_extra: boolean
     collection_date: { date: string }
   }>
   if (items.length > 0) {
@@ -78,6 +82,40 @@ export async function cancelBooking(bookingId: string): Promise<Result<void>> {
   if (updateError) {
     return { ok: false, error: updateError.message }
   }
+
+  // If booking has paid extras, create a pending refund_request for admin review
+  const paidItems = items.filter((i) => i.is_extra && i.unit_price_cents > 0)
+  const refundAmountCents = paidItems.reduce(
+    (sum, i) => sum + i.unit_price_cents * i.no_services,
+    0
+  )
+
+  if (refundAmountCents > 0 && booking.contact_id && booking.client_id) {
+    const { error: refundInsertError } = await supabase
+      .from('refund_request')
+      .insert({
+        booking_id: booking.id,
+        contact_id: booking.contact_id,
+        client_id: booking.client_id,
+        amount_cents: refundAmountCents,
+        reason: 'Booking cancelled by resident',
+        status: 'Pending',
+      })
+
+    if (refundInsertError) {
+      console.error(
+        'Failed to create refund_request for resident-cancelled booking:',
+        refundInsertError.message
+      )
+    }
+  }
+
+  // Fire booking_cancelled notification — fire-and-forget
+  await invokeSendNotification(supabase, {
+    type: 'booking_cancelled',
+    booking_id: bookingId,
+    refund_status: refundAmountCents > 0 ? 'pending_review' : undefined,
+  })
 
   return { ok: true, data: undefined }
 }

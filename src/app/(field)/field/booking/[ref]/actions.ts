@@ -2,6 +2,7 @@
 
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { invokeSendNotification } from '@/lib/notifications/invoke'
 import type { Database } from '@/lib/supabase/types'
 
 type NcnReason = Database['public']['Enums']['ncn_reason']
@@ -76,6 +77,32 @@ export async function completeBooking(bookingId: string): Promise<Result<void>> 
     .eq('id', bookingId)
 
   if (error) return { ok: false, error: error.message }
+
+  // Create survey + fire completion notification
+  const headerStore = await headers()
+  const clientId = headerStore.get('x-client-id')
+
+  if (clientId) {
+    const surveyToken = crypto.randomUUID()
+    const { error: surveyError } = await supabase
+      .from('booking_survey')
+      .insert({
+        booking_id: bookingId,
+        client_id: clientId,
+        token: surveyToken,
+      })
+
+    if (surveyError) {
+      console.error('Failed to create booking_survey:', surveyError.message)
+    } else {
+      await invokeSendNotification(supabase, {
+        type: 'completion_survey',
+        booking_id: bookingId,
+        survey_token: surveyToken,
+      })
+    }
+  }
+
   return { ok: true, data: undefined }
 }
 
@@ -113,7 +140,7 @@ export async function raiseNcn(
   } = await supabase.auth.getUser()
 
   // Insert non_conformance_notice
-  const { error: ncnError } = await supabase
+  const { data: ncnRow, error: ncnError } = await supabase
     .from('non_conformance_notice')
     .insert({
       booking_id: bookingId,
@@ -125,6 +152,8 @@ export async function raiseNcn(
       reported_at: new Date().toISOString(),
       status: 'Issued',
     })
+    .select('id')
+    .single()
 
   if (ncnError) return { ok: false, error: ncnError.message }
 
@@ -135,6 +164,17 @@ export async function raiseNcn(
     .eq('id', bookingId)
 
   if (updateError) return { ok: false, error: updateError.message }
+
+  // Fire NCN notification — fire-and-forget
+  await invokeSendNotification(supabase, {
+    type: 'ncn_raised',
+    booking_id: bookingId,
+    ncn_id: ncnRow?.id ?? '',
+    reason,
+    notes: notes || undefined,
+    photos: photoUrls.length > 0 ? photoUrls : undefined,
+  })
+
   return { ok: true, data: undefined }
 }
 
@@ -171,7 +211,7 @@ export async function raiseNothingPresented(
     data: { user },
   } = await supabase.auth.getUser()
 
-  const { error: npError } = await supabase
+  const { data: npRow, error: npError } = await supabase
     .from('nothing_presented')
     .insert({
       booking_id: bookingId,
@@ -183,6 +223,8 @@ export async function raiseNothingPresented(
       reported_at: new Date().toISOString(),
       status: 'Issued',
     })
+    .select('id')
+    .single()
 
   if (npError) return { ok: false, error: npError.message }
 
@@ -192,6 +234,17 @@ export async function raiseNothingPresented(
     .eq('id', bookingId)
 
   if (updateError) return { ok: false, error: updateError.message }
+
+  // Fire NP notification — fire-and-forget
+  await invokeSendNotification(supabase, {
+    type: 'np_raised',
+    booking_id: bookingId,
+    np_id: npRow?.id ?? '',
+    notes: notes || undefined,
+    photos: photoUrls.length > 0 ? photoUrls : undefined,
+    contractor_fault: dmFault,
+  })
+
   return { ok: true, data: undefined }
 }
 

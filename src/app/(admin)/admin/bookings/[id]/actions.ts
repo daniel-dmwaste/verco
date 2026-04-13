@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { invokeSendNotification } from '@/lib/notifications/invoke'
 
 type Result<T, E = string> =
   | { ok: true; data: T }
@@ -161,6 +162,15 @@ export async function cancelBooking(bookingId: string): Promise<Result<void>> {
       console.error('Failed to create refund_request for cancelled booking:', refundInsertError?.message)
     }
   }
+
+  // Fire booking_cancelled notification. Fire-and-forget — failure never
+  // reverts the cancel. Uses direct fetch() per CLAUDE.md §11 (supabase
+  // .functions.invoke is unreliable in SSR).
+  await invokeSendNotification(supabase, {
+    type: 'booking_cancelled',
+    booking_id: bookingId,
+    refund_status: refundAmountCents > 0 ? 'processed' : undefined,
+  })
 
   return { ok: true, data: undefined }
 }

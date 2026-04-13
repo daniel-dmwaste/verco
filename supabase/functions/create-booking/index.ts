@@ -3,6 +3,40 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.0'
 import { z } from 'https://esm.sh/zod@3.23.8'
 import { calculatePrice } from '../_shared/pricing.ts'
 
+/**
+ * Fire-and-forget POST to the send-notification Edge Function. Returns
+ * nothing — failures are logged to the Supabase console but never thrown
+ * back to the caller, so the booking creation always completes.
+ */
+async function invokeSendNotification(payload: {
+  type: 'booking_created'
+  booking_id: string
+}): Promise<void> {
+  try {
+    const url = `${Deno.env.get('SUPABASE_URL') ?? ''}/functions/v1/send-notification`
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${serviceKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) {
+      const body = await res.text().catch(() => '(no body)')
+      console.error(
+        `[notifications] send-notification returned ${res.status} for ${payload.type} ${payload.booking_id}: ${body}`
+      )
+    }
+  } catch (err) {
+    console.error(
+      `[notifications] Failed to invoke send-notification for ${payload.type} ${payload.booking_id}:`,
+      err instanceof Error ? err.message : String(err)
+    )
+  }
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -260,7 +294,18 @@ serve(async (req) => {
     const bookingId = rpcResult.booking_id
     const ref = rpcResult.ref
 
-    // ── 11. Return result ────────────────────────────────────────────────────
+    // ── 11. Fire booking_created notification (free path only) ──────────────
+    // Paid bookings land in 'Pending Payment' and get notified via
+    // stripe-webhook on the Pending Payment → Submitted transition.
+    // Fire-and-forget — failure never breaks the booking creation.
+    if (!requiresPayment) {
+      void invokeSendNotification({
+        type: 'booking_created',
+        booking_id: bookingId,
+      })
+    }
+
+    // ── 12. Return result ────────────────────────────────────────────────────
 
     return jsonResponse({
       booking_id: bookingId,

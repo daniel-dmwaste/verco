@@ -2,6 +2,41 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.0'
 import Stripe from 'https://esm.sh/stripe@17.7.0?target=deno'
 
+/**
+ * Fire-and-forget POST to the send-notification Edge Function. Mirrors the
+ * helper in create-booking/index.ts. Failures are logged but never thrown
+ * back to the webhook — the Stripe event has already been processed and
+ * the booking status has already flipped.
+ */
+async function invokeSendNotification(payload: {
+  type: 'booking_created'
+  booking_id: string
+}): Promise<void> {
+  try {
+    const url = `${Deno.env.get('SUPABASE_URL') ?? ''}/functions/v1/send-notification`
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${serviceKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) {
+      const body = await res.text().catch(() => '(no body)')
+      console.error(
+        `[notifications] send-notification returned ${res.status} for ${payload.type} ${payload.booking_id}: ${body}`
+      )
+    }
+  } catch (err) {
+    console.error(
+      `[notifications] Failed to invoke send-notification for ${payload.type} ${payload.booking_id}:`,
+      err instanceof Error ? err.message : String(err)
+    )
+  }
+}
+
 serve(async (req) => {
   // Webhook only accepts POST
   if (req.method !== 'POST') {
@@ -143,6 +178,14 @@ async function handleCheckoutCompleted(
   }
 
   console.log(`Checkout completed: booking_payment ${payment.id}, booking ${payment.booking_id} → Submitted`)
+
+  // Fire booking_created notification on the paid path. Mirrors the
+  // free-path call in create-booking/index.ts. Fire-and-forget — failure
+  // never reverts the Submitted transition.
+  void invokeSendNotification({
+    type: 'booking_created',
+    booking_id: payment.booking_id,
+  })
 }
 
 // ── charge.refunded ──────────────────────────────────────────────────────────
