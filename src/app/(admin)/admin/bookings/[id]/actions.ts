@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { invokeSendNotification } from '@/lib/notifications/invoke'
 
 type Result<T, E = string> =
   | { ok: true; data: T }
@@ -172,69 +173,6 @@ export async function cancelBooking(bookingId: string): Promise<Result<void>> {
   })
 
   return { ok: true, data: undefined }
-}
-
-/**
- * Fire-and-forget POST to the send-notification Edge Function.
- *
- * Uses the **user's session access token** (NOT the service role key — that
- * would violate CLAUDE.md §20 Red Line #3). The EF accepts two auth modes:
- *   1. Service role bearer (EF→EF calls from create-booking, stripe-webhook, crons)
- *   2. Valid user JWT (server-action→EF calls like this one) — the EF then
- *      verifies the user's role is in the permitted set before dispatching
- *
- * Internal PII access inside the EF uses service role regardless of the
- * caller — the triggering user's role authorises the send, but the actual
- * contact lookup is elevated-privilege work that happens inside the EF.
- *
- * Fire-and-forget: the caller operation (cancelBooking, etc.) has already
- * committed before this runs, so notification failure never breaks the
- * user-facing flow.
- */
-async function invokeSendNotification(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  payload: {
-    type: 'booking_created' | 'booking_cancelled'
-    booking_id: string
-    reason?: string
-    refund_status?: 'processed' | 'pending_review'
-  }
-): Promise<void> {
-  try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
-    if (!supabaseUrl) {
-      console.error(
-        '[notifications] NEXT_PUBLIC_SUPABASE_URL not set — skipping send-notification'
-      )
-      return
-    }
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.access_token) {
-      console.error(
-        '[notifications] No session access token — skipping send-notification'
-      )
-      return
-    }
-    const res = await fetch(`${supabaseUrl}/functions/v1/send-notification`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    })
-    if (!res.ok) {
-      const body = await res.text().catch(() => '(no body)')
-      console.error(
-        `[notifications] send-notification returned ${res.status} for ${payload.type} ${payload.booking_id}: ${body}`
-      )
-    }
-  } catch (err) {
-    console.error(
-      `[notifications] Failed to invoke send-notification for ${payload.type} ${payload.booking_id}:`,
-      err instanceof Error ? err.message : String(err)
-    )
-  }
 }
 
 export async function updateContact(
