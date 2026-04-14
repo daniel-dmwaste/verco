@@ -1,0 +1,186 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# One deploy in flight at a time. Later pushes queue behind any in-progress run
+# so we never race the Coolify webhook or EF deploy loop.
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+env:
+  SUPABASE_PROJECT_REF: tfddjmplcizfirxqhotv
+  REGISTRY: ghcr.io
+
+jobs:
+  # Reuse the full CI gate (build, test, typecheck, types-check, template-sync)
+  # via workflow_call. Deploy only proceeds if CI is green.
+  ci:
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
+  # ---------------------------------------------------------------
+  # Build + push Docker image to GHCR
+  # ---------------------------------------------------------------
+  docker:
+    name: Build & push image
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image_tag: ${{ steps.meta.outputs.image_tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # CLAUDE.md §16 red line #3: SUPABASE_SERVICE_ROLE_KEY must never appear
+      # in Next.js source. Enforce at build time so we fail loud if anyone
+      # imports it by mistake.
+      - name: Guard — service role key must not appear in Next.js source
+        run: |
+          if grep -rn "SUPABASE_SERVICE_ROLE_KEY" src/ 2>/dev/null; then
+            echo "::error::SUPABASE_SERVICE_ROLE_KEY referenced in Next.js source (CLAUDE.md §16 red line #3)"
+            exit 1
+          fi
+          echo "OK — no service role references in src/"
+
+      - name: Compute image tag
+        id: meta
+        env:
+          REPO: ${{ github.repository }}
+          GIT_SHA: ${{ github.sha }}
+        run: |
+          lower=$(echo "$REPO" | tr '[:upper:]' '[:lower:]')
+          echo "image_tag=${REGISTRY}/${lower}:${GIT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "image_latest=${REGISTRY}/${lower}:latest" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image_tag }}
+            ${{ steps.meta.outputs.image_latest }}
+          build-args: |
+            NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+            GIT_SHA=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ---------------------------------------------------------------
+  # Deploy all Edge Functions with --no-verify-jwt
+  # Closes VER-156: the guard step at the end asserts verify_jwt=false
+  # for every function present in supabase/functions/.
+  # ---------------------------------------------------------------
+  edge-functions:
+    name: Deploy Edge Functions
+    needs: ci
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '9'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Deploy every function with --no-verify-jwt
+        run: |
+          set -euo pipefail
+          for dir in supabase/functions/*/; do
+            name=$(basename "$dir")
+            if [ "$name" = "_shared" ]; then
+              continue
+            fi
+            echo "::group::Deploying $name"
+            pnpm supabase functions deploy "$name" \
+              --project-ref "$SUPABASE_PROJECT_REF" \
+              --no-verify-jwt
+            echo "::endgroup::"
+          done
+
+      # VER-156 guard: after deploy, query the Supabase management API and
+      # assert every function we ship has verify_jwt=false. Catches drift
+      # from manual deploys or any future accidental --verify-jwt invocation.
+      - name: Assert all functions have verify_jwt=false
+        run: |
+          set -euo pipefail
+          EXPECTED=$(ls -d supabase/functions/*/ | xargs -n1 basename | grep -v '^_shared$')
+          RESPONSE=$(curl -fsS \
+            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/functions")
+          missing=0
+          for fn in $EXPECTED; do
+            verify=$(echo "$RESPONSE" | jq -r --arg slug "$fn" '.[] | select(.slug == $slug) | .verify_jwt')
+            if [ "$verify" != "false" ]; then
+              echo "::error::Function '$fn' has verify_jwt=${verify:-<not deployed>} (expected false). See VER-156."
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+          echo "All deployed functions have verify_jwt=false."
+
+  # ---------------------------------------------------------------
+  # Trigger Coolify to pull the new image, then verify the deploy
+  # by polling /api/health and matching the returned SHA.
+  # ---------------------------------------------------------------
+  coolify:
+    name: Trigger Coolify & verify
+    needs: [docker, edge-functions]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Coolify webhook
+        env:
+          WEBHOOK_URL: ${{ secrets.COOLIFY_WEBHOOK_URL }}
+          WEBHOOK_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsS -X POST \
+            -H "Authorization: Bearer ${WEBHOOK_TOKEN}" \
+            "${WEBHOOK_URL}"
+          echo "Coolify webhook triggered."
+
+      - name: Poll /api/health until SHA matches (max ~3 min)
+        env:
+          HEALTH_URL: ${{ secrets.PROD_HEALTH_URL }}
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          deadline=$(( $(date +%s) + 180 ))
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            body=$(curl -fsS "$HEALTH_URL" || echo '{}')
+            status=$(echo "$body" | jq -r '.status // "unknown"')
+            sha=$(echo "$body" | jq -r '.sha // "unknown"')
+            echo "health: status=$status sha=$sha (expect $EXPECTED_SHA)"
+            if [ "$status" = "ok" ] && [ "$sha" = "$EXPECTED_SHA" ]; then
+              echo "Deploy verified."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::Deploy did not settle to expected SHA within 3 min."
+          exit 1
