@@ -57,6 +57,7 @@ export default async function FieldLayout({
     <div
       style={{
         '--brand': primaryColour,
+        '--brand-foreground': '#FFFFFF',
         '--brand-light': `color-mix(in srgb, ${primaryColour} 8%, white)`,
         '--brand-hover': `color-mix(in srgb, ${primaryColour} 85%, black)`,
         '--brand-accent': accentColour,

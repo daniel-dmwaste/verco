@@ -730,7 +730,10 @@ export function ConfirmForm() {
 
         {/* Total block */}
         <div className="flex items-center justify-between rounded-xl bg-[var(--brand)] px-5 py-4">
-          <span className="font-[family-name:var(--font-heading)] text-base font-semibold text-white">
+          <span
+            className="font-[family-name:var(--font-heading)] text-base font-semibold"
+            style={{ color: '#FFFFFF' }}
+          >
             Total
           </span>
           <span
@@ -739,7 +742,7 @@ export function ConfirmForm() {
           >
             {totalCents > 0
               ? `$${(totalCents / 100).toFixed(2)}`
-              : 'Free'}
+              : 'Included'}
           </span>
         </div>
 

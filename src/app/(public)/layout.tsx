@@ -69,6 +69,7 @@ export default async function PublicLayout({
       className="min-h-screen bg-gray-50"
       style={{
         '--brand': primaryColour,
+        '--brand-foreground': '#FFFFFF',
         '--brand-light': `color-mix(in srgb, ${primaryColour} 8%, white)`,
         '--brand-hover': `color-mix(in srgb, ${primaryColour} 85%, black)`,
         '--brand-accent': accentColour,

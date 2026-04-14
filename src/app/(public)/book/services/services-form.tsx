@@ -363,7 +363,7 @@ export function ServicesForm() {
                   <button
                     type="button"
                     onClick={() => updateQty(rule.service_id, 1)}
-                    className="flex size-7 items-center justify-center rounded-full bg-[var(--brand)] text-lg font-semibold text-white"
+                    className="flex size-7 items-center justify-center rounded-full bg-[var(--brand)] text-lg font-semibold text-[var(--brand-foreground)]"
                   >
                     +
                   </button>

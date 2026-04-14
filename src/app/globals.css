@@ -95,6 +95,7 @@
 
   /* White-label brand colours — overridden per-tenant in layout.tsx */
   --brand: #293F52;
+  --brand-foreground: #FFFFFF;
   --brand-light: color-mix(in srgb, #293F52 8%, white);
   --brand-hover: color-mix(in srgb, #293F52 85%, black);
   --brand-accent: #00E47C;
