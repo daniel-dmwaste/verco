@@ -38,15 +38,22 @@ jobs:
       - uses: actions/checkout@v4
 
       # CLAUDE.md §16 red line #3: SUPABASE_SERVICE_ROLE_KEY must never appear
-      # in Next.js source. Enforce at build time so we fail loud if anyone
-      # imports it by mistake.
-      - name: Guard — service role key must not appear in Next.js source
+      # in Next.js production source. Test files are excluded — RLS tests need
+      # the service role key to set up fixtures and prove policies work. Tests
+      # don't ship with the Docker image (.dockerignore + Next.js build tracer).
+      - name: Guard — service role key must not appear in Next.js production source
         run: |
-          if grep -rn "SUPABASE_SERVICE_ROLE_KEY" src/ 2>/dev/null; then
-            echo "::error::SUPABASE_SERVICE_ROLE_KEY referenced in Next.js source (CLAUDE.md §16 red line #3)"
+          if grep -rn \
+              --exclude-dir=__tests__ \
+              --exclude='*.test.ts' \
+              --exclude='*.test.tsx' \
+              --exclude='*.spec.ts' \
+              --exclude='*.spec.tsx' \
+              "SUPABASE_SERVICE_ROLE_KEY" src/ 2>/dev/null; then
+            echo "::error::SUPABASE_SERVICE_ROLE_KEY referenced in Next.js production source (CLAUDE.md §16 red line #3)"
             exit 1
           fi
-          echo "OK — no service role references in src/"
+          echo "OK — no service role references in production src/"
 
       - name: Compute image tag
         id: meta
