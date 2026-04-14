@@ -14,6 +14,14 @@ const ADMIN_ROLES: AppRole[] = [
 const FIELD_ROLES: AppRole[] = ['field', 'ranger']
 
 export async function proxy(request: NextRequest) {
+  // Healthcheck bypass: Docker HEALTHCHECK hits /api/health from the container's
+  // internal network, so there is no tenant-resolving hostname to match. Skip
+  // the tenant lookup, auth refresh, and route guard so the probe stays cheap
+  // and immune to tenant-config drift.
+  if (request.nextUrl.pathname === '/api/health') {
+    return NextResponse.next()
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient<Database>(

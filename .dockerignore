@@ -1,0 +1,41 @@
+# Secrets and local env
+.env
+.env.*
+!.env.example
+
+# Build outputs and deps (rebuilt inside image)
+node_modules
+.next
+out
+dist
+coverage
+playwright-report
+playwright/.cache
+test-results
+
+# Git + CI + editor
+.git
+.gitignore
+.github
+.vscode
+.idea
+.DS_Store
+
+# Not shipped in the Next.js container.
+# Edge Functions run on Supabase and are deployed separately.
+supabase/functions
+supabase/.temp
+
+# Tests and docs don't belong in a production image
+tests
+e2e
+docs
+*.md
+!README.md
+
+# Runtime artefacts
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
