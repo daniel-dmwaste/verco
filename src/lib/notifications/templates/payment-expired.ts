@@ -11,9 +11,8 @@ import { formatCollectionDate, escapeHtml } from './template-helpers'
  *
  * ## Pure function
  *
- * Takes booking + appUrl, returns `{ subject, html }`. Mirrored to
- * `supabase/functions/_shared/templates/payment-expired.ts` — kept in sync
- * by the template-sync CI job.
+ * Takes booking + appUrl, returns `{ subject, html }`. Kept in sync with its
+ * Node/Deno mirror by the template-sync CI job.
  */
 
 export function renderPaymentExpired(

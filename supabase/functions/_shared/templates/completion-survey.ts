@@ -19,9 +19,8 @@ import { formatCollectionDate, escapeHtml } from './template-helpers.ts'
  *
  * ## Pure function
  *
- * Takes booking + appUrl + surveyToken, returns `{ subject, html }`. Mirrored
- * from `src/lib/notifications/templates/completion-survey.ts` — kept in sync
- * by the template-sync CI job.
+ * Takes booking + appUrl + surveyToken, returns `{ subject, html }`. Kept in
+ * sync with its Node/Deno mirror by the template-sync CI job.
  *
  * No reason, notes, photos, or dispute window — just a friendly "how was it?"
  */

@@ -23,9 +23,8 @@ import { formatCollectionDate, escapeHtml } from './template-helpers.ts'
  *
  * ## Pure function
  *
- * Takes booking + appUrl + options, returns `{ subject, html }`. Mirrored from
- * `src/lib/notifications/templates/np-raised.ts` — kept in sync by the
- * template-sync CI job.
+ * Takes booking + appUrl + options, returns `{ subject, html }`. Kept in sync
+ * with its Node/Deno mirror by the template-sync CI job.
  */
 
 export interface RenderNpRaisedOptions {
