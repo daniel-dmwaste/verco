@@ -369,9 +369,6 @@ Supabase returns `numeric` columns as strings. Coerce with `Number()` before pas
 ### Tailwind CSS 4 configuration
 All theme config in `@theme inline` block in `globals.css` (no `tailwind.config.ts`). Font families: `--font-sans` (DM Sans), `--font-heading` (Poppins) via `font-[family-name:var(--font-heading)]`.
 
-### Booking wizard layout
-`app/(public)/book/layout.tsx` wraps all `/book/*` pages with max-width + padding via inline styles (Tailwind classes were not rendering reliably). Individual step forms use `flex flex-col` only — no `min-h-screen` or `bg-*` (layout handles those).
-
 ### Admin page pattern
 List pages: `<Suspense><Client /></Suspense>`. Client uses `useQuery` + browser Supabase. Header: `border-b border-gray-100 bg-white px-7 pb-5 pt-6`. RLS handles tenant scoping.
 
@@ -384,8 +381,8 @@ Public pages: `<main className="mx-auto w-full max-w-5xl px-6 py-8">` at server 
 ### RLS on new columns — check UPDATE policies exist
 Adding a column doesn't grant UPDATE. If the table lacks an UPDATE policy, writes silently fail. Check `pg_policies` and add if missing.
 
-### White-label colours — use `var(--brand)` not hardcoded hex
-Public/field pages use CSS variables (`--brand`, `--brand-accent` + derived `-light`/`-hover`/`-dark`). Never hardcode `#293F52`/`#00E47C` in public/field — admin pages are exempt.
+### White-label colours — use `var(--brand)` + `var(--brand-foreground)`, not hardcoded hex
+Public/field pages use CSS vars (`--brand`, `--brand-accent`, `--brand-foreground` + derived `-light`/`-hover`/`-dark`). Never hardcode `#293F52`/`#00E47C` in public/field — admin pages exempt. `text-white` on brand backgrounds can silently fail under Tailwind v4 + Turbopack — use `--brand-foreground` (defaults `#FFFFFF`) with an inline `style={{ color }}` fallback; `VercoButton` primary variant does this automatically.
 
 ### Typography — use semantic tokens, not arbitrary px
 `text-2xs`(10), `text-body-sm`(13), `text-body`(15), `text-subtitle`(17), `text-title`(22), `text-display`(28). Exception: `text-[11px]` has no token.
@@ -398,3 +395,6 @@ Server actions MUST NOT use the service role key. EFs needing PII (e.g. `send-no
 
 ### Notification module conventions
 Shared helpers in `templates/template-helpers.ts` — never duplicate. `invokeSendNotification` in `src/lib/notifications/invoke.ts` — never create local copies. Resume-by-log-id only works for `RESUMABLE_TYPES` in `dispatch.ts` — `ncn_raised`/`completion_survey` cannot be retried via log_id.
+
+### `NEXT_PUBLIC_*` vars are baked at build time, not runtime
+These are inlined into the JS bundle during `next build` via Docker build-args (see `deploy.yml`). Setting them in Coolify's runtime env panel is a no-op. When adding a new `NEXT_PUBLIC_*`: document in `.env.example`, add to GitHub Actions secrets, wire as a build-arg in `deploy.yml`'s docker job, and pass to `ENV` in the Dockerfile builder stage.
