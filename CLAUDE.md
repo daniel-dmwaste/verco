@@ -225,6 +225,7 @@ All Edge Functions live in `supabase/functions/`. Each function is a single `ind
 - **Service role** only for: `nightly-sync-to-dm-ops`, `stripe-webhook`, `audit_log` writes, batch admin ops — document why with a comment
 - **Error handling** — catch blocks must return `err.message`, not generic strings. Include `rpcError.message` on RPC failures
 - **Calling from Next.js** — use direct `fetch()` with explicit URL/headers, not `supabase.functions.invoke()` (unreliable in SSR)
+- **Cron EFs** — return HTTP 500 when any per-row work fails (pg_cron only sees HTTP status; a 200 hides partial failures). Wrap `cron.schedule` migrations in `DO $$ IF EXISTS cron.unschedule $$ END` so they can be re-applied
 
 ---
 
@@ -366,17 +367,14 @@ Any client component using `useSearchParams()` must be wrapped in `<Suspense>`.
 ### Postgres numeric → JavaScript number
 Supabase returns `numeric` columns as strings. Coerce with `Number()` before passing to components (e.g., Leaflet maps).
 
-### Tailwind CSS 4 configuration
-All theme config in `@theme inline` block in `globals.css` (no `tailwind.config.ts`). Font families: `--font-sans` (DM Sans), `--font-heading` (Poppins) via `font-[family-name:var(--font-heading)]`.
+### Tailwind CSS 4
+No `tailwind.config.ts` — theme in `@theme inline` block in `globals.css`. Fonts: `--font-sans` (DM Sans), `--font-heading` (Poppins) via `font-[family-name:var(--font-heading)]`. Breakpoints: `tablet:` (1024px) for nav/layout switching only; `md:` for text/spacing.
 
 ### Admin page pattern
 List pages: `<Suspense><Client /></Suspense>`. Client uses `useQuery` + browser Supabase. Header: `border-b border-gray-100 bg-white px-7 pb-5 pt-6`. RLS handles tenant scoping.
 
 ### Desktop layout conventions
 Public pages: `<main className="mx-auto w-full max-w-5xl px-6 py-8">` at server page level. `bg-gray-50 min-h-screen` on `app/(public)/layout.tsx`. Bottom nav: `pb-16 tablet:pb-0`.
-
-### Tailwind v4 breakpoints
-`tablet:` (1024px) for nav/layout switching only. `md:` for text sizing and spacing.
 
 ### RLS on new columns — check UPDATE policies exist
 Adding a column doesn't grant UPDATE. If the table lacks an UPDATE policy, writes silently fail. Check `pg_policies` and add if missing.
