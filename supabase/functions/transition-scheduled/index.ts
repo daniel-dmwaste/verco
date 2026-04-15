@@ -1,27 +1,26 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.0'
+import {
+  awstDateFromUtc,
+  filterBookingsReadyToSchedule,
+  type BookingWithItemDates,
+} from '../_shared/schedule-transition.ts'
 
 /**
- * transition-scheduled cron Edge Function (VER-148)
+ * transition-scheduled cron Edge Function
  *
  * Fires daily at 15:25 AWST (07:25 UTC) via pg_cron. Service role only —
- * bypasses RLS because the DB trigger enforce_booking_state_transition is the
- * authoritative guard for this transition.
+ * the DB trigger enforce_booking_state_transition is the authoritative guard
+ * for this transition.
  *
  * Transitions Confirmed bookings to Scheduled when the earliest collection
  * date on the booking is tomorrow (AWST). The cancellation cutoff
  * (15:30 AWST the day prior) is about to pass, so the booking is locked in.
+ *
+ * Note on timing: "tomorrow" is computed from wall-clock at invocation. A
+ * scheduled fire at 07:25 UTC resolves correctly; a late manual invocation
+ * may target a different date. pg_cron does not retry missed runs.
  */
-
-function awstDateFromUtc(nowUtc: Date): string {
-  const awstMs = nowUtc.getTime() + 8 * 60 * 60 * 1000
-  return new Date(awstMs).toISOString().slice(0, 10)
-}
-
-interface BookingRow {
-  id: string
-  booking_item: Array<{ collection_date: { date: string } | null }>
-}
 
 serve(async (_req) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -35,6 +34,7 @@ serve(async (_req) => {
     tomorrow_awst: tomorrow,
     transitioned: 0,
     failed: 0,
+    skipped_no_date: 0,
   }
 
   try {
@@ -51,15 +51,19 @@ serve(async (_req) => {
       )
     }
 
-    const candidateIds: string[] = []
-    for (const booking of (bookings ?? []) as BookingRow[]) {
-      const dates = booking.booking_item
-        .map((item) => item.collection_date?.date)
-        .filter((d): d is string => Boolean(d))
-      if (dates.length === 0) continue
-      const earliest = dates.reduce((min, d) => (d < min ? d : min))
-      if (earliest === tomorrow) candidateIds.push(booking.id)
+    const bookingRows = (bookings ?? []) as BookingWithItemDates[]
+
+    // Data-integrity check: a Confirmed booking with no collection_date is an
+    // invariant violation (how did it confirm?). Log loudly so it surfaces.
+    for (const booking of bookingRows) {
+      const hasDate = booking.booking_item.some((item) => Boolean(item.collection_date?.date))
+      if (!hasDate) {
+        results.skipped_no_date++
+        console.warn(`Confirmed booking ${booking.id} has no collection_date — skipping`)
+      }
     }
+
+    const candidateIds = filterBookingsReadyToSchedule(bookingRows, tomorrow)
 
     for (const id of candidateIds) {
       const { error: updateError } = await supabase
@@ -78,8 +82,12 @@ serve(async (_req) => {
 
     console.log(JSON.stringify({ event: 'transition_scheduled', ...results }))
 
-    return new Response(JSON.stringify({ ok: true, ...results }), {
-      status: 200,
+    // Return 500 on any update failure so pg_cron logs a non-success HTTP
+    // status — otherwise silent partial failures look fine to monitoring.
+    const status = results.failed > 0 ? 500 : 200
+    const ok = results.failed === 0
+    return new Response(JSON.stringify({ ok, ...results }), {
+      status,
       headers: { 'Content-Type': 'application/json' },
     })
   } catch (err) {

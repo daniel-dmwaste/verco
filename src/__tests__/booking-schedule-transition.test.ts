@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+  addOneDay,
   awstDateFromUtc,
   filterBookingsReadyToSchedule,
   type BookingWithItemDates,
@@ -25,6 +26,32 @@ describe('awstDateFromUtc', () => {
 
   it('handles UTC just before midnight rolling to next AWST day', () => {
     expect(awstDateFromUtc(new Date('2026-04-15T23:00:00Z'))).toBe('2026-04-16')
+  })
+})
+
+describe('addOneDay', () => {
+  it('increments by one day in the same month', () => {
+    expect(addOneDay('2026-04-15')).toBe('2026-04-16')
+  })
+
+  it('rolls over month boundaries', () => {
+    expect(addOneDay('2026-04-30')).toBe('2026-05-01')
+  })
+
+  it('rolls over year boundaries', () => {
+    expect(addOneDay('2026-12-31')).toBe('2027-01-01')
+  })
+
+  it('handles leap day 2028-02-28 → 2028-02-29', () => {
+    expect(addOneDay('2028-02-28')).toBe('2028-02-29')
+  })
+
+  it('handles leap day 2028-02-29 → 2028-03-01', () => {
+    expect(addOneDay('2028-02-29')).toBe('2028-03-01')
+  })
+
+  it('handles non-leap Feb 2026-02-28 → 2026-03-01', () => {
+    expect(addOneDay('2026-02-28')).toBe('2026-03-01')
   })
 })
 
