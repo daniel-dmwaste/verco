@@ -364,8 +364,10 @@ These are absolute. If a task requires crossing one, stop and flag it.
 ### Suspense boundaries for useSearchParams
 Any client component using `useSearchParams()` must be wrapped in `<Suspense>`.
 
-### Postgres numeric → JavaScript number
-Supabase returns `numeric` columns as strings. Coerce with `Number()` before passing to components (e.g., Leaflet maps).
+### Postgres numeric → JS number — coerce with `Number()` (Supabase returns `numeric` as strings)
+
+### Audit trail — `audit_trigger_fn()` on new tables
+All audited tables have an AFTER INSERT/UPDATE/DELETE trigger writing to `audit_log`. When adding a new table that needs audit: attach the trigger in a migration, add its columns to `lib/audit/field-labels.ts`, and render `<AuditTimeline>` on its detail page. The resolver (`lib/audit/resolve.ts`) handles FK→label resolution server-side. For client components without a detail page, use a server action wrapper (see `collection-dates/actions.ts`).
 
 ### Tailwind CSS 4
 No `tailwind.config.ts` — theme in `@theme inline` block in `globals.css`. Fonts: `--font-sans` (DM Sans), `--font-heading` (Poppins) via `font-[family-name:var(--font-heading)]`. Breakpoints: `tablet:` (1024px) for nav/layout switching only; `md:` for text/spacing.
