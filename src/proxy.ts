@@ -50,26 +50,35 @@ export async function proxy(request: NextRequest) {
   console.log(`[proxy] hostname="${hostname}" NODE_ENV="${process.env.NODE_ENV}"`)
 
 
-  // Local dev bypass: use first active client when running on localhost
+  // Local dev bypass: resolve tenant from LOCAL_DEV_CLIENT_SLUG env var,
+  // falling back to first active client by created_at.
   const isLocalDev =
     process.env.NODE_ENV === 'development' &&
     (hostname.startsWith('localhost') || hostname.startsWith('127.0.0.1'))
 
-  const { data: client } = isLocalDev
-    ? await supabase
-        .from('client')
-        .select('id, slug, contractor_id')
-        .eq('is_active', true)
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .single()
-    : await supabase
-        .from('client')
-        .select('id, slug, contractor_id')
-        .or(`slug.eq.${hostname.split('.')[0]},custom_domain.eq.${hostname}`)
-        .eq('is_active', true)
-        .single()
+  let clientQuery = supabase
+    .from('client')
+    .select('id, slug, contractor_id')
+    .eq('is_active', true)
 
+  if (isLocalDev) {
+    const devSlug = process.env.LOCAL_DEV_CLIENT_SLUG
+    if (devSlug) {
+      clientQuery = clientQuery.eq('slug', devSlug)
+    } else {
+      clientQuery = clientQuery.order('created_at', { ascending: true }).limit(1)
+    }
+  } else {
+    clientQuery = clientQuery.or(
+      `slug.eq.${hostname.split('.')[0]},custom_domain.eq.${hostname}`
+    )
+  }
+
+  const { data: client, error: clientError } = await clientQuery.single()
+
+  if (clientError) {
+    console.error(`[proxy] tenant query failed: ${clientError.message} (code=${clientError.code})`)
+  }
   console.log(`[proxy] tenant resolution: isLocalDev=${isLocalDev} client=${client ? client.slug : 'null'}`)
 
   if (!client) {
