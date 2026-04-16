@@ -25,6 +25,16 @@ export default async function AdminLayout({
     .eq('id', user.id)
     .single()
 
+  // Fetch user role for conditional nav rendering
+  const { data: userRole } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+    .single()
+
+  const role = userRole?.role ?? null
+
   // Fetch tenant name from x-client-id header
   const headerStore = await headers()
   const clientId = headerStore.get('x-client-id')
@@ -83,6 +93,7 @@ export default async function AdminLayout({
       clientName={clientName}
       initials={initials}
       counts={counts}
+      role={role}
     >
       {children}
     </AdminLayoutClient>

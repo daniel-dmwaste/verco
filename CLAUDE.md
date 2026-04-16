@@ -364,8 +364,6 @@ These are absolute. If a task requires crossing one, stop and flag it.
 ### Suspense boundaries for useSearchParams
 Any client component using `useSearchParams()` must be wrapped in `<Suspense>`.
 
-### Postgres numeric → JS number — coerce with `Number()` (Supabase returns `numeric` as strings)
-
 ### Audit trail — `audit_trigger_fn()` on new tables
 All audited tables have an AFTER INSERT/UPDATE/DELETE trigger writing to `audit_log`. When adding a new table that needs audit: attach the trigger in a migration, add its columns to `lib/audit/field-labels.ts`, and render `<AuditTimeline>` on its detail page. The resolver (`lib/audit/resolve.ts`) handles FK→label resolution server-side. For client components without a detail page, use a server action wrapper (see `collection-dates/actions.ts`).
 
@@ -375,11 +373,10 @@ No `tailwind.config.ts` — theme in `@theme inline` block in `globals.css`. Fon
 ### Admin page pattern
 List pages: `<Suspense><Client /></Suspense>`. Client uses `useQuery` + browser Supabase. Header: `border-b border-gray-100 bg-white px-7 pb-5 pt-6`. RLS handles tenant scoping.
 
-### Desktop layout conventions
-Public pages: `<main className="mx-auto w-full max-w-5xl px-6 py-8">` at server page level. `bg-gray-50 min-h-screen` on `app/(public)/layout.tsx`. Bottom nav: `pb-16 tablet:pb-0`.
+### Desktop layout — public pages
+`<main className="mx-auto w-full max-w-5xl px-6 py-8">` at server page level. `pb-16 tablet:pb-0` for bottom nav.
 
-### RLS on new columns — check UPDATE policies exist
-Adding a column doesn't grant UPDATE. If the table lacks an UPDATE policy, writes silently fail. Check `pg_policies` and add if missing.
+### RLS on new columns — check UPDATE policies exist; writes silently fail without them
 
 ### White-label colours — use `var(--brand)` + `var(--brand-foreground)`, not hardcoded hex
 Public/field pages use CSS vars (`--brand`, `--brand-accent`, `--brand-foreground` + derived `-light`/`-hover`/`-dark`). Never hardcode `#293F52`/`#00E47C` in public/field — admin pages exempt. `text-white` on brand backgrounds can silently fail under Tailwind v4 + Turbopack — use `--brand-foreground` (defaults `#FFFFFF`) with an inline `style={{ color }}` fallback; `VercoButton` primary variant does this automatically.
@@ -394,7 +391,10 @@ Every wizard step carries ALL params through back/forward nav via `carryParams`.
 Server actions MUST NOT use the service role key. EFs needing PII (e.g. `send-notification`) accept EITHER a service role bearer (EF→EF callers) OR a valid user JWT whose `current_user_role()` is in a permitted set. Internal loads always use service role inside the EF — the user's role gates the TRIGGER, not the data access.
 
 ### Notification module conventions
-Shared helpers in `templates/template-helpers.ts` — never duplicate. `invokeSendNotification` in `src/lib/notifications/invoke.ts` — never create local copies. Resume-by-log-id only works for `RESUMABLE_TYPES` in `dispatch.ts` — `ncn_raised`/`completion_survey` cannot be retried via log_id.
+Use shared helpers in `templates/template-helpers.ts` and `invokeSendNotification` in `src/lib/notifications/invoke.ts` — never duplicate. Resume-by-log-id only works for `RESUMABLE_TYPES` in `dispatch.ts`.
+
+### Local dev tenant override — `LOCAL_DEV_CLIENT_SLUG`
+Set in `.env.local` to pick which client the proxy resolves (default: first by `created_at`). Avoids `accessible_client_ids()` errors for multi-client contractors.
 
 ### `NEXT_PUBLIC_*` vars are baked at build time, not runtime
-These are inlined into the JS bundle during `next build` via Docker build-args (see `deploy.yml`). Setting them in Coolify's runtime env panel is a no-op. When adding a new `NEXT_PUBLIC_*`: document in `.env.example`, add to GitHub Actions secrets, wire as a build-arg in `deploy.yml`'s docker job, and pass to `ENV` in the Dockerfile builder stage.
+Inlined via Docker build-args (`deploy.yml`). Coolify runtime env is a no-op. New vars: add to `.env.example`, GitHub secrets, `deploy.yml` build-arg, and Dockerfile `ENV`.

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
@@ -70,6 +70,19 @@ export function ServiceTicketsClient() {
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [actionMenuId, setActionMenuId] = useState<string | null>(null)
+  const menuRef = useRef<HTMLTableCellElement>(null)
+
+  // Close action menu on outside click
+  useEffect(() => {
+    if (!actionMenuId) return
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setActionMenuId(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [actionMenuId])
 
   // Debounce search
   const searchTimerRef = useState<ReturnType<typeof setTimeout> | null>(null)
@@ -235,7 +248,7 @@ export function ServiceTicketsClient() {
                     <td className="px-4 py-2.5 text-body-sm text-gray-500">
                       {formatDistanceToNow(new Date(t.created_at), { addSuffix: true })}
                     </td>
-                    <td className="relative px-4 py-2.5 text-right">
+                    <td className="relative px-4 py-2.5 text-right" ref={actionMenuId === t.id ? menuRef : undefined}>
                       <button
                         type="button"
                         onClick={() => setActionMenuId(actionMenuId === t.id ? null : t.id)}

@@ -11,6 +11,7 @@ interface AdminLayoutClientProps {
     np: number
     tickets: number
   }
+  role: string | null
   children: React.ReactNode
 }
 
@@ -18,6 +19,7 @@ export function AdminLayoutClient({
   clientName,
   initials,
   counts,
+  role,
   children,
 }: AdminLayoutClientProps) {
   return (
@@ -68,7 +70,7 @@ export function AdminLayoutClient({
 
       {/* Body: sidebar + main */}
       <div className="flex flex-1 overflow-hidden">
-        <AdminSidebar counts={counts} />
+        <AdminSidebar counts={counts} role={role} />
         <main className="flex flex-1 flex-col overflow-y-auto bg-gray-50">
           {children}
         </main>
