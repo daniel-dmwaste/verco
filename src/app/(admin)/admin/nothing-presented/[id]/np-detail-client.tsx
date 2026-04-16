@@ -8,6 +8,8 @@ import { Dialog } from '@base-ui/react/dialog'
 import { updateNpStatus, rebookNp, resolveNpWithRefund } from './actions'
 import { getStatusStyle } from '@/lib/ui/status-styles'
 import type { Database } from '@/lib/supabase/types'
+import type { ResolvedAuditEntry } from '@/lib/audit/resolve'
+import { AuditTimeline } from '@/components/audit-timeline'
 
 type NpStatus = Database['public']['Enums']['np_status']
 
@@ -48,9 +50,10 @@ interface Np {
 interface NpDetailClientProps {
   np: Np
   availableDates: { id: string; date: string }[]
+  auditLogs: ResolvedAuditEntry[]
 }
 
-export function NpDetailClient({ np, availableDates }: NpDetailClientProps) {
+export function NpDetailClient({ np, availableDates, auditLogs }: NpDetailClientProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -384,6 +387,13 @@ export function NpDetailClient({ np, availableDates }: NpDetailClientProps) {
             <p className="rounded-lg bg-gray-50 px-3 py-2.5 text-body-sm text-gray-700">
               {np.resolution_notes}
             </p>
+          </div>
+        )}
+
+        {/* Audit trail */}
+        {auditLogs.length > 0 && (
+          <div className="mt-4 rounded-xl bg-white shadow-sm">
+            <AuditTimeline entries={auditLogs} />
           </div>
         )}
       </div>

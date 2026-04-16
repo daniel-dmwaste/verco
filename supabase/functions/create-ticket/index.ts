@@ -185,22 +185,9 @@ serve(async (req) => {
       return errorResponse(`Failed to create ticket: ${ticketError?.message ?? 'unknown'}`, 500)
     }
 
-    // ── 7. Insert audit_log entry ──────────────────────────────────────────
+    // Audit logging handled by audit_trigger on service_ticket table
 
-    await supabaseService
-      .from('audit_log')
-      .insert({
-        table_name: 'service_ticket',
-        record_id: ticketRow.id,
-        action: 'INSERT',
-        new_data: { subject, category, channel: 'portal', display_id: displayId },
-        client_id,
-      })
-      .then(({ error }) => {
-        if (error) console.error('Audit log insert error (non-blocking):', error)
-      })
-
-    // ── 8. Return result ───────────────────────────────────────────────────
+    // ── 7. Return result ───────────────────────────────────────────────────
 
     return jsonResponse({ display_id: displayId })
   } catch (err) {

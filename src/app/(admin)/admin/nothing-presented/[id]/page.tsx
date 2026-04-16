@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { resolveAuditLogs } from '@/lib/audit/resolve'
 import { NpDetailClient } from './np-detail-client'
 
 interface NpDetailPageProps {
@@ -56,5 +57,8 @@ export default async function NpDetailPage({ params }: NpDetailPageProps) {
     availableDates = data ?? []
   }
 
-  return <NpDetailClient np={np} availableDates={availableDates} />
+  // Fetch resolved audit trail
+  const auditLogs = await resolveAuditLogs(supabase, 'nothing_presented', id)
+
+  return <NpDetailClient np={np} availableDates={availableDates} auditLogs={auditLogs} />
 }

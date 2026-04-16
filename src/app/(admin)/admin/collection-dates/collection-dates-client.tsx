@@ -3,8 +3,12 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, addDays, addWeeks, addMonths } from 'date-fns'
+import { Dialog } from '@base-ui/react/dialog'
 import { createClient } from '@/lib/supabase/client'
 import { SkeletonRow } from '@/components/ui/skeleton'
+import type { ResolvedAuditEntry } from '@/lib/audit/resolve'
+import { AuditTimeline } from '@/components/audit-timeline'
+import { fetchCollectionDateAudit } from './actions'
 
 const PAGE_SIZE = 50
 
@@ -35,6 +39,9 @@ export function CollectionDatesClient() {
   const [showCreate, setShowCreate] = useState(false)
   const [showBulkCreate, setShowBulkCreate] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [auditDialogId, setAuditDialogId] = useState<string | null>(null)
+  const [auditEntries, setAuditEntries] = useState<ResolvedAuditEntry[]>([])
+  const [auditLoading, setAuditLoading] = useState(false)
 
   // Create form state
   const [createAreaId, setCreateAreaId] = useState('')
@@ -208,6 +215,15 @@ export function CollectionDatesClient() {
 
     await supabase.from('collection_date').delete().eq('id', d.id)
     void queryClient.invalidateQueries({ queryKey: ['admin-collection-dates'] })
+  }
+
+  async function handleShowAudit(dateId: string) {
+    setAuditDialogId(dateId)
+    setAuditLoading(true)
+    setAuditEntries([])
+    const entries = await fetchCollectionDateAudit(dateId)
+    setAuditEntries(entries)
+    setAuditLoading(false)
   }
 
   const bulkPreviewDates = showBulkPreview ? generateBulkDates() : []
@@ -473,6 +489,7 @@ export function CollectionDatesClient() {
                     </td>
                     <td className="px-4 py-2.5 text-right">
                       <button type="button" onClick={() => startEdit(d)} className="mr-2 text-xs font-medium text-[#293F52] hover:underline">Edit</button>
+                      <button type="button" onClick={() => handleShowAudit(d.id)} className="mr-2 text-xs font-medium text-gray-500 hover:underline">History</button>
                       <button
                         type="button"
                         onClick={() => handleDelete(d)}
@@ -507,6 +524,36 @@ export function CollectionDatesClient() {
           </div>
         </div>
       )}
+
+      {/* Audit history dialog */}
+      <Dialog.Root open={!!auditDialogId} onOpenChange={() => setAuditDialogId(null)}>
+        <Dialog.Portal>
+          <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/40" />
+          <Dialog.Popup className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
+              <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+                <Dialog.Title className="font-[family-name:var(--font-heading)] text-base font-bold text-[#293F52]">
+                  Change History
+                </Dialog.Title>
+                <Dialog.Close className="text-gray-400 hover:text-gray-600">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </Dialog.Close>
+              </div>
+              <div className="max-h-[60vh] overflow-y-auto">
+                {auditLoading ? (
+                  <div className="px-5 py-8 text-center text-sm text-gray-400">Loading...</div>
+                ) : auditEntries.length === 0 ? (
+                  <div className="px-5 py-8 text-center text-sm text-gray-400">No changes recorded</div>
+                ) : (
+                  <AuditTimeline entries={auditEntries} />
+                )}
+              </div>
+            </div>
+          </Dialog.Popup>
+        </Dialog.Portal>
+      </Dialog.Root>
     </>
   )
 }

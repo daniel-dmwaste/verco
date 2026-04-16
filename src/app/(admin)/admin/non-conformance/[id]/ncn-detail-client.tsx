@@ -8,6 +8,8 @@ import { Dialog } from '@base-ui/react/dialog'
 import { updateNcnStatus, rebookNcn, resolveWithRefund } from './actions'
 import { getStatusStyle } from '@/lib/ui/status-styles'
 import type { Database } from '@/lib/supabase/types'
+import type { ResolvedAuditEntry } from '@/lib/audit/resolve'
+import { AuditTimeline } from '@/components/audit-timeline'
 
 type NcnStatus = Database['public']['Enums']['ncn_status']
 
@@ -49,9 +51,10 @@ interface Ncn {
 interface NcnDetailClientProps {
   ncn: Ncn
   availableDates: { id: string; date: string }[]
+  auditLogs: ResolvedAuditEntry[]
 }
 
-export function NcnDetailClient({ ncn, availableDates }: NcnDetailClientProps) {
+export function NcnDetailClient({ ncn, availableDates, auditLogs }: NcnDetailClientProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -390,6 +393,13 @@ export function NcnDetailClient({ ncn, availableDates }: NcnDetailClientProps) {
             <p className="rounded-lg bg-gray-50 px-3 py-2.5 text-body-sm text-gray-700">
               {ncn.resolution_notes}
             </p>
+          </div>
+        )}
+
+        {/* Audit trail */}
+        {auditLogs.length > 0 && (
+          <div className="mt-4 rounded-xl bg-white shadow-sm">
+            <AuditTimeline entries={auditLogs} />
           </div>
         )}
       </div>

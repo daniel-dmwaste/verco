@@ -12,7 +12,8 @@ import { LOCATION_OPTIONS, type LocationOption } from '@/lib/booking/schemas'
 import { confirmBooking, cancelBooking, updateContact, updateCollectionDetails, updateNotes } from './actions'
 import { cn } from '@/lib/utils'
 import type { Database } from '@/lib/supabase/types'
-import type { Json } from '@/lib/supabase/types'
+import type { ResolvedAuditEntry } from '@/lib/audit/resolve'
+import { AuditTimeline } from '@/components/audit-timeline'
 
 type BookingStatus = Database['public']['Enums']['booking_status']
 
@@ -25,15 +26,6 @@ interface BookingItem {
   unit_price_cents: number
   service: { name: string }
   collection_date: { date: string }
-}
-
-interface AuditLog {
-  id: string
-  action: string
-  created_at: string
-  changed_by: string | null
-  old_data: Json | null
-  new_data: Json | null
 }
 
 interface Booking {
@@ -56,7 +48,7 @@ interface Booking {
 
 interface BookingDetailPanelProps {
   booking: Booking
-  auditLogs: AuditLog[]
+  auditLogs: ResolvedAuditEntry[]
 }
 
 // Pencil icon shared across edit buttons
@@ -557,28 +549,7 @@ export function BookingDetailPanel({
       </div>
 
       {/* Audit trail */}
-      {auditLogs.length > 0 && (
-        <div className="border-b border-gray-100 px-5 py-4">
-          <div className="mb-3 text-2xs font-semibold uppercase tracking-wide text-gray-500">
-            Audit Trail
-          </div>
-          <div className="flex flex-col gap-2">
-            {auditLogs.map((log) => (
-              <div key={log.id} className="flex items-start gap-2.5">
-                <div className="mt-1.5 size-1.5 shrink-0 rounded-full bg-gray-300" />
-                <div>
-                  <div className="text-xs font-medium text-gray-900">
-                    {log.action}
-                  </div>
-                  <div className="text-[11px] text-gray-500">
-                    {format(new Date(log.created_at), 'd MMM yyyy, h:mmaaa')}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <AuditTimeline entries={auditLogs} />
 
       {/* Error */}
       {error && (
