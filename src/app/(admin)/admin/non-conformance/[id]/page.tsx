@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { resolveAuditLogs } from '@/lib/audit/resolve'
 import { NcnDetailClient } from './ncn-detail-client'
 
 interface NcnDetailPageProps {
@@ -58,5 +59,8 @@ export default async function NcnDetailPage({ params }: NcnDetailPageProps) {
     availableDates = data ?? []
   }
 
-  return <NcnDetailClient ncn={ncn} availableDates={availableDates} />
+  // Fetch resolved audit trail
+  const auditLogs = await resolveAuditLogs(supabase, 'non_conformance_notice', id)
+
+  return <NcnDetailClient ncn={ncn} availableDates={availableDates} auditLogs={auditLogs} />
 }

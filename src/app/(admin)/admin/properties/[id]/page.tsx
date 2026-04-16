@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { resolveAuditLogs } from '@/lib/audit/resolve'
 import { PropertyDetailClient } from './property-detail-client'
 
 interface PropertyDetailPageProps {
@@ -140,6 +141,13 @@ export default async function AdminPropertyDetailPage({
       .not('booking.status', 'in', '("Cancelled","Pending Payment")'),
   ])
 
+  // Fetch resolved audit trail (property + strata user links)
+  const auditLogs = await resolveAuditLogs(supabase, 'eligible_properties', id, {
+    includeChildren: [
+      { table: 'strata_user_properties', fkColumn: 'property_id' },
+    ],
+  })
+
   return (
     <PropertyDetailClient
       property={property}
@@ -153,6 +161,7 @@ export default async function AdminPropertyDetailPage({
       fyUsage={fyUsage ?? []}
       nextExpected={nextExpected}
       authFormSignedUrl={authFormSignedUrl}
+      auditLogs={auditLogs}
     />
   )
 }

@@ -7,6 +7,8 @@ import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { getStatusStyle } from '@/lib/ui/status-styles'
 import type { Database } from '@/lib/supabase/types'
+import type { ResolvedAuditEntry } from '@/lib/audit/resolve'
+import { AuditTimeline } from '@/components/audit-timeline'
 
 type TicketStatus = Database['public']['Enums']['ticket_status']
 type TicketPriority = Database['public']['Enums']['ticket_priority']
@@ -72,6 +74,7 @@ interface AdminTicketDetailClientProps {
   responses: ResponseData[]
   staffUsers: StaffUser[]
   linkedBooking: LinkedBooking | null
+  auditLogs: ResolvedAuditEntry[]
 }
 
 export function AdminTicketDetailClient({
@@ -80,6 +83,7 @@ export function AdminTicketDetailClient({
   responses: initialResponses,
   staffUsers,
   linkedBooking,
+  auditLogs,
 }: AdminTicketDetailClientProps) {
   const supabase = createClient()
   const router = useRouter()
@@ -521,6 +525,13 @@ export function AdminTicketDetailClient({
                 )}
                 <div className="mt-2 text-[11px] font-semibold text-[#00B864]">View booking &rarr;</div>
               </Link>
+            </div>
+          )}
+
+          {/* Audit trail */}
+          {auditLogs.length > 0 && (
+            <div className="rounded-xl bg-white shadow-sm">
+              <AuditTimeline entries={auditLogs} />
             </div>
           )}
         </div>

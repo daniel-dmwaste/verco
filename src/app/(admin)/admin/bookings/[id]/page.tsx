@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { resolveAuditLogs } from '@/lib/audit/resolve'
 import { BookingDetailPanel } from './booking-detail-panel'
 
 interface BookingDetailPageProps {
@@ -34,14 +35,15 @@ export default async function AdminBookingDetailPage({
     redirect('/admin/bookings')
   }
 
-  // Fetch audit trail
-  const { data: auditLogs } = await supabase
-    .from('audit_log')
-    .select('id, action, created_at, changed_by, old_data, new_data')
-    .eq('record_id', id)
-    .eq('table_name', 'booking')
-    .order('created_at', { ascending: false })
-    .limit(10)
+  // Fetch resolved audit trail (booking + child records)
+  const auditLogs = await resolveAuditLogs(supabase, 'booking', id, {
+    includeChildren: [
+      { table: 'booking_item', fkColumn: 'booking_id' },
+      ...(booking.contact_id
+        ? [{ table: 'contacts', fkColumn: 'id', fkValue: booking.contact_id }]
+        : []),
+    ],
+  })
 
   return (
     <div className="flex h-full">
@@ -62,7 +64,7 @@ export default async function AdminBookingDetailPage({
       {/* Detail panel */}
       <BookingDetailPanel
         booking={booking}
-        auditLogs={auditLogs ?? []}
+        auditLogs={auditLogs}
       />
     </div>
   )

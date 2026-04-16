@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { resolveAuditLogs } from '@/lib/audit/resolve'
 import { AdminTicketDetailClient } from './admin-ticket-detail-client'
 
 interface AdminTicketDetailPageProps {
@@ -112,6 +113,13 @@ export default async function AdminTicketDetailPage({
     }
   }
 
+  // Fetch resolved audit trail (ticket + responses)
+  const auditLogs = await resolveAuditLogs(supabase, 'service_ticket', ticket.id, {
+    includeChildren: [
+      { table: 'ticket_response', fkColumn: 'ticket_id' },
+    ],
+  })
+
   const contact = ticket.contact as { id: string; full_name: string; email: string; mobile_e164: string | null } | null
 
   const enrichedResponses = (responses ?? []).map((r) => ({
@@ -145,6 +153,7 @@ export default async function AdminTicketDetailPage({
         responses={enrichedResponses}
         staffUsers={staffUsers}
         linkedBooking={linkedBooking}
+        auditLogs={auditLogs}
       />
     </div>
   )

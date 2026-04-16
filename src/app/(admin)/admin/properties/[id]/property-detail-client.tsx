@@ -8,6 +8,8 @@ import { BookingStatusBadge } from '@/components/booking/booking-status-badge'
 import { getStatusStyle } from '@/lib/ui/status-styles'
 import { AllocationFormModal } from '@/app/(admin)/admin/allocations/allocation-form-modal'
 import { MudDetailSection } from './mud-detail-section'
+import type { ResolvedAuditEntry } from '@/lib/audit/resolve'
+import { AuditTimeline } from '@/components/audit-timeline'
 
 /* ------------------------------------------------------------------ */
 /*  Props — shaped by what page.tsx actually passes                    */
@@ -92,6 +94,7 @@ interface PropertyDetailClientProps {
     service: { category: { code: string } }
     booking: { property_id: string | null; fy_id: string; status: string }
   }>
+  auditLogs: ResolvedAuditEntry[]
 }
 
 /* ------------------------------------------------------------------ */
@@ -191,6 +194,7 @@ export function PropertyDetailClient({
   fyUsage,
   nextExpected,
   authFormSignedUrl,
+  auditLogs,
 }: PropertyDetailClientProps) {
   const queryClient = useQueryClient()
   const [showAllocationModal, setShowAllocationModal] = useState(false)
@@ -652,6 +656,15 @@ export function PropertyDetailClient({
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Audit trail ──────────────────────────────────────────── */}
+      {auditLogs.length > 0 && (
+        <div className="px-7 py-5">
+          <div className="rounded-xl bg-white shadow-sm">
+            <AuditTimeline entries={auditLogs} />
           </div>
         </div>
       )}
