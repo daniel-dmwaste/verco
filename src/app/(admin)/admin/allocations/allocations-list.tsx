@@ -130,7 +130,7 @@ export function AllocationsList() {
 
       {/* Table */}
       <div className="flex-1 px-7 pb-6">
-        <div className="overflow-hidden rounded-xl bg-white shadow-sm">
+        <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
           <table className="w-full border-collapse">
             <thead>
               <tr>

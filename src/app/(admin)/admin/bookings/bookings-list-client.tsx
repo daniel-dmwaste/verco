@@ -71,10 +71,10 @@ export function BookingsListClient() {
       let query = supabase
         .from('booking')
         .select(
-          `id, ref, status, type, location, created_at,
+          `id, ref, status, type, location, created_at, property_id,
            eligible_properties:property_id(formatted_address, address),
            collection_area!inner(code, name),
-           booking_item(no_services, service!inner(name), collection_date!inner(date))`,
+           booking_item(no_services, service!inner(name), collection_date!inner(id, date))`,
           { count: 'exact' }
         )
         .order('created_at', { ascending: false })
@@ -102,10 +102,12 @@ export function BookingsListClient() {
   const total = bookingsData?.total ?? 0
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
-  function getCollectionDate(booking: typeof bookings[number]): string | null {
-    const items = booking.booking_item as Array<{ collection_date: { date: string } }>
+  function getCollectionDate(booking: typeof bookings[number]): { id: string; date: string } | null {
+    const items = booking.booking_item as Array<{ collection_date: { id: string; date: string } }>
     if (items.length === 0) return null
-    return items[0]?.collection_date?.date ?? null
+    const cd = items[0]?.collection_date
+    if (!cd?.date) return null
+    return cd
   }
 
   function getServicesSummary(booking: typeof bookings[number]): string {
@@ -253,7 +255,7 @@ export function BookingsListClient() {
 
       {/* Table */}
       <div className="flex-1 px-7 pb-6">
-        <div className="overflow-hidden rounded-xl bg-white shadow-sm">
+        <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
           <table className="w-full border-collapse">
             <thead>
               <tr>
@@ -265,14 +267,13 @@ export function BookingsListClient() {
                 <th className="border-b border-gray-100 bg-gray-50 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">Area</th>
                 <th className="border-b border-gray-100 bg-gray-50 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">Status</th>
                 <th className="border-b border-gray-100 bg-gray-50 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">Created</th>
-                <th className="border-b border-gray-100 bg-gray-50 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500"></th>
               </tr>
             </thead>
             <tbody>
               {isLoading && (
                 <>
                   {Array.from({ length: 5 }).map((_, i) => (
-                    <SkeletonRow key={i} columns={9} />
+                    <SkeletonRow key={i} columns={8} />
                   ))}
                 </>
               )}
@@ -287,11 +288,25 @@ export function BookingsListClient() {
                     key={booking.id}
                     className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50"
                   >
-                    <td className="px-4 py-3 font-[family-name:var(--font-heading)] text-body-sm font-semibold text-[#293F52]">
-                      {booking.ref}
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/admin/bookings/${booking.id}`}
+                        className="font-[family-name:var(--font-heading)] text-body-sm font-semibold text-[#293F52] hover:underline"
+                      >
+                        {booking.ref}
+                      </Link>
                     </td>
                     <td className="max-w-[180px] truncate px-4 py-3 text-body-sm">
-                      {getAddress(booking)}
+                      {booking.property_id ? (
+                        <Link
+                          href={`/admin/properties/${booking.property_id}`}
+                          className="text-gray-900 hover:text-[#293F52] hover:underline"
+                        >
+                          {getAddress(booking)}
+                        </Link>
+                      ) : (
+                        getAddress(booking)
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span className="inline-flex items-center gap-1 text-[11px] font-medium text-gray-700">
@@ -303,36 +318,35 @@ export function BookingsListClient() {
                       {getServicesSummary(booking)}
                     </td>
                     <td className="px-4 py-3 text-body-sm">
-                      {collDate ? format(new Date(collDate + 'T00:00:00'), 'EEE d MMM yyyy') : '—'}
+                      {collDate ? (
+                        <Link
+                          href="/admin/collection-dates"
+                          className="text-gray-900 hover:text-[#293F52] hover:underline"
+                        >
+                          {format(new Date(collDate.date + 'T00:00:00'), 'EEE d MMM yyyy')}
+                        </Link>
+                      ) : '—'}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500">
                       {area.code}
                     </td>
                     <td className="px-4 py-3">
-                      <BookingStatusBadge status={booking.status} />
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-500">
-                      {format(new Date(booking.created_at), 'd MMM')}
-                    </td>
-                    <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5">
+                        <BookingStatusBadge status={booking.status} />
                         {booking.status === 'Pending Payment' && (
                           <button
                             type="button"
                             onClick={() => handlePayNow(booking.id)}
                             disabled={payingBookingId === booking.id}
-                            className="inline-flex items-center rounded-md border-[1.5px] border-[#00B864] bg-[#E8FDF0] px-3 py-1 text-xs font-semibold text-[#006A38] disabled:opacity-50"
+                            className="inline-flex items-center rounded-md border-[1.5px] border-[#00B864] bg-[#E8FDF0] px-2 py-0.5 text-2xs font-semibold text-[#006A38] disabled:opacity-50"
                           >
-                            {payingBookingId === booking.id ? 'Loading...' : 'Pay Now'}
+                            {payingBookingId === booking.id ? '...' : 'Pay'}
                           </button>
                         )}
-                        <Link
-                          href={`/admin/bookings/${booking.id}`}
-                          className="inline-flex items-center rounded-md border-[1.5px] border-gray-100 bg-white px-3 py-1 text-xs font-semibold text-[#293F52]"
-                        >
-                          View
-                        </Link>
                       </div>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-500">
+                      {format(new Date(booking.created_at), 'd MMM')}
                     </td>
                   </tr>
                 )

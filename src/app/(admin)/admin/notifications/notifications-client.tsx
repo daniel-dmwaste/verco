@@ -121,7 +121,7 @@ export function NotificationsClient() {
       </div>
 
       {/* Table */}
-      <div className="px-7">
+      <div className="overflow-x-auto px-7">
         <table className="w-full">
           <thead>
             <tr className="border-b border-gray-100 text-left">
