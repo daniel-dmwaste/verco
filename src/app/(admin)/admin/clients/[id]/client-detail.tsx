@@ -11,6 +11,7 @@ import { NotificationsTab } from './tabs/notifications-tab'
 import { FaqsTab } from './tabs/faqs-tab'
 import { SubClientsTab } from './tabs/sub-clients-tab'
 import { CollectionAreasTab } from './tabs/collection-areas-tab'
+import { RulesTab } from './tabs/rules-tab'
 
 type Client = Database['public']['Tables']['client']['Row']
 
@@ -45,6 +46,7 @@ const TABS = [
   { key: 'branding', label: 'Branding' },
   { key: 'notifications', label: 'Notifications' },
   { key: 'faqs', label: 'FAQs' },
+  { key: 'rules', label: 'Rules' },
   { key: 'sub-clients', label: 'Sub-Clients' },
   { key: 'areas', label: 'Collection Areas' },
 ] as const
@@ -116,14 +118,12 @@ export function ClientDetail({ client, subClients, categories, services }: Clien
           {activeTab === 'branding' && <BrandingTab client={client} />}
           {activeTab === 'notifications' && <NotificationsTab client={client} />}
           {activeTab === 'faqs' && <FaqsTab client={client} />}
+          {activeTab === 'rules' && (
+            <RulesTab client={client} categories={categories} services={services} />
+          )}
           {activeTab === 'sub-clients' && <SubClientsTab client={client} subClients={subClients} />}
           {activeTab === 'areas' && (
-            <CollectionAreasTab
-              client={client}
-              subClients={subClients}
-              categories={categories}
-              services={services}
-            />
+            <CollectionAreasTab client={client} subClients={subClients} />
           )}
         </div>
       </div>
