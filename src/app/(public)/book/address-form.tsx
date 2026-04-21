@@ -25,7 +25,16 @@ const PropertyMap = dynamic(
   { ssr: false }
 )
 
-export function AddressForm() {
+// Reduce a Google-style formatted address to "street, suburb" so the text
+// fallback requires suburb agreement, not just street. Handles Google's
+// common 3-4 part shape ("10 Casserley Way, Orelia WA 6167, Australia").
+function addressMatchKey(s: string): string {
+  const parts = s.split(',').map((p) => p.trim()).filter(Boolean)
+  if (parts.length >= 2) return `${parts[0]}, ${parts[1]}`
+  return parts[0] ?? s
+}
+
+export function AddressForm({ clientId }: { clientId: string }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
@@ -40,30 +49,49 @@ export function AddressForm() {
 
   // Shared lookup function used by both manual selection and auto-resolve.
   //
-  // Tries the input as-is first; if no match is found, retries with the
-  // address prefix stripped (e.g. "Unit 5 / 18 Sulphur Rd" → "18 Sulphur Rd")
-  // to catch residents who entered their MUD address with a unit prefix.
-  // If the resolved property is a MUD, blocks the booking flow and renders
-  // the redirect message instead of advancing.
+  // Primary path: authoritative Google place_id match, tenant-scoped.
+  // Fallback: suburb-aware ILIKE on formatted_address, tenant-scoped — used for
+  // rows with null google_place_id and the ?address= auto-resolve path. If the
+  // first pass misses, retry with the MUD unit-prefix stripped
+  // (e.g. "Unit 5 / 18 Sulphur Rd, Kwinana" → "18 Sulphur Rd, Kwinana") so
+  // residents who typed a unit prefix still resolve to the MUD building.
   const lookupProperty = useCallback(
-    async (searchStr: string) => {
+    async (searchStr: string, placeId?: string) => {
       setNotFound(false)
       setSelectedProperty(null)
       setMudRedirect(null)
 
-      const tryLookup = async (s: string) => {
-        const streetPart = s.split(',')[0] ?? s
+      const tryLookup = async (
+        s: string,
+        pid?: string
+      ): Promise<EligibleProperty | null> => {
+        if (pid) {
+          const { data } = await supabase
+            .from('eligible_properties')
+            .select('*, collection_area!inner(client_id)')
+            .eq('google_place_id', pid)
+            .eq('collection_area.client_id', clientId)
+            .maybeSingle()
+          if (data) return data as unknown as EligibleProperty
+        }
+
+        const key = addressMatchKey(s)
+        if (!key) return null
+        const safe = key.replace(/[%_\\]/g, (c) => `\\${c}`)
         const { data } = await supabase
           .from('eligible_properties')
-          .select('*')
-          .or(`formatted_address.ilike.%${streetPart}%,address.ilike.%${streetPart}%`)
-          .limit(1)
-        return data?.[0] ?? null
+          .select('*, collection_area!inner(client_id)')
+          .ilike('formatted_address', `%${safe}%`)
+          .eq('collection_area.client_id', clientId)
+          .limit(2)
+        if (data && data.length === 1) return data[0] as unknown as EligibleProperty
+        return null
       }
 
-      let property = await tryLookup(searchStr)
+      let property = await tryLookup(searchStr, placeId)
 
-      // Fallback: strip a Unit/Apt/Lot prefix and retry
+      // Fallback: strip a Unit/Apt/Lot prefix and retry (text-only; the place_id
+      // would have matched on the primary pass if it corresponded to a MUD).
       if (!property) {
         const stripped = stripAddressPrefix(searchStr)
         if (stripped !== searchStr) {
@@ -101,7 +129,7 @@ export function AddressForm() {
 
       setSelectedProperty(property)
     },
-    [supabase]
+    [supabase, clientId]
   )
 
   // Auto-resolve address from search params on mount
@@ -178,7 +206,7 @@ export function AddressForm() {
   })
 
   function handleAddressSelect(placeId: string, description: string) {
-    void lookupProperty(description)
+    void lookupProperty(description, placeId)
   }
 
   function handleContinue() {

@@ -82,10 +82,14 @@ export default async function LandingPage() {
   return (
     <div className="flex min-h-screen flex-col">
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-hover)] via-[var(--brand)] to-[color-mix(in_srgb,var(--brand)_60%,white)] px-8 py-20 lg:px-20 lg:py-24">
-        {/* Decorative radials — use accent colour */}
-        <div className="absolute -right-32 -top-32 size-[500px] rounded-full" style={{ background: 'radial-gradient(circle, color-mix(in srgb, var(--brand-accent) 12%, transparent) 0%, transparent 70%)' }} />
-        <div className="absolute -bottom-20 -left-20 size-[400px] rounded-full" style={{ background: 'radial-gradient(circle, color-mix(in srgb, var(--brand-accent) 6%, transparent) 0%, transparent 70%)' }} />
+      <section className="relative bg-gradient-to-br from-[var(--brand-hover)] via-[var(--brand)] to-[color-mix(in_srgb,var(--brand)_60%,white)] px-8 py-20 lg:px-20 lg:py-24">
+        {/* Decorative radials — use accent colour. Clipped to the hero so they
+            don't leak; kept in a sibling layer so the autocomplete dropdown can
+            extend below the hero without being cut off. */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -right-32 -top-32 size-[500px] rounded-full" style={{ background: 'radial-gradient(circle, color-mix(in srgb, var(--brand-accent) 12%, transparent) 0%, transparent 70%)' }} />
+          <div className="absolute -bottom-20 -left-20 size-[400px] rounded-full" style={{ background: 'radial-gradient(circle, color-mix(in srgb, var(--brand-accent) 6%, transparent) 0%, transparent 70%)' }} />
+        </div>
 
         <div className="relative z-10 max-w-[640px]">
           {/* Tenant tag */}
