@@ -370,16 +370,13 @@ All audited tables have an AFTER INSERT/UPDATE/DELETE trigger writing to `audit_
 ### Tailwind CSS 4
 No `tailwind.config.ts` — theme in `@theme inline` block in `globals.css`. Fonts: `--font-sans` (DM Sans), `--font-heading` (Poppins) via `font-[family-name:var(--font-heading)]`. Breakpoints: `tablet:` (1024px) for nav/layout switching only; `md:` for text/spacing.
 
-### Admin page pattern
-List pages: `<Suspense><Client /></Suspense>`. Client uses `useQuery` + browser Supabase. Header: `border-b border-gray-100 bg-white px-7 pb-5 pt-6`. RLS handles tenant scoping.
-
-### Desktop layout — public pages
-`<main className="mx-auto w-full max-w-5xl px-6 py-8">` at server page level. `pb-16 tablet:pb-0` for bottom nav.
+### Page layout conventions
+Admin list: `<Suspense><Client/></Suspense>`, client uses `useQuery` + browser Supabase; header `border-b border-gray-100 bg-white px-7 pb-5 pt-6`; RLS scopes. Public: `<main className="mx-auto w-full max-w-5xl px-6 py-8">` server-side, `pb-16 tablet:pb-0` for bottom nav.
 
 ### RLS on new columns — check UPDATE policies exist; writes silently fail without them
 
-### White-label colours — use `var(--brand)` + `var(--brand-foreground)`, not hardcoded hex
-Public/field pages use CSS vars (`--brand`, `--brand-accent`, `--brand-foreground` + derived `-light`/`-hover`/`-dark`). Never hardcode `#293F52`/`#00E47C` in public/field — admin pages exempt. `text-white` on brand backgrounds can silently fail under Tailwind v4 + Turbopack — use `--brand-foreground` (defaults `#FFFFFF`) with an inline `style={{ color }}` fallback; `VercoButton` primary variant does this automatically.
+### White-label colours — use CSS vars, not hex
+Public/field use `--brand`, `--brand-accent`, `--brand-foreground` + derived `-light`/`-hover`/`-dark`; admin exempt. `text-white` silently fails under Tailwind v4 + Turbopack — use `--brand-foreground` (defaults `#FFFFFF`) with inline `style={{ color }}` fallback; `VercoButton` primary does this.
 
 ### Typography — use semantic tokens, not arbitrary px
 `text-2xs`(10), `text-body-sm`(13), `text-body`(15), `text-subtitle`(17), `text-title`(22), `text-display`(28). Exception: `text-[11px]` has no token.
@@ -390,8 +387,11 @@ Every wizard step carries ALL params through back/forward nav via `carryParams`.
 ### EFs that access PII accept dual auth (per §20 Red Line #3)
 Server actions MUST NOT use the service role key. EFs needing PII (e.g. `send-notification`) accept EITHER a service role bearer (EF→EF callers) OR a valid user JWT whose `current_user_role()` is in a permitted set. Internal loads always use service role inside the EF — the user's role gates the TRIGGER, not the data access.
 
-### Notification module conventions
-Use shared helpers in `templates/template-helpers.ts` and `invokeSendNotification` in `src/lib/notifications/invoke.ts` — never duplicate. Resume-by-log-id only works for `RESUMABLE_TYPES` in `dispatch.ts`.
+### Notification module — shared helpers, never duplicate
+`templates/template-helpers.ts` + `invokeSendNotification` from `src/lib/notifications/invoke.ts`. Resume-by-log-id only for `RESUMABLE_TYPES` in `dispatch.ts`.
+
+### Public-SELECT RLS (`USING(true)`) doesn't tenant-scope — filter in app
+`eligible_properties`, `collection_area`, `collection_date` etc. are cross-tenant readable for the unauthenticated `/book` flow. Server pages must read `x-client-id` from `headers()`, pass `clientId` to client components, and queries must join via embedded `!inner` FK + `.eq('<fk>.client_id', clientId)`. See `book/page.tsx` + `book/address-form.tsx`.
 
 ### Local dev tenant override — `LOCAL_DEV_CLIENT_SLUG`
 Set in `.env.local` to pick which client the proxy resolves (default: first by `created_at`). Avoids `accessible_client_ids()` errors for multi-client contractors.
