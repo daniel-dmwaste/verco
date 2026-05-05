@@ -53,6 +53,17 @@ serve(async (req) => {
     // ── 1. Parse + validate input ──────────────────────────────────────────
 
     const body = await req.json()
+
+    // Back-compat shim — see create-booking for context. Remove once main
+    // is on the first_name+last_name shape.
+    if (body?.contact?.full_name && !body.contact.first_name) {
+      const trimmed = String(body.contact.full_name).trim()
+      const idx = trimmed.indexOf(' ')
+      body.contact.first_name = idx === -1 ? trimmed : trimmed.slice(0, idx)
+      body.contact.last_name = idx === -1 ? '-' : (trimmed.slice(idx + 1).trim() || '-')
+      delete body.contact.full_name
+    }
+
     const parsed = CreateTicketRequest.safeParse(body)
 
     if (!parsed.success) {

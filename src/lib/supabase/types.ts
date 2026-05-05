@@ -908,10 +908,6 @@ export type Database = {
         ]
       }
       contacts: {
-        // Hand-edited for migration 20260505072318_split_contact_name.
-        // Re-run `pnpm supabase gen types typescript --project-id tfddjmplcizfirxqhotv > src/lib/supabase/types.ts`
-        // after the migration is applied to pick up the canonical generated types.
-        // full_name is now a generated column (read-only) — Insert/Update reject writes to it.
         Row: {
           attio_person_id: string | null
           attio_person_web_url: string | null
@@ -931,6 +927,7 @@ export type Database = {
           created_at?: string
           email: string
           first_name?: string
+          full_name?: string
           id?: string
           last_name?: string
           last_synced_by?: string | null
@@ -943,6 +940,7 @@ export type Database = {
           created_at?: string
           email?: string
           first_name?: string
+          full_name?: string
           id?: string
           last_name?: string
           last_synced_by?: string | null
