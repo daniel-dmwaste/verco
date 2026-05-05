@@ -99,7 +99,8 @@ describe('BookingItemSchema', () => {
 
 describe('ContactSchema', () => {
   const validContact = {
-    full_name: 'Jane Smith',
+    first_name: 'Jane',
+    last_name: 'Smith',
     email: 'jane@example.com',
     mobile: '0412345678',
   }
@@ -112,8 +113,22 @@ describe('ContactSchema', () => {
     }
   })
 
-  it('rejects empty name', () => {
-    const result = ContactSchema.safeParse({ ...validContact, full_name: '' })
+  it('rejects empty first_name', () => {
+    const result = ContactSchema.safeParse({ ...validContact, first_name: '' })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects empty last_name', () => {
+    const result = ContactSchema.safeParse({ ...validContact, last_name: '' })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects missing last_name (single-name input)', () => {
+    const result = ContactSchema.safeParse({
+      first_name: 'Madonna',
+      email: 'm@example.com',
+      mobile: '0412345678',
+    })
     expect(result.success).toBe(false)
   })
 

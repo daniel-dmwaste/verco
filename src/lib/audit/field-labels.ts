@@ -46,7 +46,9 @@ export const FIELD_LABELS: Record<string, string> = {
   is_extra: 'Extra Item',
 
   // Contact
-  full_name: 'Name',
+  full_name: 'Name', // generated column — kept for legacy audit_log entries
+  first_name: 'First name',
+  last_name: 'Last name',
   email: 'Email',
   mobile_e164: 'Mobile',
 

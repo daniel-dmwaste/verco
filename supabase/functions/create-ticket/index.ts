@@ -6,7 +6,8 @@ import { corsHeaders, jsonResponse, optionsResponse, errorResponse } from '../_s
 // ── Input validation ─────────────────────────────────────────────────────────
 
 const ContactInput = z.object({
-  full_name: z.string().min(1).max(200),
+  first_name: z.string().min(1).max(100),
+  last_name: z.string().min(1).max(100),
   email: z.string().email().max(320),
   mobile_e164: z.string().regex(/^\+614\d{8}$/).optional(),
 })
@@ -97,8 +98,10 @@ serve(async (req) => {
     let contactId: string
 
     if (existingContact) {
+      // full_name is a generated column — must write first/last_name.
       const updateData: Record<string, string> = {
-        full_name: contact.full_name,
+        first_name: contact.first_name,
+        last_name: contact.last_name,
       }
       if (contact.mobile_e164) {
         updateData.mobile_e164 = contact.mobile_e164
@@ -117,7 +120,8 @@ serve(async (req) => {
       contactId = existingContact.id
     } else {
       const insertData: Record<string, string> = {
-        full_name: contact.full_name,
+        first_name: contact.first_name,
+        last_name: contact.last_name,
         email: contact.email,
       }
       if (contact.mobile_e164) {

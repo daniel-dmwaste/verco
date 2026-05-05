@@ -23,7 +23,8 @@ const auMobileRegex = /^(\+614\d{8}|04\d{8})$/
  * MUD strata managers (need both for NCN dual-recipient routing).
  */
 export const strataContactSchema = z.object({
-  full_name: z.string().min(1, 'Name is required').max(120),
+  first_name: z.string().min(1, 'First name is required').max(60),
+  last_name: z.string().min(1, 'Last name is required').max(60),
   mobile_e164: z
     .string()
     .min(1, 'Mobile is required')

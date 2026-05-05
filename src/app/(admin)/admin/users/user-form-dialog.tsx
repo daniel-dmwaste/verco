@@ -26,7 +26,8 @@ const ROLE_OPTIONS: { value: AppRole; label: string }[] = [
 
 const UserFormSchema = z
   .object({
-    full_name: z.string().min(1, 'Name is required').max(200),
+    first_name: z.string().min(1, 'First name is required').max(100),
+    last_name: z.string().min(1, 'Last name is required').max(100),
     email: z.string().email('Please enter a valid email'),
     mobile_e164: z
       .string()
@@ -65,7 +66,8 @@ type UserFormData = z.infer<typeof UserFormSchema>
 
 export interface EditUserData {
   user_id: string
-  full_name: string
+  first_name: string
+  last_name: string
   email: string
   mobile_e164: string | null
   role: AppRole
@@ -111,7 +113,8 @@ export function UserFormDialog({ callerRole, editData, open, onOpenChange }: Use
   } = useForm<UserFormData>({
     resolver: zodResolver(UserFormSchema),
     defaultValues: {
-      full_name: editData?.full_name ?? '',
+      first_name: editData?.first_name ?? '',
+      last_name: editData?.last_name ?? '',
       email: editData?.email ?? '',
       mobile_e164: getDisplayMobile(),
       role: editData?.role ?? 'client-staff',
@@ -123,7 +126,8 @@ export function UserFormDialog({ callerRole, editData, open, onOpenChange }: Use
   useEffect(() => {
     if (open) {
       reset({
-        full_name: editData?.full_name ?? '',
+        first_name: editData?.first_name ?? '',
+        last_name: editData?.last_name ?? '',
         email: editData?.email ?? '',
         mobile_e164: editData ? getDisplayMobile() : '',
         role: editData?.role ?? 'client-staff',
@@ -195,7 +199,8 @@ export function UserFormDialog({ callerRole, editData, open, onOpenChange }: Use
       const isClientRole = CLIENT_ROLES.includes(role)
 
       const requestBody: Record<string, unknown> = {
-        full_name: data.full_name,
+        first_name: data.first_name,
+        last_name: data.last_name,
         email: data.email,
         role: data.role,
       }
@@ -296,13 +301,22 @@ export function UserFormDialog({ callerRole, editData, open, onOpenChange }: Use
                 </div>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3">
-                  {/* Full Name */}
-                  <div>
-                    <label className={labelClass}>
-                      Full Name<span className="ml-0.5 text-red-500">*</span>
-                    </label>
-                    <input type="text" placeholder="e.g. Jane Smith" {...register('full_name')} className={inputClass} />
-                    {errors.full_name && <p className={errorClass}>{errors.full_name.message}</p>}
+                  {/* Name */}
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className={labelClass}>
+                        First Name<span className="ml-0.5 text-red-500">*</span>
+                      </label>
+                      <input type="text" autoComplete="given-name" placeholder="Jane" {...register('first_name')} className={inputClass} />
+                      {errors.first_name && <p className={errorClass}>{errors.first_name.message}</p>}
+                    </div>
+                    <div>
+                      <label className={labelClass}>
+                        Last Name<span className="ml-0.5 text-red-500">*</span>
+                      </label>
+                      <input type="text" autoComplete="family-name" placeholder="Smith" {...register('last_name')} className={inputClass} />
+                      {errors.last_name && <p className={errorClass}>{errors.last_name.message}</p>}
+                    </div>
                   </div>
 
                   {/* Email */}

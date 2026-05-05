@@ -21,7 +21,7 @@ export default async function AdminPropertyDetailPage({
     supabase
       .from('eligible_properties')
       .select(
-        '*, collection_area!inner(id, name, code), strata_contact:strata_contact_id(id, full_name, mobile_e164, email)'
+        '*, collection_area!inner(id, name, code), strata_contact:strata_contact_id(id, first_name, last_name, full_name, mobile_e164, email)'
       )
       .eq('id', id)
       .single(),

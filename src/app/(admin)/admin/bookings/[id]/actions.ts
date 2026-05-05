@@ -177,7 +177,7 @@ export async function cancelBooking(bookingId: string): Promise<Result<void>> {
 
 export async function updateContact(
   contactId: string,
-  data: { full_name: string; email: string; mobile_e164: string | null },
+  data: { first_name: string; last_name: string; email: string; mobile_e164: string | null },
 ): Promise<Result<void>> {
   const supabase = await createClient()
 
@@ -187,14 +187,16 @@ export async function updateContact(
     return { ok: false, error: 'Insufficient permissions.' }
   }
 
-  if (!data.full_name.trim() || !data.email.trim()) {
-    return { ok: false, error: 'Name and email are required.' }
+  if (!data.first_name.trim() || !data.last_name.trim() || !data.email.trim()) {
+    return { ok: false, error: 'First name, last name, and email are required.' }
   }
 
+  // full_name is a generated column — write first/last_name only.
   const { error } = await supabase
     .from('contacts')
     .update({
-      full_name: data.full_name.trim(),
+      first_name: data.first_name.trim(),
+      last_name: data.last_name.trim(),
       email: data.email.trim().toLowerCase(),
       mobile_e164: data.mobile_e164?.trim() || null,
     })

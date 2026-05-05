@@ -12,7 +12,8 @@ import { COLLECTION_CADENCES, type CollectionCadence } from '@/lib/mud/validatio
 
 type StrataContact = {
   id: string
-  full_name: string
+  first_name: string
+  last_name: string
   mobile_e164: string | null
   email: string
 } | null
@@ -44,7 +45,8 @@ export function MudEditForm({ property, strataContact, onCancel }: MudEditFormPr
     property.collection_cadence ?? 'Quarterly'
   )
   const [wasteNotes, setWasteNotes] = useState(property.waste_location_notes ?? '')
-  const [contactName, setContactName] = useState(strataContact?.full_name ?? '')
+  const [contactFirstName, setContactFirstName] = useState(strataContact?.first_name ?? '')
+  const [contactLastName, setContactLastName] = useState(strataContact?.last_name ?? '')
   const [contactMobile, setContactMobile] = useState(strataContact?.mobile_e164 ?? '')
   const [contactEmail, setContactEmail] = useState(strataContact?.email ?? '')
   const [authFormPath, setAuthFormPath] = useState<string | null>(property.auth_form_url)
@@ -110,12 +112,12 @@ export function MudEditForm({ property, strataContact, onCancel }: MudEditFormPr
     }
 
     // Strata contact: all-or-nothing
-    const anyContactField = contactName || contactMobile || contactEmail
+    const anyContactField = contactFirstName || contactLastName || contactMobile || contactEmail
     let strataContactId: string | null = strataContact?.id ?? null
 
     if (anyContactField) {
-      if (!contactName.trim()) {
-        setError('Strata contact name is required if any contact field is filled.')
+      if (!contactFirstName.trim() || !contactLastName.trim()) {
+        setError('Strata contact first and last name are required if any contact field is filled.')
         return
       }
       if (!auMobileRegex.test(contactMobile.trim())) {
@@ -132,7 +134,8 @@ export function MudEditForm({ property, strataContact, onCancel }: MudEditFormPr
     try {
       if (anyContactField) {
         const contactResult = await upsertStrataContact({
-          full_name: contactName.trim(),
+          first_name: contactFirstName.trim(),
+          last_name: contactLastName.trim(),
           mobile_e164: contactMobile.trim(),
           email: contactEmail.trim(),
         })
@@ -225,13 +228,24 @@ export function MudEditForm({ property, strataContact, onCancel }: MudEditFormPr
           Strata contact
         </div>
         <div className="space-y-2">
-          <input
-            type="text"
-            value={contactName}
-            onChange={(e) => setContactName(e.target.value)}
-            placeholder="Full name"
-            className="w-full rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-2 text-[13px] outline-none placeholder:text-gray-400 focus:border-[#293F52]"
-          />
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="text"
+              autoComplete="given-name"
+              value={contactFirstName}
+              onChange={(e) => setContactFirstName(e.target.value)}
+              placeholder="First name"
+              className="w-full rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-2 text-[13px] outline-none placeholder:text-gray-400 focus:border-[#293F52]"
+            />
+            <input
+              type="text"
+              autoComplete="family-name"
+              value={contactLastName}
+              onChange={(e) => setContactLastName(e.target.value)}
+              placeholder="Last name"
+              className="w-full rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-2 text-[13px] outline-none placeholder:text-gray-400 focus:border-[#293F52]"
+            />
+          </div>
           <input
             type="tel"
             value={contactMobile}

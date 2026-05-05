@@ -7,6 +7,8 @@ import { MudStatusActions } from './mud-status-actions'
 
 type StrataContact = {
   id: string
+  first_name: string
+  last_name: string
   full_name: string
   mobile_e164: string | null
   email: string

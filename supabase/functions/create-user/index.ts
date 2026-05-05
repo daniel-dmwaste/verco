@@ -34,7 +34,8 @@ function isClientRole(role: string): boolean {
 
 const CreateUserRequest = z
   .object({
-    full_name: z.string().min(1).max(200),
+    first_name: z.string().min(1).max(100),
+    last_name: z.string().min(1).max(100),
     email: z.string().email().max(320),
     mobile_e164: z.string().regex(/^\+614\d{8}$/).optional(),
     role: z.enum(ALL_ROLES),
@@ -93,7 +94,11 @@ serve(async (req) => {
       return errorResponse(parsed.error.message, 400)
     }
 
-    const { full_name, email, mobile_e164, role, contractor_id, client_id } = parsed.data
+    const { first_name, last_name, email, mobile_e164, role, contractor_id, client_id } = parsed.data
+    // Derived once; used for non-contacts surfaces (auth metadata, profile
+    // display name, welcome email, audit log). The contacts table itself
+    // gets first/last only — full_name is generated.
+    const full_name = `${first_name} ${last_name}`.trim()
 
     // ── 3. Scope check — client-admin restrictions ──────────────────────
 
@@ -188,7 +193,8 @@ serve(async (req) => {
     let contactId: string
 
     if (existingContact) {
-      const updateData: Record<string, string> = { full_name }
+      // full_name is a generated column — must write first/last_name.
+      const updateData: Record<string, string> = { first_name, last_name }
       if (mobile_e164) updateData.mobile_e164 = mobile_e164
 
       const { error: updateError } = await supabaseService
@@ -203,7 +209,7 @@ serve(async (req) => {
 
       contactId = existingContact.id
     } else {
-      const insertData: Record<string, string> = { full_name, email }
+      const insertData: Record<string, string> = { first_name, last_name, email }
       if (mobile_e164) insertData.mobile_e164 = mobile_e164
 
       const { data: newContact, error: insertError } = await supabaseService

@@ -42,7 +42,7 @@ interface Booking {
   contact_id: string | null
   collection_area: { name: string; code: string }
   eligible_properties: { formatted_address: string | null; address: string } | null
-  contact: { full_name: string; mobile_e164: string | null; email: string } | null
+  contact: { first_name: string; last_name: string; full_name: string; mobile_e164: string | null; email: string } | null
   booking_item: BookingItem[]
 }
 
@@ -78,7 +78,8 @@ export function BookingDetailPanel({
   const [editingNotes, setEditingNotes] = useState(false)
 
   // Contact edit form
-  const [editName, setEditName] = useState(booking.contact?.full_name ?? '')
+  const [editFirstName, setEditFirstName] = useState(booking.contact?.first_name ?? '')
+  const [editLastName, setEditLastName] = useState(booking.contact?.last_name ?? '')
   const [editEmail, setEditEmail] = useState(booking.contact?.email ?? '')
   const [editMobile, setEditMobile] = useState(booking.contact?.mobile_e164 ?? '')
 
@@ -93,7 +94,7 @@ export function BookingDetailPanel({
 
   const area = booking.collection_area as { name: string; code: string }
   const property = booking.eligible_properties as { formatted_address: string | null; address: string } | null
-  const contact = booking.contact as { full_name: string; mobile_e164: string | null; email: string } | null
+  const contact = booking.contact as { first_name: string; last_name: string; full_name: string; mobile_e164: string | null; email: string } | null
   const address = property?.formatted_address ?? property?.address ?? '—'
 
   const collectionDateStr =
@@ -127,7 +128,8 @@ export function BookingDetailPanel({
         ...(booking.booking_item[0]?.collection_date_id ? { collection_date_id: booking.booking_item[0].collection_date_id } : {}),
         ...(booking.location ? { location: booking.location } : {}),
         ...(booking.notes ? { notes: booking.notes } : {}),
-        ...(contact?.full_name ? { contact_name: contact.full_name } : {}),
+        ...(contact?.first_name ? { contact_first_name: contact.first_name } : {}),
+        ...(contact?.last_name ? { contact_last_name: contact.last_name } : {}),
         ...(contact?.email ? { contact_email: contact.email } : {}),
         ...(contact?.mobile_e164 ? { contact_mobile: contact.mobile_e164 } : {}),
         return_url: `/admin/bookings/${booking.id}`,
@@ -223,7 +225,8 @@ export function BookingDetailPanel({
     setIsPending(true)
     setError(null)
     const result = await updateContact(booking.contact_id, {
-      full_name: editName,
+      first_name: editFirstName,
+      last_name: editLastName,
       email: editEmail,
       mobile_e164: editMobile || null,
     })
@@ -445,14 +448,27 @@ export function BookingDetailPanel({
             )
           ) : (
             <div className="flex flex-col gap-2.5">
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-500">Name</label>
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="w-full rounded-lg border-[1.5px] border-gray-100 bg-gray-50 px-3 py-2 text-body-sm text-gray-900 outline-none focus:border-[#293F52] focus:bg-white"
-                />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-500">First name</label>
+                  <input
+                    type="text"
+                    autoComplete="given-name"
+                    value={editFirstName}
+                    onChange={(e) => setEditFirstName(e.target.value)}
+                    className="w-full rounded-lg border-[1.5px] border-gray-100 bg-gray-50 px-3 py-2 text-body-sm text-gray-900 outline-none focus:border-[#293F52] focus:bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-500">Last name</label>
+                  <input
+                    type="text"
+                    autoComplete="family-name"
+                    value={editLastName}
+                    onChange={(e) => setEditLastName(e.target.value)}
+                    className="w-full rounded-lg border-[1.5px] border-gray-100 bg-gray-50 px-3 py-2 text-body-sm text-gray-900 outline-none focus:border-[#293F52] focus:bg-white"
+                  />
+                </div>
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-500">Email</label>
@@ -477,7 +493,7 @@ export function BookingDetailPanel({
                 <button
                   type="button"
                   onClick={handleSaveContact}
-                  disabled={isPending || !editName || !editEmail}
+                  disabled={isPending || !editFirstName || !editLastName || !editEmail}
                   className="flex-1 rounded-lg bg-[#293F52] px-3 py-2 text-body-sm font-semibold text-white disabled:opacity-50"
                 >
                   {isPending ? 'Saving...' : 'Save'}
@@ -486,7 +502,8 @@ export function BookingDetailPanel({
                   type="button"
                   onClick={() => {
                     setEditingContact(false)
-                    setEditName(contact?.full_name ?? '')
+                    setEditFirstName(contact?.first_name ?? '')
+                    setEditLastName(contact?.last_name ?? '')
                     setEditEmail(contact?.email ?? '')
                     setEditMobile(contact?.mobile_e164 ?? '')
                   }}

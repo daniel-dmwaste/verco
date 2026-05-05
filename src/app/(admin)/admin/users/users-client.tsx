@@ -77,7 +77,7 @@ export function UsersClient() {
         .from('user_roles')
         .select(
           `id, role, is_active, created_at, client_id, contractor_id,
-           profiles!inner(id, email, display_name, contacts(full_name, mobile_e164)),
+           profiles!inner(id, email, display_name, contacts(first_name, last_name, full_name, mobile_e164)),
            client:client_id(name),
            contractor:contractor_id(name)`,
           { count: 'exact' }
@@ -111,11 +111,16 @@ export function UsersClient() {
       id: string
       email: string
       display_name: string | null
-      contacts: { full_name: string; mobile_e164: string | null } | null
+      contacts: { first_name: string; last_name: string; full_name: string; mobile_e164: string | null } | null
     }
+    // Fall back to splitting display_name on first space if there's no contact row.
+    const fallback = (profile.display_name ?? '').trim()
+    const fallbackFirst = fallback.split(' ', 1)[0] ?? ''
+    const fallbackLast = fallback.includes(' ') ? fallback.slice(fallback.indexOf(' ') + 1) : ''
     setEditData({
       user_id: profile.id,
-      full_name: profile.contacts?.full_name ?? profile.display_name ?? '',
+      first_name: profile.contacts?.first_name ?? fallbackFirst,
+      last_name: profile.contacts?.last_name ?? fallbackLast,
       email: profile.email,
       mobile_e164: profile.contacts?.mobile_e164 ?? null,
       role: ur.role as AppRole,

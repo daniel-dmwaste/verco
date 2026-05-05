@@ -52,7 +52,8 @@ function jsonResponse(body: unknown, status = 200) {
 // ── Input validation ─────────────────────────────────────────────────────────
 
 const ContactInput = z.object({
-  full_name: z.string().min(1).max(200),
+  first_name: z.string().min(1).max(100),
+  last_name: z.string().min(1).max(100),
   email: z.string().email().max(320),
   mobile_e164: z.string().regex(/^\+614\d{8}$/, 'Must be a valid AU mobile in E.164 format'),
 })
@@ -191,11 +192,13 @@ serve(async (req) => {
     let contactId: string
 
     if (existingContact) {
-      // Update name and mobile if they've changed
+      // Update name and mobile if they've changed.
+      // full_name is a generated column — must write first/last_name.
       const { error: updateError } = await supabaseService
         .from('contacts')
         .update({
-          full_name: contact.full_name,
+          first_name: contact.first_name,
+          last_name: contact.last_name,
           mobile_e164: contact.mobile_e164,
         })
         .eq('id', existingContact.id)
@@ -210,7 +213,8 @@ serve(async (req) => {
       const { data: newContact, error: insertError } = await supabaseService
         .from('contacts')
         .insert({
-          full_name: contact.full_name,
+          first_name: contact.first_name,
+          last_name: contact.last_name,
           email: contact.email,
           mobile_e164: contact.mobile_e164,
         })

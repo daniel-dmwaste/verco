@@ -26,7 +26,8 @@ async function validateStaffRole(): Promise<Result<string>> {
 // ----------------------------------------------------------------------------
 
 export interface StrataContactInput {
-  full_name: string
+  first_name: string
+  last_name: string
   mobile_e164: string
   email: string
 }
@@ -34,6 +35,8 @@ export interface StrataContactInput {
 /**
  * Looks up an existing contact by email; creates one if not found.
  * Returns the contact_id.
+ *
+ * full_name is a generated column on contacts — write first/last_name only.
  */
 export async function upsertStrataContact(
   input: StrataContactInput
@@ -55,7 +58,11 @@ export async function upsertStrataContact(
     // Update name + mobile in case they've changed
     const { error: updateError } = await supabase
       .from('contacts')
-      .update({ full_name: input.full_name, mobile_e164: input.mobile_e164 })
+      .update({
+        first_name: input.first_name,
+        last_name: input.last_name,
+        mobile_e164: input.mobile_e164,
+      })
       .eq('id', existing.id)
     if (updateError) return { ok: false, error: updateError.message }
     return { ok: true, data: { contact_id: existing.id } }
@@ -64,7 +71,8 @@ export async function upsertStrataContact(
   const { data: created, error: createError } = await supabase
     .from('contacts')
     .insert({
-      full_name: input.full_name,
+      first_name: input.first_name,
+      last_name: input.last_name,
       mobile_e164: input.mobile_e164,
       email: input.email,
     })
