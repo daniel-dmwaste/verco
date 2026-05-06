@@ -75,10 +75,12 @@ Eight roles. Scope is enforced at the DB level via RLS — never rely on fronten
 
 **PII rule — absolute, no exceptions:**
 `field` and `ranger` roles receive **zero** contact information. This means:
-- Never query `contacts.full_name`, `contacts.email`, or `contacts.mobile_e164` in any code path accessible to these roles
+- Never query `contacts.first_name`, `contacts.last_name`, `contacts.full_name` (generated from first+last), `contacts.email`, or `contacts.mobile_e164` in any code path accessible to these roles
 - The run sheet RPC (`get_run_sheet`) structurally excludes these fields — do not add them
 - This is enforced at RLS level AND in query structure — defence in depth
 - **Never use `is_contractor_user()` in RLS policies gating PII** — it includes `field`. Use explicit `current_user_role() IN ('contractor-admin', 'contractor-staff')` instead
+
+**Contact name shape:** `contacts` stores `first_name` (text NOT NULL) + `last_name` (text NOT NULL) as the source of truth. `full_name` is a `GENERATED ALWAYS AS (TRIM(first_name || ' ' || last_name)) STORED` column — read-only. INSERT/UPDATE on `contacts.full_name` will fail. Forms must capture first/last as separate required fields. Read paths can continue to select `full_name` for display.
 
 **Privacy rule — `resident`/`strata` excluded from admin user management:**
 Admin users pages filter out `resident` and `strata` roles from queries and dropdowns. These roles are self-service only — admin users should not see the full resident list.

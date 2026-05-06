@@ -25,12 +25,14 @@ export function DetailsForm() {
   const [notes, setNotes] = useState(searchParams.get('notes') ?? '')
 
   // Carry params through for edit flow
-  const contactName = searchParams.get('contact_name')
+  const contactFirstName = searchParams.get('contact_first_name')
+  const contactLastName = searchParams.get('contact_last_name')
   const contactEmail = searchParams.get('contact_email')
   const contactMobile = searchParams.get('contact_mobile')
   const returnUrl = searchParams.get('return_url')
   const carryParams = {
-    ...(contactName ? { contact_name: contactName } : {}),
+    ...(contactFirstName ? { contact_first_name: contactFirstName } : {}),
+    ...(contactLastName ? { contact_last_name: contactLastName } : {}),
     ...(contactEmail ? { contact_email: contactEmail } : {}),
     ...(contactMobile ? { contact_mobile: contactMobile } : {}),
     ...(returnUrl ? { return_url: returnUrl } : {}),

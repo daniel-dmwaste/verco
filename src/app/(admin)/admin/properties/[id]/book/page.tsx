@@ -20,7 +20,7 @@ export default async function MudBookingPage({ params }: MudBookingPageProps) {
     .select(
       `id, formatted_address, address, is_mud, unit_count, mud_code,
        mud_onboarding_status, waste_location_notes, collection_area_id,
-       strata_contact:strata_contact_id(id, full_name, mobile_e164, email),
+       strata_contact:strata_contact_id(id, first_name, last_name, full_name, mobile_e164, email),
        collection_area:collection_area_id(id, code, name)`
     )
     .eq('id', id)

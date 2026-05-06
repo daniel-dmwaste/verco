@@ -913,8 +913,10 @@ export type Database = {
           attio_person_web_url: string | null
           created_at: string
           email: string
+          first_name: string
           full_name: string
           id: string
+          last_name: string
           last_synced_by: string | null
           mobile_e164: string | null
           updated_at: string
@@ -924,8 +926,10 @@ export type Database = {
           attio_person_web_url?: string | null
           created_at?: string
           email: string
-          full_name: string
+          first_name?: string
+          full_name?: string
           id?: string
+          last_name?: string
           last_synced_by?: string | null
           mobile_e164?: string | null
           updated_at?: string
@@ -935,8 +939,10 @@ export type Database = {
           attio_person_web_url?: string | null
           created_at?: string
           email?: string
+          first_name?: string
           full_name?: string
           id?: string
+          last_name?: string
           last_synced_by?: string | null
           mobile_e164?: string | null
           updated_at?: string

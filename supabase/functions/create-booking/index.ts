@@ -52,7 +52,8 @@ function jsonResponse(body: unknown, status = 200) {
 // ── Input validation ─────────────────────────────────────────────────────────
 
 const ContactInput = z.object({
-  full_name: z.string().min(1).max(200),
+  first_name: z.string().min(1).max(100),
+  last_name: z.string().min(1).max(100),
   email: z.string().email().max(320),
   mobile_e164: z.string().regex(/^\+614\d{8}$/, 'Must be a valid AU mobile in E.164 format'),
 })
@@ -101,6 +102,21 @@ serve(async (req) => {
     // ── 1. Parse + validate input ────────────────────────────────────────────
 
     const body = await req.json()
+
+    // Back-compat shim: prior to the contacts.full_name -> first_name+last_name
+    // split, callers sent {contact: {full_name: 'Jane Smith'}}. The deployed
+    // Verco app on `main` still does this until the split-contact-name PR
+    // merges and Coolify redeploys. Split the legacy name server-side so
+    // those callers keep working in the gap. Safe to remove once main is on
+    // the new shape.
+    if (body?.contact?.full_name && !body.contact.first_name) {
+      const trimmed = String(body.contact.full_name).trim()
+      const idx = trimmed.indexOf(' ')
+      body.contact.first_name = idx === -1 ? trimmed : trimmed.slice(0, idx)
+      body.contact.last_name = idx === -1 ? '-' : (trimmed.slice(idx + 1).trim() || '-')
+      delete body.contact.full_name
+    }
+
     const parsed = CreateBookingRequest.safeParse(body)
 
     if (!parsed.success) {
@@ -191,11 +207,13 @@ serve(async (req) => {
     let contactId: string
 
     if (existingContact) {
-      // Update name and mobile if they've changed
+      // Update name and mobile if they've changed.
+      // full_name is a generated column — must write first/last_name.
       const { error: updateError } = await supabaseService
         .from('contacts')
         .update({
-          full_name: contact.full_name,
+          first_name: contact.first_name,
+          last_name: contact.last_name,
           mobile_e164: contact.mobile_e164,
         })
         .eq('id', existingContact.id)
@@ -210,7 +228,8 @@ serve(async (req) => {
       const { data: newContact, error: insertError } = await supabaseService
         .from('contacts')
         .insert({
-          full_name: contact.full_name,
+          first_name: contact.first_name,
+          last_name: contact.last_name,
           email: contact.email,
           mobile_e164: contact.mobile_e164,
         })

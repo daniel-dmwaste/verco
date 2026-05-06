@@ -23,7 +23,8 @@ const TicketFormSchema = z.object({
   category: z.enum(['general', 'booking', 'billing', 'service', 'complaint', 'other']),
   message: z.string().min(20, 'Message must be at least 20 characters').max(2000),
   contact_email: z.string().email('Please enter a valid email').optional(),
-  contact_name: z.string().min(1, 'Name is required').optional(),
+  contact_first_name: z.string().min(1, 'First name is required').optional(),
+  contact_last_name: z.string().min(1, 'Last name is required').optional(),
 })
 
 type TicketFormData = z.infer<typeof TicketFormSchema>
@@ -107,7 +108,8 @@ export function ServiceTicketForm({
 
       try {
         // Get contact details from session or form
-        let contactName = formData.contact_name ?? ''
+        let contactFirstName = formData.contact_first_name ?? ''
+        let contactLastName = formData.contact_last_name ?? ''
         let contactEmail = formData.contact_email ?? ''
 
         const {
@@ -117,16 +119,18 @@ export function ServiceTicketForm({
         if (user) {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('contact_id, contacts(full_name, email)')
+            .select('contact_id, contacts(first_name, last_name, email)')
             .eq('id', user.id)
             .single()
 
           const contact = profile?.contacts as {
-            full_name: string
+            first_name: string
+            last_name: string
             email: string
           } | null
           if (contact) {
-            contactName = contact.full_name
+            contactFirstName = contact.first_name
+            contactLastName = contact.last_name
             contactEmail = contact.email
           } else if (user.email) {
             contactEmail = user.email
@@ -139,6 +143,10 @@ export function ServiceTicketForm({
           return
         }
 
+        // Email-prefix fallback only fires for authenticated users without a
+        // contact row — for guests, the form-validation block above guarantees
+        // both name fields are populated.
+        const emailPrefix = contactEmail.split('@')[0] ?? 'User'
         const requestBody = {
           subject: formData.subject,
           category: formData.category,
@@ -146,7 +154,8 @@ export function ServiceTicketForm({
           booking_id: bookingId,
           client_id: clientId,
           contact: {
-            full_name: contactName || (contactEmail.split('@')[0] ?? ''),
+            first_name: contactFirstName || emailPrefix,
+            last_name: contactLastName || '-',
             email: contactEmail,
           },
         }
@@ -321,9 +330,13 @@ export function ServiceTicketForm({
       return
     }
 
-    // Guest — require email + name, then OTP
+    // Guest — require email + both names, then OTP
     if (!formData.contact_email) {
       setSubmitError('Please enter your email address.')
+      return
+    }
+    if (!formData.contact_first_name?.trim() || !formData.contact_last_name?.trim()) {
+      setSubmitError('Please enter your first and last name.')
       return
     }
 
@@ -518,21 +531,41 @@ export function ServiceTicketForm({
         {/* Contact fields for unauthenticated users */}
         {!isAuthenticated && (
           <>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">
-                Your Name<span className="ml-0.5 text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                placeholder="Full name"
-                {...register('contact_name')}
-                className="w-full rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-300 focus:border-[var(--brand)] focus:bg-white"
-              />
-              {errors.contact_name && (
-                <p className="mt-1 text-[11px] text-red-500">
-                  {errors.contact_name.message}
-                </p>
-              )}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">
+                  First Name<span className="ml-0.5 text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  autoComplete="given-name"
+                  placeholder="First name"
+                  {...register('contact_first_name')}
+                  className="w-full rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-300 focus:border-[var(--brand)] focus:bg-white"
+                />
+                {errors.contact_first_name && (
+                  <p className="mt-1 text-[11px] text-red-500">
+                    {errors.contact_first_name.message}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">
+                  Last Name<span className="ml-0.5 text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  autoComplete="family-name"
+                  placeholder="Last name"
+                  {...register('contact_last_name')}
+                  className="w-full rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-300 focus:border-[var(--brand)] focus:bg-white"
+                />
+                {errors.contact_last_name && (
+                  <p className="mt-1 text-[11px] text-red-500">
+                    {errors.contact_last_name.message}
+                  </p>
+                )}
+              </div>
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-700">

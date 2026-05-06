@@ -21,7 +21,7 @@ export default async function AdminBookingDetailPage({
        property_id, collection_area_id, contact_id,
        collection_area!inner(name, code),
        eligible_properties:property_id(formatted_address, address),
-       contact:contact_id(full_name, mobile_e164, email),
+       contact:contact_id(first_name, last_name, full_name, mobile_e164, email),
        booking_item(
          id, service_id, collection_date_id, no_services, is_extra, unit_price_cents,
          service!inner(name),

@@ -325,7 +325,8 @@ test.describe('Booking Flow', () => {
     await expect(page.getByText('Confirm Your Booking')).toBeVisible()
 
     // Fill contact details
-    await page.getByPlaceholder('Full name').fill('Jane Smith')
+    await page.getByPlaceholder('First name').fill('Jane')
+    await page.getByPlaceholder('Last name').fill('Smith')
     await page.getByPlaceholder('Email address').fill('jane@example.com')
     await page.getByPlaceholder(/Mobile number/).fill('0412345678')
 
@@ -409,7 +410,8 @@ test.describe('Booking Flow', () => {
     await expect(page.getByText('Confirm Your Booking')).toBeVisible()
 
     // Fill contact
-    await page.getByPlaceholder('Full name').fill('Jane Smith')
+    await page.getByPlaceholder('First name').fill('Jane')
+    await page.getByPlaceholder('Last name').fill('Smith')
     await page.getByPlaceholder('Email address').fill('jane@example.com')
     await page.getByPlaceholder(/Mobile number/).fill('0412345678')
 
@@ -465,7 +467,8 @@ test.describe('Booking Flow', () => {
     await expect(page.getByText('Confirm Your Booking')).toBeVisible()
 
     // Fill contact
-    await page.getByPlaceholder('Full name').fill('Jane Smith')
+    await page.getByPlaceholder('First name').fill('Jane')
+    await page.getByPlaceholder('Last name').fill('Smith')
     await page.getByPlaceholder('Email address').fill('jane@example.com')
     await page.getByPlaceholder(/Mobile number/).fill('0412345678')
 

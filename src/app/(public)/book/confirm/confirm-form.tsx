@@ -64,10 +64,12 @@ export function ConfirmForm() {
   useEffect(() => {
     if (onBehalf) {
       // On-behalf: prefill from URL params if available (edit flow passes these)
-      const contactName = searchParams.get('contact_name')
+      const contactFirstName = searchParams.get('contact_first_name')
+      const contactLastName = searchParams.get('contact_last_name')
       const contactEmail = searchParams.get('contact_email')
       const contactMobile = searchParams.get('contact_mobile')
-      if (contactName) setValue('full_name', contactName)
+      if (contactFirstName) setValue('first_name', contactFirstName)
+      if (contactLastName) setValue('last_name', contactLastName)
       if (contactEmail) setValue('email', contactEmail)
       if (contactMobile) {
         setValue('mobile', contactMobile)
@@ -92,13 +94,14 @@ export function ConfirmForm() {
 
       const { data: contact } = await supabase
         .from('contacts')
-        .select('full_name, email, mobile_e164')
+        .select('first_name, last_name, email, mobile_e164')
         .eq('id', profile.contact_id)
         .single()
 
       if (!contact) return
 
-      if (contact.full_name) setValue('full_name', contact.full_name)
+      if (contact.first_name) setValue('first_name', contact.first_name)
+      if (contact.last_name) setValue('last_name', contact.last_name)
       if (contact.email) setValue('email', contact.email)
       if (contact.mobile_e164) {
         setValue('mobile', contact.mobile_e164)
@@ -269,7 +272,8 @@ export function ConfirmForm() {
         location,
         notes: notes || undefined,
         contact: {
-          full_name: contact.full_name,
+          first_name: contact.first_name,
+          last_name: contact.last_name,
           email: contact.email,
           mobile_e164: contact.mobile,
         },
@@ -536,7 +540,8 @@ export function ConfirmForm() {
   }
 
   function handleBack() {
-    const contactName = searchParams.get('contact_name')
+    const contactFirstName = searchParams.get('contact_first_name')
+    const contactLastName = searchParams.get('contact_last_name')
     const contactEmail = searchParams.get('contact_email')
     const contactMobile = searchParams.get('contact_mobile')
     const returnUrl = searchParams.get('return_url')
@@ -550,7 +555,8 @@ export function ConfirmForm() {
       location,
       ...(notes ? { notes } : {}),
       ...(onBehalf ? { on_behalf: 'true' } : {}),
-      ...(contactName ? { contact_name: contactName } : {}),
+      ...(contactFirstName ? { contact_first_name: contactFirstName } : {}),
+      ...(contactLastName ? { contact_last_name: contactLastName } : {}),
       ...(contactEmail ? { contact_email: contactEmail } : {}),
       ...(contactMobile ? { contact_mobile: contactMobile } : {}),
       ...(returnUrl ? { return_url: returnUrl } : {}),
@@ -590,21 +596,41 @@ export function ConfirmForm() {
             Contact Information
           </h2>
           <div className="flex flex-col gap-2.5">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">
-                Full Name<span className="ml-0.5 text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                placeholder="Full name"
-                {...register('full_name')}
-                className="w-full rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-300 focus:border-[var(--brand)] focus:bg-white"
-              />
-              {errors.full_name && (
-                <p className="mt-1 text-[11px] text-red-500">
-                  {errors.full_name.message}
-                </p>
-              )}
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">
+                  First Name<span className="ml-0.5 text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  autoComplete="given-name"
+                  placeholder="First name"
+                  {...register('first_name')}
+                  className="w-full rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-300 focus:border-[var(--brand)] focus:bg-white"
+                />
+                {errors.first_name && (
+                  <p className="mt-1 text-[11px] text-red-500">
+                    {errors.first_name.message}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">
+                  Last Name<span className="ml-0.5 text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  autoComplete="family-name"
+                  placeholder="Last name"
+                  {...register('last_name')}
+                  className="w-full rounded-[10px] border-[1.5px] border-gray-100 bg-gray-50 px-3.5 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-300 focus:border-[var(--brand)] focus:bg-white"
+                />
+                {errors.last_name && (
+                  <p className="mt-1 text-[11px] text-red-500">
+                    {errors.last_name.message}
+                  </p>
+                )}
+              </div>
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-700">

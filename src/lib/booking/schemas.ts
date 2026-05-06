@@ -43,7 +43,8 @@ export function formatAuMobileDisplay(e164: string): string {
 }
 
 export const ContactSchema = z.object({
-  full_name: z.string().min(1, 'Name is required').max(200),
+  first_name: z.string().min(1, 'First name is required').max(100),
+  last_name: z.string().min(1, 'Last name is required').max(100),
   email: z.string().min(1, 'Email is required').email('Invalid email address'),
   mobile: z
     .string()
