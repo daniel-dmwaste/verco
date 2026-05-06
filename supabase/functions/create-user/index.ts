@@ -89,18 +89,6 @@ serve(async (req) => {
     // ── 2. Parse + validate input ───────────────────────────────────────
 
     const body = await req.json()
-
-    // Back-compat shim — see create-booking for context. Body shape is flat
-    // here (no nested contact). Remove once main is on the first_name+
-    // last_name shape.
-    if (body?.full_name && !body.first_name) {
-      const trimmed = String(body.full_name).trim()
-      const idx = trimmed.indexOf(' ')
-      body.first_name = idx === -1 ? trimmed : trimmed.slice(0, idx)
-      body.last_name = idx === -1 ? '-' : (trimmed.slice(idx + 1).trim() || '-')
-      delete body.full_name
-    }
-
     const parsed = CreateUserRequest.safeParse(body)
     if (!parsed.success) {
       return errorResponse(parsed.error.message, 400)
