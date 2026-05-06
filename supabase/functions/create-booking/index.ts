@@ -102,21 +102,6 @@ serve(async (req) => {
     // ── 1. Parse + validate input ────────────────────────────────────────────
 
     const body = await req.json()
-
-    // Back-compat shim: prior to the contacts.full_name -> first_name+last_name
-    // split, callers sent {contact: {full_name: 'Jane Smith'}}. The deployed
-    // Verco app on `main` still does this until the split-contact-name PR
-    // merges and Coolify redeploys. Split the legacy name server-side so
-    // those callers keep working in the gap. Safe to remove once main is on
-    // the new shape.
-    if (body?.contact?.full_name && !body.contact.first_name) {
-      const trimmed = String(body.contact.full_name).trim()
-      const idx = trimmed.indexOf(' ')
-      body.contact.first_name = idx === -1 ? trimmed : trimmed.slice(0, idx)
-      body.contact.last_name = idx === -1 ? '-' : (trimmed.slice(idx + 1).trim() || '-')
-      delete body.contact.full_name
-    }
-
     const parsed = CreateBookingRequest.safeParse(body)
 
     if (!parsed.success) {
