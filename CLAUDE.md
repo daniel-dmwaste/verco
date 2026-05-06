@@ -257,13 +257,6 @@ RLS is the primary security layer. Application code is defence-in-depth, not the
 - RLS policies: smoke test per role per table
 - E2E booking flows: free booking, paid booking, mixed cart
 
-### Running tests
-```bash
-pnpm test          # Vitest unit tests
-pnpm test:e2e      # Playwright E2E
-pnpm test:coverage # Coverage report
-```
-
 ### Every new feature requires
 1. Unit tests for business logic (`src/__tests__/`)
 2. E2E test for user-facing flows (`tests/e2e/`)
@@ -289,8 +282,7 @@ These are explicitly out of scope for v2. If a task seems to require one of thes
 
 ## 16. Environment Variables
 
-See `docs/VERCO_V2_TECH_SPEC.md` §16 for full list. Key rule:
-
+See `docs/VERCO_V2_TECH_SPEC.md` §16 for full list. Key rules:
 - **`NEXT_PUBLIC_*`** — safe for browser (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `STRIPE_PUBLISHABLE_KEY`)
 - **`SUPABASE_SERVICE_ROLE_KEY`** — Edge Functions only. **If you need it in `app/` — stop. You are doing something wrong.**
 - **Edge Function secrets** — set in Supabase dashboard, never in `.env`
@@ -299,8 +291,7 @@ See `docs/VERCO_V2_TECH_SPEC.md` §16 for full list. Key rule:
 
 ## 17. Git Conventions
 
-- **Branches:** `feature/`, `fix/`, `chore/` prefixes
-- **Commits:** Conventional commits (`feat:`, `fix:`, `chore:`, `test:`)
+- **Branches:** `feature/`, `fix/`, `chore/` prefixes. **Commits:** Conventional (`feat:`, `fix:`, `chore:`, `test:`).
 - **Never commit:** `.env*`, `supabase/.temp/`
 
 ---
@@ -352,7 +343,7 @@ pnpm start
 These are absolute. If a task requires crossing one, stop and flag it.
 
 1. **Never set `unit_price_cents` from client input** — server-side calculation only, always re-validated on booking creation
-2. **Never return `contacts.full_name`, `contacts.email`, or `contacts.mobile_e164` to `field` or `ranger` roles** — structural exclusion, not a UI hide
+2. **Never return any contact PII (name fields, email, mobile) to `field` or `ranger` roles** — structural exclusion, not a UI hide. See §4 for the full list.
 3. **Never use service role key in `app/` code** — Edge Functions only
 4. **Never skip the advisory lock on capacity-critical writes** — always use `create_booking_with_capacity_check` RPC
 5. **Never directly set `booking.status = 'Scheduled'`** — the cron owns this transition
@@ -366,8 +357,8 @@ These are absolute. If a task requires crossing one, stop and flag it.
 ### Suspense boundaries for useSearchParams
 Any client component using `useSearchParams()` must be wrapped in `<Suspense>`.
 
-### Audit trail — `audit_trigger_fn()` on new tables
-All audited tables have an AFTER INSERT/UPDATE/DELETE trigger writing to `audit_log`. When adding a new table that needs audit: attach the trigger in a migration, add its columns to `lib/audit/field-labels.ts`, and render `<AuditTimeline>` on its detail page. The resolver (`lib/audit/resolve.ts`) handles FK→label resolution server-side. For client components without a detail page, use a server action wrapper (see `collection-dates/actions.ts`).
+### Audit trail on new tables
+Attach `audit_trigger_fn()` AFTER INSERT/UPDATE/DELETE in a migration, add columns to `lib/audit/field-labels.ts`, render `<AuditTimeline>` on the detail page. Client-only pages need a server action wrapper (see `collection-dates/actions.ts`). FK resolution is server-side via `lib/audit/resolve.ts`.
 
 ### Tailwind CSS 4
 No `tailwind.config.ts` — theme in `@theme inline` block in `globals.css`. Fonts: `--font-sans` (DM Sans), `--font-heading` (Poppins) via `font-[family-name:var(--font-heading)]`. Breakpoints: `tablet:` (1024px) for nav/layout switching only; `md:` for text/spacing.
@@ -400,3 +391,9 @@ Set in `.env.local` to pick which client the proxy resolves (default: first by `
 
 ### `NEXT_PUBLIC_*` vars are baked at build time, not runtime
 Inlined via Docker build-args (`deploy.yml`). Coolify runtime env is a no-op. New vars: add to `.env.example`, GitHub secrets, `deploy.yml` build-arg, and Dockerfile `ENV`.
+
+### Write-shape changes — inventory every writer + roll the deploy
+Splitting/renaming a column (e.g. `full_name` → `first_name`+`last_name` with the old as a generated column) breaks every writer at once. Grep all EFs, server actions, forms, MUD flows, wizard URL params, and `lib/booking/schemas.ts` — not just the obvious form. Deploy: migration → EFs with a **back-compat shim** (split legacy payload pre-zod) → Coolify ships new app → second EF deploy strips the shim. Skipping the shim 500s every in-flight booking until Coolify catches up.
+
+### Generated NOT NULL columns need an explicit constraint
+The Supabase CLI infers nullability from column metadata, not the expression. After creating a `GENERATED ... STORED` column whose inputs are NOT NULL, also `ALTER COLUMN ... SET NOT NULL` so regen'd TS is `string`, not `string | null`.
