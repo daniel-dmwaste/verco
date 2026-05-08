@@ -76,7 +76,7 @@ Eight roles. Scope is enforced at the DB level via RLS — never rely on fronten
 **PII rule — absolute, no exceptions:**
 `field` and `ranger` roles receive **zero** contact information. This means:
 - Never query `contacts.first_name`, `contacts.last_name`, `contacts.full_name` (generated from first+last), `contacts.email`, or `contacts.mobile_e164` in any code path accessible to these roles
-- The run sheet RPC (`get_run_sheet`) structurally excludes these fields — do not add them
+- The field run sheet page (`src/app/(field)/field/run-sheet/page.tsx`) structurally excludes these fields in its `.select()` clause — do not add them. RLS on `contacts` is the second line of defence (see B1 fix in `20260508045155_fix_profiles_pii_field_exclusion.sql`)
 - This is enforced at RLS level AND in query structure — defence in depth
 - **Never use `is_contractor_user()` in RLS policies gating PII** — it includes `field`. Use explicit `current_user_role() IN ('contractor-admin', 'contractor-staff')` instead
 
