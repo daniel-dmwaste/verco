@@ -246,7 +246,11 @@ if (!haveDb) {
     await pg.query('BEGIN')
     try {
       await pg.query(`SET LOCAL ROLE authenticated`)
-      await pg.query(`SET LOCAL request.jwt.claims = $1`, [
+      // SET LOCAL is a utility statement and doesn't accept parameter binding.
+      // set_config() is a regular function that does the same job and supports
+      // $-params, so we use it for the JSON claims string. Third arg `true`
+      // makes the change local to the current transaction.
+      await pg.query(`SELECT set_config('request.jwt.claims', $1, true)`, [
         JSON.stringify({ sub: userId, role: 'authenticated' }),
       ])
       const r = await pg.query<{ c: string }>(`SELECT count(*)::text AS c FROM (${sql}) _t`)
