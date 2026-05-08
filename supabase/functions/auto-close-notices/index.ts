@@ -15,6 +15,13 @@ serve(async (_req) => {
   cutoffDate.setDate(cutoffDate.getDate() - 14)
   const cutoff = cutoffDate.toISOString()
 
+  const results = {
+    ncn_closed: 0,
+    np_closed: 0,
+    ncn_failed: 0,
+    np_failed: 0,
+  }
+
   try {
     // Close NCN notices older than 14 days in 'Issued' status
     const { data: ncnClosed, error: ncnError } = await supabase
@@ -29,6 +36,7 @@ serve(async (_req) => {
       .select('id')
 
     if (ncnError) {
+      results.ncn_failed++
       console.error('NCN auto-close error:', ncnError.message)
     }
 
@@ -45,25 +53,24 @@ serve(async (_req) => {
       .select('id')
 
     if (npError) {
+      results.np_failed++
       console.error('NP auto-close error:', npError.message)
     }
 
-    const ncnCount = ncnClosed?.length ?? 0
-    const npCount = npClosed?.length ?? 0
+    results.ncn_closed = ncnClosed?.length ?? 0
+    results.np_closed = npClosed?.length ?? 0
 
-    console.log(`Auto-close complete: ${ncnCount} NCN, ${npCount} NP`)
+    console.log(`Auto-close complete: ${results.ncn_closed} NCN, ${results.np_closed} NP`)
 
-    return new Response(
-      JSON.stringify({
-        ok: true,
-        ncn_closed: ncnCount,
-        np_closed: npCount,
-      }),
-      {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      },
-    )
+    // Return 500 on any failure so pg_cron logs a non-success HTTP status —
+    // otherwise silent partial failures look fine to monitoring.
+    const failed = results.ncn_failed + results.np_failed
+    const status = failed > 0 ? 500 : 200
+    const ok = failed === 0
+    return new Response(JSON.stringify({ ok, ...results }), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    })
   } catch (err) {
     console.error('Auto-close error:', err)
     return new Response(
