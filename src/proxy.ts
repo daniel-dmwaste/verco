@@ -13,6 +13,9 @@ const ADMIN_ROLES: AppRole[] = [
 
 const FIELD_ROLES: AppRole[] = ['field', 'ranger']
 
+const DEBUG_PROXY =
+  process.env.NODE_ENV === 'development' || process.env.DEBUG_PROXY === '1'
+
 export async function proxy(request: NextRequest) {
   // Healthcheck bypass: Docker HEALTHCHECK hits /api/health from the container's
   // internal network, so there is no tenant-resolving hostname to match. Skip
@@ -47,7 +50,9 @@ export async function proxy(request: NextRequest) {
 
   // --- 1. Resolve tenant from hostname ---
   const hostname = request.headers.get('host') ?? ''
-  console.log(`[proxy] hostname="${hostname}" NODE_ENV="${process.env.NODE_ENV}"`)
+  if (DEBUG_PROXY) {
+    console.log(`[proxy] hostname="${hostname}" NODE_ENV="${process.env.NODE_ENV}"`)
+  }
 
 
   // Local dev bypass: resolve tenant from LOCAL_DEV_CLIENT_SLUG env var,
@@ -79,7 +84,9 @@ export async function proxy(request: NextRequest) {
   if (clientError) {
     console.error(`[proxy] tenant query failed: ${clientError.message} (code=${clientError.code})`)
   }
-  console.log(`[proxy] tenant resolution: isLocalDev=${isLocalDev} client=${client ? client.slug : 'null'}`)
+  if (DEBUG_PROXY) {
+    console.log(`[proxy] tenant resolution: isLocalDev=${isLocalDev} client=${client ? client.slug : 'null'}`)
+  }
 
   if (!client) {
     return new NextResponse('Not Found', { status: 404 })
@@ -96,14 +103,17 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL('/auth', request.url))
     }
 
-    const { data: userRole } = await supabase
+    // Multi-role users (e.g. admin + field) may have multiple active rows in
+    // `user_roles`. Pull all active roles and check if ANY qualifies for the
+    // /admin guard — `.single()` would crash when N > 1.
+    const { data: userRoles } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .eq('is_active', true)
-      .single()
 
-    if (!userRole || !ADMIN_ROLES.includes(userRole.role)) {
+    const roles = userRoles?.map((r) => r.role) ?? []
+    if (!roles.some((r) => ADMIN_ROLES.includes(r))) {
       return NextResponse.redirect(new URL('/auth', request.url))
     }
   } else if (path.startsWith('/field')) {
@@ -111,14 +121,17 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL('/auth', request.url))
     }
 
-    const { data: userRole } = await supabase
+    // Multi-role users (e.g. field + resident) may have multiple active rows
+    // in `user_roles`. Pull all active roles and check if ANY qualifies for
+    // the /field guard — `.single()` would crash when N > 1.
+    const { data: userRoles } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .eq('is_active', true)
-      .single()
 
-    if (!userRole || !FIELD_ROLES.includes(userRole.role)) {
+    const roles = userRoles?.map((r) => r.role) ?? []
+    if (!roles.some((r) => FIELD_ROLES.includes(r))) {
       return NextResponse.redirect(new URL('/auth', request.url))
     }
   } else if (path.startsWith('/dashboard') || path.startsWith('/booking')) {
