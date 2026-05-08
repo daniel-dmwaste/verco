@@ -95,6 +95,51 @@ export const FIELD_LABELS: Record<string, string> = {
 
   // Strata user properties
   user_id: 'User',
+
+  // Client (white-label config)
+  name: 'Name',
+  slug: 'Slug',
+  custom_domain: 'Custom Domain',
+  is_active: 'Active',
+  logo_light_url: 'Logo (Light)',
+  logo_dark_url: 'Logo (Dark)',
+  primary_colour: 'Primary Colour',
+  accent_colour: 'Accent Colour',
+  service_name: 'Service Name',
+  hero_banner_url: 'Hero Banner',
+  show_powered_by: 'Show "Powered By"',
+  landing_headline: 'Landing Headline',
+  landing_subheading: 'Landing Subheading',
+  contact_name: 'Contact Name',
+  contact_phone: 'Contact Phone',
+  contact_email: 'Contact Email',
+  privacy_policy_url: 'Privacy Policy URL',
+  email_footer_html: 'Email Footer HTML',
+  faq_items: 'FAQ Items',
+  sms_sender_id: 'SMS Sender ID',
+  reply_to_email: 'Reply-To Email',
+  email_from_name: 'Email From Name',
+  sms_reminder_days_before: 'SMS Reminder Days Before',
+
+  // Collection area
+  code: 'Code',
+  dm_job_code: 'DM-Ops Job Code',
+  sub_client_id: 'Sub-Client',
+
+  // Allocation rules / service rules
+  category_id: 'Category',
+  max_collections: 'Max Collections',
+  extra_unit_price: 'Extra Unit Price',
+
+  // Allocation override
+  extra_allocations: 'Extra Allocations',
+  created_by: 'Created By',
+
+  // Refund request
+  amount_cents: 'Amount',
+  stripe_refund_id: 'Stripe Refund ID',
+  reviewed_by: 'Reviewed By',
+  reviewed_at: 'Reviewed At',
 }
 
 /**
@@ -117,4 +162,8 @@ export const FK_RESOLVE_MAP: Record<string, { table: string; column: string }> =
   cancelled_by: { table: 'profiles', column: 'display_name' },
   author_id: { table: 'profiles', column: 'display_name' },
   user_id: { table: 'profiles', column: 'display_name' },
+  created_by: { table: 'profiles', column: 'display_name' },
+  reviewed_by: { table: 'profiles', column: 'display_name' },
+  category_id: { table: 'category', column: 'name' },
+  sub_client_id: { table: 'sub_client', column: 'name' },
 }
