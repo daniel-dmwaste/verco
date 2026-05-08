@@ -161,8 +161,12 @@ serve(async (_req) => {
 
     console.log(JSON.stringify({ event: 'handle_expired_payments', ...results }))
 
-    return new Response(JSON.stringify({ ok: true, ...results }), {
-      status: 200,
+    // Return 500 on any per-row failure so pg_cron logs a non-success HTTP
+    // status — otherwise silent partial failures look fine to monitoring.
+    const status = results.expired_failed > 0 ? 500 : 200
+    const ok = results.expired_failed === 0
+    return new Response(JSON.stringify({ ok, ...results }), {
+      status,
       headers: { 'Content-Type': 'application/json' },
     })
   } catch (err) {
