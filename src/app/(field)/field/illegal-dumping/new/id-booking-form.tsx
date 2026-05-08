@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
+import { invokeEdgeFunction } from '@/lib/supabase/invoke-ef'
 import { createIdBooking } from './actions'
 import { Confirmation } from './confirmation'
 import { cn } from '@/lib/utils'
@@ -102,11 +103,12 @@ export function IdBookingForm({ collectionDates }: IdBookingFormProps) {
 
   async function reverseGeocode(lat: number, lng: number) {
     try {
-      const { data } = await supabase.functions.invoke('google-places-proxy', {
-        body: { latlng: `${lat},${lng}`, type: 'reverse' },
-      })
+      const data = await invokeEdgeFunction<{ address?: string | null }>(
+        'google-places-proxy',
+        { latlng: `${lat},${lng}`, type: 'reverse' }
+      )
       if (data?.address) {
-        setGeoAddress(data.address as string)
+        setGeoAddress(data.address)
       }
     } catch {
       // Fallback: use raw coordinates as address

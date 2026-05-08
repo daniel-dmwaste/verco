@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { invokeEdgeFunction } from '@/lib/supabase/invoke-ef'
 import { cn } from '@/lib/utils'
 
 interface PlaceSuggestion {
@@ -22,7 +22,6 @@ export function AddressAutocomplete({
   initialValue = '',
   variant = 'default',
 }: AddressAutocompleteProps) {
-  const supabase = createClient()
   const [query, setQuery] = useState(initialValue)
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([])
   const [isSearching, setIsSearching] = useState(false)
@@ -56,33 +55,17 @@ export function AddressAutocomplete({
 
       setIsSearching(true)
       try {
-        const { data, error } = await supabase.functions.invoke(
-          'google-places-proxy',
-          {
-            body: {
-              input,
-              session_token: sessionTokenRef.current,
-              types: 'address',
-              components: 'country:au',
-            },
-          }
-        )
+        const data = await invokeEdgeFunction<{
+          predictions?: Array<{ place_id: string; description: string }>
+        }>('google-places-proxy', {
+          input,
+          session_token: sessionTokenRef.current,
+          types: 'address',
+          components: 'country:au',
+        })
 
-        if (error) {
-          console.error('[AddressAutocomplete] google-places-proxy error:', error)
-        }
-
-        if (
-          !error &&
-          data?.predictions &&
-          Array.isArray(data.predictions)
-        ) {
-          const results = (
-            data.predictions as Array<{
-              place_id: string
-              description: string
-            }>
-          ).map((p) => ({
+        if (data?.predictions && Array.isArray(data.predictions)) {
+          const results = data.predictions.map((p) => ({
             place_id: p.place_id,
             description: p.description,
           }))
@@ -90,11 +73,13 @@ export function AddressAutocomplete({
           setIsOpen(results.length > 0)
           setSelectedIndex(-1)
         }
+      } catch (err) {
+        console.error('[AddressAutocomplete] google-places-proxy error:', err)
       } finally {
         setIsSearching(false)
       }
     },
-    [supabase]
+    []
   )
 
   function handleInputChange(value: string) {
