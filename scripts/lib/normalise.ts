@@ -10,7 +10,7 @@
 export function normaliseAddress(raw: string): string {
   return raw
     .toLowerCase()
-    .replace(/\b(wa|western australia)\b\s*\d{4}?/gi, '')
+    .replace(/\b(wa|western australia)\b\s*\d{4}/gi, '')
     .replace(/,/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()

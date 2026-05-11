@@ -53,7 +53,7 @@ async function main() {
 
   const failedGeocodes: { baseId: string; recordId: string; address: string }[] = []
   const unmappedCodes: { baseId: string; recordId: string; code: string }[] = []
-  const counts: Record<string, { newRows: number; skipped: number; upserted: number; failed: number }> = {}
+  const counts: Record<string, { newRows: number; skipped: number; upserted: number; failedBatches: number }> = {}
 
   for (const base of bases) {
     console.log(`\n─── Base ${base.key} (${base.baseId}) ───`)
@@ -117,11 +117,31 @@ async function main() {
       newRows: newRows.length,
       skipped: airtableRows.length - newRows.length,
       upserted: upsertResult.ok,
-      failed: upsertResult.failedBatches * 500, // approx; batch granularity
+      failedBatches: upsertResult.failedBatches,
     }
   }
 
-  // 6. Hard abort on unmapped codes (defensive — hygiene should catch first).
+  // 6. Save report FIRST — so a hard-exit on unmapped codes still leaves a diagnostic on disk.
+  const report = {
+    completedAt: new Date().toISOString(),
+    dryRun,
+    counts,
+    failedGeocodes,
+    unmappedCodes,
+  }
+  const path = `import-vv-report-${timestamp()}.json`
+  writeFileSync(path, JSON.stringify(report, null, 2))
+
+  console.log('\n═════════════════════════════════════════════════════════')
+  console.log(`Done. ${dryRun ? '(DRY RUN — no writes)' : ''}`)
+  for (const [k, v] of Object.entries(counts)) {
+    console.log(`  ${k.padEnd(5)}  new=${v.newRows}  skipped=${v.skipped}  upserted=${v.upserted}  failedBatches=${v.failedBatches}`)
+  }
+  console.log(`Failed geocodes: ${failedGeocodes.length}`)
+  console.log(`Report: ${path}`)
+
+  // 7. Hard abort on unmapped codes (defensive — hygiene should catch first).
+  //    Done AFTER writing the report so ops always gets a diagnostic.
   if (unmappedCodes.length > 0) {
     console.error(`\n✗ ${unmappedCodes.length} row(s) had unmapped Council_Codes. Sample:`)
     for (const u of unmappedCodes.slice(0, 5)) {
@@ -130,23 +150,8 @@ async function main() {
     process.exit(1)
   }
 
-  // 7. Save report.
-  const report = {
-    completedAt: new Date().toISOString(),
-    dryRun,
-    counts,
-    failedGeocodes,
-  }
-  const path = `import-vv-report-${timestamp()}.json`
-  writeFileSync(path, JSON.stringify(report, null, 2))
-
-  console.log('\n═════════════════════════════════════════════════════════')
-  console.log(`Done. ${dryRun ? '(DRY RUN — no writes)' : ''}`)
-  for (const [k, v] of Object.entries(counts)) {
-    console.log(`  ${k.padEnd(5)}  new=${v.newRows}  skipped=${v.skipped}  upserted=${v.upserted}  failed=${v.failed}`)
-  }
-  console.log(`Failed geocodes: ${failedGeocodes.length}`)
-  console.log(`Report: ${path}`)
+  // 8. Verification queries — only on a successful (zero-unmapped) run, where
+  //    they're a useful next step. On a failed run they'd be misleading guidance.
   console.log('')
   console.log('Run these verification queries against Verco:')
   console.log("  SELECT ca.code, count(*) FROM eligible_properties ep")
