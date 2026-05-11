@@ -111,7 +111,7 @@ async function airtableFetch<T>(url: string, token: string): Promise<T> {
   while (true) {
     const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
     if (res.ok) return (await res.json()) as T
-    if (res.status === 429 && attempt < MAX_RETRIES) {
+    if ((res.status === 429 || res.status >= 500) && attempt < MAX_RETRIES) {
       await sleep(RETRY_BACKOFF_MS * Math.pow(2, attempt))
       attempt++
       continue

@@ -53,6 +53,7 @@ async function main() {
 
   const failedGeocodes: { baseId: string; recordId: string; address: string }[] = []
   const unmappedCodes: { baseId: string; recordId: string; code: string }[] = []
+  const emptyAddresses: { baseId: string; recordId: string; address: string }[] = []
   const counts: Record<string, { newRows: number; skipped: number; upserted: number; failedBatches: number }> = {}
 
   for (const base of bases) {
@@ -81,6 +82,12 @@ async function main() {
       const areaId = resolveAreaId(code, areaMap)
       if (!areaId) {
         unmappedCodes.push({ baseId: base.baseId, recordId: row.id, code })
+        continue
+      }
+      // Defensive: empty/short addresses pass NOT NULL but break public lookup.
+      // Hygiene script flags these as `empty_addresses`; this is the final gate.
+      if (row.address.trim().length < 4) {
+        emptyAddresses.push({ baseId: base.baseId, recordId: row.id, address: row.address })
         continue
       }
 
@@ -128,6 +135,7 @@ async function main() {
     counts,
     failedGeocodes,
     unmappedCodes,
+    emptyAddresses,
   }
   const path = `import-vv-report-${timestamp()}.json`
   writeFileSync(path, JSON.stringify(report, null, 2))
@@ -138,6 +146,7 @@ async function main() {
     console.log(`  ${k.padEnd(5)}  new=${v.newRows}  skipped=${v.skipped}  upserted=${v.upserted}  failedBatches=${v.failedBatches}`)
   }
   console.log(`Failed geocodes: ${failedGeocodes.length}`)
+  console.log(`Empty addresses skipped: ${emptyAddresses.length}`)
   console.log(`Report: ${path}`)
 
   // 7. Hard abort on unmapped codes (defensive — hygiene should catch first).
