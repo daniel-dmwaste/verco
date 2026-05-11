@@ -985,6 +985,8 @@ export type Database = {
             | Database["public"]["Enums"]["collection_cadence"]
             | null
           created_at: string
+          external_id: string | null
+          external_source: string | null
           formatted_address: string | null
           google_place_id: string | null
           has_geocode: boolean
@@ -1010,6 +1012,8 @@ export type Database = {
             | Database["public"]["Enums"]["collection_cadence"]
             | null
           created_at?: string
+          external_id?: string | null
+          external_source?: string | null
           formatted_address?: string | null
           google_place_id?: string | null
           has_geocode?: boolean
@@ -1035,6 +1039,8 @@ export type Database = {
             | Database["public"]["Enums"]["collection_cadence"]
             | null
           created_at?: string
+          external_id?: string | null
+          external_source?: string | null
           formatted_address?: string | null
           google_place_id?: string | null
           has_geocode?: boolean
@@ -2308,3 +2314,5 @@ export const Constants = {
     },
   },
 } as const
+A new version of Supabase CLI is available: v2.98.2 (currently installed v2.84.2)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
