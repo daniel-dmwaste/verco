@@ -41,6 +41,9 @@ DECLARE
   v_sc_sop uuid; v_sc_mos uuid; v_sc_pep uuid; v_sc_sub uuid; v_sc_vic uuid;
 BEGIN
   SELECT id INTO v_contractor_id FROM contractor WHERE slug = 'dm';
+  IF v_contractor_id IS NULL THEN
+    RAISE EXCEPTION 'Contractor with slug=dm not found — run supabase/seed.sql first';
+  END IF;
 
   INSERT INTO client (contractor_id, name, slug, is_active, primary_colour, service_name, show_powered_by)
   VALUES (v_contractor_id, 'Verge Valet', 'vergevalet', true, '#293F52', 'Verge Valet', true)
