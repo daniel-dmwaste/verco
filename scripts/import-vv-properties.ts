@@ -53,6 +53,7 @@ async function main() {
 
   const failedGeocodes: { baseId: string; recordId: string; address: string }[] = []
   const unmappedCodes: { baseId: string; recordId: string; code: string }[] = []
+  const orphanAddresses: { baseId: string; recordId: string; address: string }[] = []
   const emptyAddresses: { baseId: string; recordId: string; address: string }[] = []
   const counts: Record<string, { newRows: number; skipped: number; upserted: number; failedBatches: number }> = {}
 
@@ -76,7 +77,12 @@ async function main() {
     for (const row of newRows) {
       const code = row.councilCode
       if (!code) {
-        unmappedCodes.push({ baseId: base.baseId, recordId: row.id, code: '<null>' })
+        // Row has no Council_Code link in Airtable. Operationally this means
+        // the row was never associated with a council — likely a data-entry
+        // miss. Hygiene script reports these as orphan_addresses[]. We log
+        // and skip rather than abort (cf. unmapped codes, which are a real
+        // config issue and DO abort below).
+        orphanAddresses.push({ baseId: base.baseId, recordId: row.id, address: row.address })
         continue
       }
       const areaId = resolveAreaId(code, areaMap)
@@ -135,6 +141,7 @@ async function main() {
     counts,
     failedGeocodes,
     unmappedCodes,
+    orphanAddresses,
     emptyAddresses,
   }
   const path = `import-vv-report-${timestamp()}.json`
@@ -146,7 +153,8 @@ async function main() {
     console.log(`  ${k.padEnd(5)}  new=${v.newRows}  skipped=${v.skipped}  upserted=${v.upserted}  failedBatches=${v.failedBatches}`)
   }
   console.log(`Failed geocodes: ${failedGeocodes.length}`)
-  console.log(`Empty addresses skipped: ${emptyAddresses.length}`)
+  console.log(`Orphan addresses skipped (no Council_Code link): ${orphanAddresses.length}`)
+  console.log(`Empty addresses skipped (< 4 chars): ${emptyAddresses.length}`)
   console.log(`Report: ${path}`)
 
   // 7. Hard abort on unmapped codes (defensive — hygiene should catch first).
