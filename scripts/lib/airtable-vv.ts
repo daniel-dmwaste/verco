@@ -15,7 +15,11 @@ type AirtableListResponse<TFields> = {
 
 type EligibleFields = {
   Address?: string
-  Council_Code?: Array<{ id: string; name: string }>
+  // Airtable REST returns linked-record fields as arrays of record-ID strings
+  // (e.g. ["recZVvvVcFPgLwExG"]). NOT the {id, name} object shape that the
+  // Airtable MCP tool returns — that's a wrapper concern. Use the lookup
+  // table built by fetchCouncilCodeLookup() to resolve recordId → code name.
+  Council_Code?: string[]
   Latitude?: number
   Longitude?: number
 }
@@ -49,7 +53,7 @@ export async function fetchAllEligibleProperties(
     const body = await airtableFetch<AirtableListResponse<EligibleFields>>(url, token)
 
     for (const rec of body.records) {
-      const codeId = rec.fields.Council_Code?.[0]?.id
+      const codeId = rec.fields.Council_Code?.[0]
       const councilCode = codeId ? codeLookup.get(codeId) ?? null : null
       results.push({
         id: rec.id,
