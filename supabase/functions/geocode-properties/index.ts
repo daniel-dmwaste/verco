@@ -86,11 +86,15 @@ serve(async (req) => {
     )
   }
   if (!fetched || fetched.length === 0) {
+    // `failed: 0` keeps the response shape stable so the chunked-loop runner's
+    // parseEfResponse() recognises this as a clean done-signal, not a malformed
+    // envelope (which would trip the consecutive-failures abort path).
     return new Response(
       JSON.stringify({
         message: 'No properties missing google_place_id',
         processed: 0,
         total: 0,
+        failed: 0,
       }),
       { headers: { 'Content-Type': 'application/json' } }
     )

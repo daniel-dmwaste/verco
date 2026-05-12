@@ -65,6 +65,29 @@ describe('parseEfResponse', () => {
     expect(r.ok).toBe(true)
     if (r.ok) expect(r.data.total).toBe(0)
   })
+
+  // Regression — geocode-loop runner aborted on clean completion (2026-05-12)
+  // because the EF's no-rows envelope omitted `failed`. Treat that shape as
+  // a valid end-of-loop signal so the loop ends with exit 0, not an abort.
+  it('returns ok=true on the legacy no-rows envelope without `failed`', () => {
+    const r = parseEfResponse({
+      message: 'No properties missing google_place_id',
+      processed: 0,
+      total: 0,
+    })
+    expect(r.ok).toBe(true)
+    if (r.ok) {
+      expect(r.data.total).toBe(0)
+      expect(r.data.failed).toBe(0)
+    }
+  })
+
+  it("still rejects mid-loop envelopes missing `failed` (where it'd actually matter)", () => {
+    // If total=500 but failed is missing, that's a real EF bug, not the
+    // benign end-of-loop case. Keep the strict check there.
+    const r = parseEfResponse({ total: 500, processed: 498 })
+    expect(r.ok).toBe(false)
+  })
 })
 
 describe('estimateCostUsd', () => {
