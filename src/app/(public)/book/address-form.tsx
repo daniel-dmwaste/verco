@@ -9,6 +9,10 @@ import { BookingStepper } from '@/components/booking/booking-stepper'
 import { AddressAutocomplete } from '@/components/booking/address-autocomplete'
 import { Spinner } from '@/components/ui/spinner'
 import { stripAddressPrefix } from '@/lib/mud/address-strip'
+import {
+  addressMatchKey as buildAddressMatchKey,
+  buildLookupCandidates,
+} from '@/lib/booking/address-match-key'
 import { decideMudRedirect, type MudLookupCandidate } from '@/lib/mud/mud-lookup'
 import type { Database } from '@/lib/supabase/types'
 
@@ -25,14 +29,8 @@ const PropertyMap = dynamic(
   { ssr: false }
 )
 
-// Reduce a Google-style formatted address to "street, suburb" so the text
-// fallback requires suburb agreement, not just street. Handles Google's
-// common 3-4 part shape ("10 Casserley Way, Orelia WA 6167, Australia").
-function addressMatchKey(s: string): string {
-  const parts = s.split(',').map((p) => p.trim()).filter(Boolean)
-  if (parts.length >= 2) return `${parts[0]}, ${parts[1]}`
-  return parts[0] ?? s
-}
+// Re-export under the local name so the rest of this file reads the same.
+const addressMatchKey = buildAddressMatchKey
 
 export function AddressForm({ clientId }: { clientId: string }) {
   const router = useRouter()
@@ -88,15 +86,18 @@ export function AddressForm({ clientId }: { clientId: string }) {
         return null
       }
 
-      let property = await tryLookup(searchStr, placeId)
-
-      // Fallback: strip a Unit/Apt/Lot prefix and retry (text-only; the place_id
-      // would have matched on the primary pass if it corresponded to a MUD).
-      if (!property) {
-        const stripped = stripAddressPrefix(searchStr)
-        if (stripped !== searchStr) {
-          property = await tryLookup(stripped)
-        }
+      // Multi-pass ILIKE: Google's Geocoding API and Places Autocomplete
+      // disagree on canonical form (Street vs St, Unit-prefix, etc.). The
+      // candidate list covers raw, premise-stripped, street-type-abbreviated,
+      // and both transforms combined — see buildLookupCandidates.
+      const candidates = buildLookupCandidates(searchStr, stripAddressPrefix)
+      let property: EligibleProperty | null = null
+      for (const candidate of candidates) {
+        property = await tryLookup(
+          candidate,
+          candidate === searchStr ? placeId : undefined
+        )
+        if (property) break
       }
 
       if (!property) {
