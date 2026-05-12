@@ -317,30 +317,14 @@ See `docs/VERCO_V2_TECH_SPEC.md` §16 for full list. Key rules:
 ## 18. Commands Reference
 
 ```bash
-# Development
-pnpm dev                          # Start Next.js dev server
-
-# Types (project ID: tfddjmplcizfirxqhotv)
-pnpm supabase gen types typescript \
-  --project-id tfddjmplcizfirxqhotv \
-  > src/lib/supabase/types.ts
-# IMPORTANT: Check the output for CLI warnings appended to the file — remove them
-
-# Migrations
-pnpm supabase migration new <name>   # Create new migration file
-pnpm supabase db push                # Push migrations to remote
-
-# Edge Functions
-pnpm supabase functions deploy <name> --no-verify-jwt
-
-# Testing
-pnpm test
-pnpm test:coverage
-pnpm test:e2e
-
-# Build
-pnpm build
-pnpm start
+pnpm dev                                                 # Next.js dev server
+pnpm test  |  pnpm test:coverage  |  pnpm test:e2e       # Vitest + Playwright
+pnpm build  |  pnpm start                                # production build
+pnpm supabase migration new <name>                       # new migration
+pnpm supabase db push                                    # push migrations
+pnpm supabase functions deploy <name> --no-verify-jwt    # deploy EF
+pnpm supabase gen types typescript --project-id tfddjmplcizfirxqhotv > src/lib/supabase/types.ts
+# After type gen, strip any CLI warnings the command appends to the file.
 ```
 
 ---
@@ -372,25 +356,15 @@ These are absolute. If a task requires crossing one, stop and flag it.
 
 ## 21. Patterns & Gotchas
 
-### Suspense boundaries for useSearchParams
-Any client component using `useSearchParams()` must be wrapped in `<Suspense>`.
-
 ### Audit trail on new tables
-Attach `audit_trigger_fn()` AFTER INSERT/UPDATE/DELETE in a migration, add columns to `lib/audit/field-labels.ts`, render `<AuditTimeline>` on the detail page. Client-only pages need a server action wrapper (see `collection-dates/actions.ts`). FK resolution is server-side via `lib/audit/resolve.ts`.
+Attach `audit_trigger_fn()` AFTER INSERT/UPDATE/DELETE in the migration, add columns to `lib/audit/field-labels.ts`, render `<AuditTimeline>` on the detail page (client-only pages need a server action wrapper — see `collection-dates/actions.ts`).
 
-### Tailwind CSS 4
-No `tailwind.config.ts` — theme in `@theme inline` block in `globals.css`. Fonts: `--font-sans` (DM Sans), `--font-heading` (Poppins) via `font-[family-name:var(--font-heading)]`. Breakpoints: `tablet:` (1024px) for nav/layout switching only; `md:` for text/spacing.
-
-### Page layout conventions
-Admin list: `<Suspense><Client/></Suspense>`, client uses `useQuery` + browser Supabase; header `border-b border-gray-100 bg-white px-7 pb-5 pt-6`; RLS scopes. Public: `<main className="mx-auto w-full max-w-5xl px-6 py-8">` server-side, `pb-16 tablet:pb-0` for bottom nav.
+### Tailwind CSS 4 — `tablet:` (1024px) for nav/layout only; `md:` for text/spacing. Theme lives in `@theme inline` in `globals.css`.
 
 ### RLS on new columns — check UPDATE policies exist; writes silently fail without them
 
 ### White-label colours — use CSS vars, not hex
 Public/field use `--brand`, `--brand-accent`, `--brand-foreground` + derived `-light`/`-hover`/`-dark`; admin exempt. `text-white` silently fails under Tailwind v4 + Turbopack — use `--brand-foreground` (defaults `#FFFFFF`) with inline `style={{ color }}` fallback; `VercoButton` primary does this.
-
-### Typography — use semantic tokens, not arbitrary px
-`text-2xs`(10), `text-body-sm`(13), `text-body`(15), `text-subtitle`(17), `text-title`(22), `text-display`(28). Exception: `text-[11px]` has no token.
 
 ### Booking wizard state — URL params are the source of truth
 Every wizard step carries ALL params through back/forward nav via `carryParams`. When adding a param, update all steps.
@@ -398,8 +372,7 @@ Every wizard step carries ALL params through back/forward nav via `carryParams`.
 ### EFs that access PII accept dual auth (per §20 Red Line #3)
 Server actions MUST NOT use the service role key. EFs needing PII (e.g. `send-notification`) accept EITHER a service role bearer (EF→EF callers) OR a valid user JWT whose `current_user_role()` is in a permitted set. Internal loads always use service role inside the EF — the user's role gates the TRIGGER, not the data access.
 
-### Notification module — shared helpers, never duplicate
-`templates/template-helpers.ts` + `invokeSendNotification` from `src/lib/notifications/invoke.ts`. Resume-by-log-id only for `RESUMABLE_TYPES` in `dispatch.ts`.
+### Notification module — use `templates/template-helpers.ts` + `invokeSendNotification` from `src/lib/notifications/invoke.ts`. Resume-by-log-id only for `RESUMABLE_TYPES` in `dispatch.ts`.
 
 ### Public-SELECT RLS (`USING(true)`) doesn't tenant-scope — filter in app
 `eligible_properties`, `collection_area`, `collection_date` etc. are cross-tenant readable for the unauthenticated `/book` flow. Server pages must read `x-client-id` from `headers()`, pass `clientId` to client components, and queries must join via embedded `!inner` FK + `.eq('<fk>.client_id', clientId)`. See `book/page.tsx` + `book/address-form.tsx`.
@@ -410,8 +383,10 @@ Set in `.env.local` to pick which client the proxy resolves (default: first by `
 ### `NEXT_PUBLIC_*` vars are baked at build time, not runtime
 Inlined via Docker build-args (`deploy.yml`). Coolify runtime env is a no-op. New vars: add to `.env.example`, GitHub secrets, `deploy.yml` build-arg, and Dockerfile `ENV`.
 
-### Write-shape changes — inventory every writer + roll the deploy
-Splitting/renaming a column (e.g. `full_name` → `first_name`+`last_name` with the old as a generated column) breaks every writer at once. Grep all EFs, server actions, forms, MUD flows, wizard URL params, and `lib/booking/schemas.ts` — not just the obvious form. Deploy: migration → EFs with a **back-compat shim** (split legacy payload pre-zod) → Coolify ships new app → second EF deploy strips the shim. Skipping the shim 500s every in-flight booking until Coolify catches up.
+### Shape consistency across consumers — DB columns AND EF response envelopes
+**DB column splits/renames** (e.g. `full_name` → `first_name`+`last_name`): grep every writer (EFs, server actions, forms, MUD flows, wizard URL params, `lib/booking/schemas.ts`) before shipping. Deploy: migration → EFs with a **back-compat shim** (split legacy payload pre-zod) → Coolify ships new app → second EF deploy strips the shim. Skipping the shim 500s every in-flight booking until Coolify catches up.
+
+**EF response envelopes** must emit the same documented fields on every code path — success, no-op, AND error. The `geocode-properties` no-rows envelope once omitted `failed`, which tripped its chunked-loop runner's strict parser on every clean completion (exit 1 after the work succeeded). If a runner/cron/consumer is downstream, missing-field defaults belong in the EF, not the parser.
 
 ### Generated NOT NULL columns need an explicit constraint
-The Supabase CLI infers nullability from column metadata, not the expression. After creating a `GENERATED ... STORED` column whose inputs are NOT NULL, also `ALTER COLUMN ... SET NOT NULL` so regen'd TS is `string`, not `string | null`.
+Supabase CLI infers nullability from metadata, not the expression. After `GENERATED ... STORED` over NOT NULL inputs, add `ALTER COLUMN ... SET NOT NULL` so regen'd TS is `string`, not `string | null`.

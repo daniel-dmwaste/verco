@@ -34,10 +34,17 @@ export function parseEfResponse(raw: unknown): ParsedChunk {
     return { ok: false, error: r.error }
   }
 
+  // Tolerate the EF's no-rows envelope having no `failed` field. Older EF
+  // builds emitted `{message, processed:0, total:0}` and tripped the parser
+  // on every clean completion. Treat missing `failed` as 0 only when there
+  // is genuinely nothing to fail — i.e. total === 0 AND processed === 0.
+  const totalIsZero = r.total === 0 && r.processed === 0
+  const failedFallback = totalIsZero && r.failed === undefined ? 0 : r.failed
+
   if (
     typeof r.total !== 'number' ||
     typeof r.processed !== 'number' ||
-    typeof r.failed !== 'number'
+    typeof failedFallback !== 'number'
   ) {
     return {
       ok: false,
@@ -51,7 +58,7 @@ export function parseEfResponse(raw: unknown): ParsedChunk {
       message: typeof r.message === 'string' ? r.message : '',
       total: r.total,
       processed: r.processed,
-      failed: r.failed,
+      failed: failedFallback,
       dry_run: r.dry_run === true,
       errors: Array.isArray(r.errors)
         ? (r.errors as Array<{ id: string; error: string }>)
