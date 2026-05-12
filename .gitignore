@@ -47,3 +47,6 @@ next-env.d.ts
 # playwright
 /test-results/
 /playwright-report/
+
+# script run reports (geocode-loop, import-vv, etc.)
+/*-report-*.json
