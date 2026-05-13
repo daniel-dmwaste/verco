@@ -393,3 +393,8 @@ Supabase CLI infers nullability from metadata, not the expression. After `GENERA
 
 ### Auth email templates live in git, not the dashboard
 `supabase/templates/*.html` + `[auth.email.template.*]` blocks in `supabase/config.toml` are the source of truth. Apply with `pnpm supabase config push`. Editing the template in the Supabase Studio dashboard is not durable — the next config push will overwrite it. Currently only `magic_link` is customised (VERCO-branded OTP email triggered by `signInWithOtp`).
+
+**GoTrue uses base Go `html/template`, NOT sprig.** Only variables (`{{ .Token }}`, `{{ .ConfirmationURL }}`, `{{ .Email }}`, `{{ .Data }}`, `{{ .SiteURL }}`, `{{ .TokenHash }}`) — no `{{ now }}`, no `| date`, no `| upper`. Parse errors fall back **silently** to Supabase's default template (no admin alert; only visible in `auth` service logs as `templatemailer_template_body_parse_error`). Always test a template by triggering an OTP and checking the auth logs before declaring the deploy successful.
+
+### Never use `--yes` on `supabase config push` until local matches prod
+`config push` syncs the **entire** `[auth]` block, not just the diff you intended. The local `supabase/config.toml` has dev-default values (`site_url = "http://127.0.0.1:3000"`, `mfa.totp.enroll_enabled = false`, `email.max_frequency = "1s"`) that will silently bake into prod if you `--yes` past the diff. Always run once interactively first, eyeball the full diff, then `--yes` if it's clean. The CLI shows the diff exactly once before applying — there's no undo.
