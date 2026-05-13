@@ -25,18 +25,24 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
     .eq('client_id', id)
     .order('code')
 
-  // Preload categories + services for Collection Areas rules config
+  // Preload categories + services for the Rules tab. Exclude Illegal Dumping
+  // (`id`) — its capacity is controlled per-date via collection_date.id_capacity_limit
+  // (set by ops or via the date generator), not via per-area allocation/service
+  // rules. Filtering at the source means RulesTab can't accidentally render ID.
   const [categoriesResult, servicesResult] = await Promise.all([
-    supabase.from('category').select('id, name, code').order('name'),
+    supabase.from('category').select('id, name, code').neq('code', 'id').order('name'),
     supabase.from('service').select('id, name, category_id').order('name'),
   ])
+
+  const keptCategoryIds = new Set((categoriesResult.data ?? []).map((c) => c.id))
+  const filteredServices = (servicesResult.data ?? []).filter((s) => keptCategoryIds.has(s.category_id))
 
   return (
     <ClientDetail
       client={client}
       subClients={subClients ?? []}
       categories={categoriesResult.data ?? []}
-      services={servicesResult.data ?? []}
+      services={filteredServices}
     />
   )
 }
