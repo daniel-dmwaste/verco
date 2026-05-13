@@ -615,6 +615,41 @@ export type Database = {
           },
         ]
       }
+      capacity_pool: {
+        Row: {
+          code: string
+          contractor_id: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          contractor_id: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          contractor_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "capacity_pool_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       category: {
         Row: {
           code: string
@@ -783,6 +818,7 @@ export type Database = {
       }
       collection_area: {
         Row: {
+          capacity_pool_id: string | null
           client_id: string
           code: string
           contractor_id: string
@@ -795,6 +831,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          capacity_pool_id?: string | null
           client_id: string
           code: string
           contractor_id: string
@@ -807,6 +844,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          capacity_pool_id?: string | null
           client_id?: string
           code?: string
           contractor_id?: string
@@ -819,6 +857,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "collection_area_capacity_pool_id_fkey"
+            columns: ["capacity_pool_id"]
+            isOneToOne: false
+            referencedRelation: "capacity_pool"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "collection_area_client_id_fkey"
             columns: ["client_id"]
@@ -903,6 +948,65 @@ export type Database = {
             columns: ["collection_area_id"]
             isOneToOne: false
             referencedRelation: "collection_area"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      collection_date_pool: {
+        Row: {
+          anc_capacity_limit: number
+          anc_is_closed: boolean
+          anc_units_booked: number
+          bulk_capacity_limit: number
+          bulk_is_closed: boolean
+          bulk_units_booked: number
+          capacity_pool_id: string
+          created_at: string
+          date: string
+          id: string
+          id_capacity_limit: number
+          id_is_closed: boolean
+          id_units_booked: number
+          updated_at: string
+        }
+        Insert: {
+          anc_capacity_limit?: number
+          anc_is_closed?: boolean
+          anc_units_booked?: number
+          bulk_capacity_limit?: number
+          bulk_is_closed?: boolean
+          bulk_units_booked?: number
+          capacity_pool_id: string
+          created_at?: string
+          date: string
+          id?: string
+          id_capacity_limit?: number
+          id_is_closed?: boolean
+          id_units_booked?: number
+          updated_at?: string
+        }
+        Update: {
+          anc_capacity_limit?: number
+          anc_is_closed?: boolean
+          anc_units_booked?: number
+          bulk_capacity_limit?: number
+          bulk_is_closed?: boolean
+          bulk_units_booked?: number
+          capacity_pool_id?: string
+          created_at?: string
+          date?: string
+          id?: string
+          id_capacity_limit?: number
+          id_is_closed?: boolean
+          id_units_booked?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collection_date_pool_capacity_pool_id_fkey"
+            columns: ["capacity_pool_id"]
+            isOneToOne: false
+            referencedRelation: "capacity_pool"
             referencedColumns: ["id"]
           },
         ]
