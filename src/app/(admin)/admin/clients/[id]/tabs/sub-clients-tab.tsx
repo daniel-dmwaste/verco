@@ -31,15 +31,38 @@ export function SubClientsTab({ client, subClients: initialSubClients }: { clien
   const [editCode, setEditCode] = useState('')
   const [editError, setEditError] = useState<string | null>(null)
 
+  // Fetch sub_clients and collection_areas separately, then aggregate counts in JS.
+  // The earlier embedded `collection_area(count)` syntax silently returned 0 once
+  // collection_area gained additional FKs (capacity_pool_id added 2026-05-13), even
+  // though the direct sub_client_id FK is unambiguous. A separate query is robust
+  // against PostgREST's embedded-resolution edge cases.
   const { data: subClients } = useQuery({
     queryKey: ['admin-sub-clients', client.id],
     queryFn: async () => {
-      const { data } = await supabase
-        .from('sub_client')
-        .select('id, name, code, is_active, collection_area(count)')
-        .eq('client_id', client.id)
-        .order('code')
-      return (data ?? []) as Array<SubClient & { collection_area: { count: number }[] }>
+      const [scResp, caResp] = await Promise.all([
+        supabase
+          .from('sub_client')
+          .select('id, name, code, is_active')
+          .eq('client_id', client.id)
+          .order('code'),
+        supabase
+          .from('collection_area')
+          .select('sub_client_id')
+          .eq('client_id', client.id)
+          .eq('is_active', true)
+          .not('sub_client_id', 'is', null),
+      ])
+
+      const countsBySc = new Map<string, number>()
+      for (const a of caResp.data ?? []) {
+        if (!a.sub_client_id) continue
+        countsBySc.set(a.sub_client_id, (countsBySc.get(a.sub_client_id) ?? 0) + 1)
+      }
+
+      return (scResp.data ?? []).map((sc) => ({
+        ...sc,
+        collection_area: [{ count: countsBySc.get(sc.id) ?? 0 }],
+      })) as Array<SubClient & { collection_area: { count: number }[] }>
     },
     initialData: initialSubClients.map((sc) => ({ ...sc, collection_area: [{ count: 0 }] })),
   })
