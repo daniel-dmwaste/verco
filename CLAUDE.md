@@ -390,3 +390,6 @@ Inlined via Docker build-args (`deploy.yml`). Coolify runtime env is a no-op. Ne
 
 ### Generated NOT NULL columns need an explicit constraint
 Supabase CLI infers nullability from metadata, not the expression. After `GENERATED ... STORED` over NOT NULL inputs, add `ALTER COLUMN ... SET NOT NULL` so regen'd TS is `string`, not `string | null`.
+
+### Auth email templates live in git, not the dashboard
+`supabase/templates/*.html` + `[auth.email.template.*]` blocks in `supabase/config.toml` are the source of truth. Apply with `pnpm supabase config push`. Editing the template in the Supabase Studio dashboard is not durable — the next config push will overwrite it. Currently only `magic_link` is customised (VERCO-branded OTP email triggered by `signInWithOtp`).
