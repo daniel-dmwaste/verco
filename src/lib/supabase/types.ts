@@ -650,6 +650,50 @@ export type Database = {
           },
         ]
       }
+      capacity_pool_schedule: {
+        Row: {
+          anc_capacity_limit: number
+          bulk_capacity_limit: number
+          capacity_pool_id: string
+          created_at: string
+          day_of_week: number
+          id: string
+          id_capacity_limit: number
+          is_active: boolean
+          updated_at: string
+        }
+        Insert: {
+          anc_capacity_limit?: number
+          bulk_capacity_limit?: number
+          capacity_pool_id: string
+          created_at?: string
+          day_of_week: number
+          id?: string
+          id_capacity_limit?: number
+          is_active?: boolean
+          updated_at?: string
+        }
+        Update: {
+          anc_capacity_limit?: number
+          bulk_capacity_limit?: number
+          capacity_pool_id?: string
+          created_at?: string
+          day_of_week?: number
+          id?: string
+          id_capacity_limit?: number
+          is_active?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "capacity_pool_schedule_capacity_pool_id_fkey"
+            columns: ["capacity_pool_id"]
+            isOneToOne: false
+            referencedRelation: "capacity_pool"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       category: {
         Row: {
           code: string
@@ -1007,6 +1051,50 @@ export type Database = {
             columns: ["capacity_pool_id"]
             isOneToOne: false
             referencedRelation: "capacity_pool"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      collection_schedule: {
+        Row: {
+          anc_capacity_limit: number
+          bulk_capacity_limit: number
+          collection_area_id: string
+          created_at: string
+          day_of_week: number
+          id: string
+          id_capacity_limit: number
+          is_active: boolean
+          updated_at: string
+        }
+        Insert: {
+          anc_capacity_limit?: number
+          bulk_capacity_limit?: number
+          collection_area_id: string
+          created_at?: string
+          day_of_week: number
+          id?: string
+          id_capacity_limit?: number
+          is_active?: boolean
+          updated_at?: string
+        }
+        Update: {
+          anc_capacity_limit?: number
+          bulk_capacity_limit?: number
+          collection_area_id?: string
+          created_at?: string
+          day_of_week?: number
+          id?: string
+          id_capacity_limit?: number
+          is_active?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collection_schedule_collection_area_id_fkey"
+            columns: ["collection_area_id"]
+            isOneToOne: false
+            referencedRelation: "collection_area"
             referencedColumns: ["id"]
           },
         ]
@@ -1496,6 +1584,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      public_holiday: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          jurisdiction: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          jurisdiction?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          jurisdiction?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       refund_request: {
         Row: {
