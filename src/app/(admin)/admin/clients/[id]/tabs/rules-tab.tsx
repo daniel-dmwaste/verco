@@ -28,16 +28,40 @@ interface RulesTabProps {
 export function RulesTab({ client, categories, services }: RulesTabProps) {
   const supabase = createBrowserClient()
 
-  // Pull sub-clients + their areas in one shot.
+  // Fetch sub-clients and their areas separately, then stitch together in the
+  // groups memo below. The earlier embedded `collection_area(...)` syntax
+  // returned empty arrays for authenticated admins once collection_area gained
+  // additional FKs (capacity_pool_id added 2026-05-13). Separate query is
+  // robust against PostgREST's embedded-resolution edge cases.
   const { data: subClients } = useQuery({
     queryKey: ['admin-rules-sub-clients', client.id],
     queryFn: async () => {
-      const { data } = await supabase
-        .from('sub_client')
-        .select('id, name, code, collection_area(id, code, is_active)')
-        .eq('client_id', client.id)
-        .order('code')
-      return data ?? []
+      const [scResp, caResp] = await Promise.all([
+        supabase
+          .from('sub_client')
+          .select('id, name, code')
+          .eq('client_id', client.id)
+          .order('code'),
+        supabase
+          .from('collection_area')
+          .select('id, code, sub_client_id, is_active')
+          .eq('client_id', client.id)
+          .eq('is_active', true)
+          .not('sub_client_id', 'is', null),
+      ])
+
+      const areasBySc = new Map<string, Array<{ id: string; code: string; is_active: boolean | null }>>()
+      for (const a of caResp.data ?? []) {
+        if (!a.sub_client_id) continue
+        const bucket = areasBySc.get(a.sub_client_id) ?? []
+        bucket.push({ id: a.id, code: a.code, is_active: a.is_active })
+        areasBySc.set(a.sub_client_id, bucket)
+      }
+
+      return (scResp.data ?? []).map((sc) => ({
+        ...sc,
+        collection_area: areasBySc.get(sc.id) ?? [],
+      }))
     },
   })
 

@@ -391,6 +391,11 @@ Inlined via Docker build-args (`deploy.yml`). Coolify runtime env is a no-op. Ne
 ### Generated NOT NULL columns need an explicit constraint
 Supabase CLI infers nullability from metadata, not the expression. After `GENERATED ... STORED` over NOT NULL inputs, add `ALTER COLUMN ... SET NOT NULL` so regen'd TS is `string`, not `string | null`.
 
+### Avoid embedded selects (`table(...)`) on tables with multiple FKs — fetch separately and stitch in JS
+PostgREST embedded selects (`.select('parent_col, related_table(child_col)')` or `related_table(count)`) can **silently return empty results for authenticated users** once the embedded table accumulates additional FKs to other tables — even if the navigating FK is unambiguous. Symptom: outer query returns rows, embedded inner returns `[]` or `[{count: 0}]`; service role works, authenticated user doesn't. Triggered for the `sub_client → collection_area` embed on 2026-05-13 after `collection_area.capacity_pool_id` was added.
+
+Robust pattern: do two `.select()` calls in `Promise.all`, group by FK in JS. Slightly more code, but immune to FK count and RLS-vs-embed quirks. The dual-FK explicit-hint syntax (`related!fk_name(col)`) is the other escape hatch but the separate-query pattern is more durable.
+
 ### Auth email templates live in git, not the dashboard
 `supabase/templates/*.html` + `[auth.email.template.*]` blocks in `supabase/config.toml` are the source of truth. Apply with `pnpm supabase config push`. Editing the template in the Supabase Studio dashboard is not durable — the next config push will overwrite it. Currently only `magic_link` is customised (VERCO-branded OTP email triggered by `signInWithOtp`).
 
