@@ -1,14 +1,11 @@
 -- =============================================================================
--- pg_cron schedule: nightly-sync-to-dm-ops
--- Runs daily at 12:00 UTC (20:00 AWST)
+-- Reschedule nightly-sync-to-dm-ops from 0 12 UTC to 0 19 UTC
+-- = 20:00 AWST (business hours) → 03:00 AWST (overnight, per runbook).
+-- The original 20260327120000_nightly_sync_cron.sql registered the wrong
+-- time; that migration is already applied in prod so we drop + reschedule.
 -- =============================================================================
 
--- Enable pg_cron extension if not already enabled
-CREATE EXTENSION IF NOT EXISTS pg_cron WITH SCHEMA extensions;
-
--- Idempotent: drop any existing schedule with the same name before re-adding.
--- Without this, `pnpm supabase db reset` halts with "duplicate jobname"
--- if the cron table already has a row from a prior apply.
+-- Idempotent: drop the existing schedule before re-adding at the new time.
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'nightly-sync-to-dm-ops') THEN
@@ -16,11 +13,9 @@ BEGIN
   END IF;
 END $$;
 
--- Schedule the Edge Function invocation via pg_net
--- pg_cron calls the Supabase Edge Function URL using the service role key
 SELECT cron.schedule(
   'nightly-sync-to-dm-ops',
-  '0 12 * * *',  -- 12:00 UTC daily = 20:00 AWST
+  '0 19 * * *',  -- 19:00 UTC daily = 03:00 AWST (overnight per runbook)
   $$
   SELECT net.http_post(
     url := current_setting('app.settings.supabase_url') || '/functions/v1/nightly-sync-to-dm-ops',

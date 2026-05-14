@@ -1,7 +1,4 @@
--- Recovered from live DB migration history on 2026-04-08.
--- This migration was applied directly via Supabase Studio and never committed
--- to git. Reconstructed verbatim from supabase_migrations.schema_migrations.
-
--- Add is_eligible flag for properties where council offers tip passes in lieu of service
-ALTER TABLE eligible_properties ADD COLUMN is_eligible boolean NOT NULL DEFAULT true;
-CREATE INDEX idx_eligible_properties_is_eligible ON eligible_properties(is_eligible) WHERE NOT is_eligible;
+-- Tombstone: this timestamp was already applied in prod via Studio.
+-- The corrected SQL ships in 20260402170000_eligible_properties_is_eligible.sql.
+-- Do not add SQL here and do not reuse this timestamp.
+SELECT 1;
