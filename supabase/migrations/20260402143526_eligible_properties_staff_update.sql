@@ -1,11 +1,4 @@
--- =============================================================================
--- TOMBSTONE — superseded by 20260402180000_eligible_properties_staff_update.sql
---
--- See sibling tombstone in 20260402141720 for full context. The actual
--- CREATE POLICY was committed as 20260402180000_eligible_properties_staff_update.sql.
--- Prod already applied the original via Studio; this file is a no-op.
--- P0-5 in UAT_READINESS_REVIEW.md.
---
--- DO NOT add SQL here — use a new dated migration if a change is needed.
--- =============================================================================
+-- Tombstone: this timestamp was already applied in prod via Studio.
+-- The corrected SQL ships in 20260402180000_eligible_properties_staff_update.sql.
+-- Do not add SQL here and do not reuse this timestamp.
 SELECT 1;

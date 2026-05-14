@@ -1,20 +1,14 @@
 -- =============================================================================
--- Role-gate allocation_rules + service_rules write policies
+-- Role-gate allocation_rules + service_rules write policies.
 --
--- The original write policies (20260416092622_allocation_service_rules_write_policies.sql)
--- gated on accessible_client_ids() only — which routes through
--- is_contractor_user() and INCLUDES the 'field' role (CLAUDE.md §4 + the
--- 2026-04-08 rls-security-patterns memory). Effect: field users could
--- mutate pricing and free-allocation quotas across every client of
--- their contractor. P0-6 in UAT_READINESS_REVIEW.md.
+-- accessible_client_ids() routes through is_contractor_user(), which
+-- includes the 'field' role. Without an explicit role gate, field users
+-- could mutate pricing and free-allocation quotas across every client of
+-- their contractor — contradicts CLAUDE.md §4 and §6.
 --
--- This migration drops the original 6 policies and recreates them
--- with an explicit role gate restricting writes to admin/staff tiers:
--- contractor-admin, contractor-staff, client-admin, client-staff.
--- field, ranger, resident, strata are now denied.
---
--- The collection_area_id scope check (existing) is preserved on top
--- of the role gate — defence-in-depth.
+-- Drops the original 6 policies (from 20260416092622) and recreates them
+-- with role restricted to admin/staff tiers. collection_area_id scope
+-- check is preserved on top — defence-in-depth.
 -- =============================================================================
 
 -- ─── allocation_rules ──────────────────────────────────────────────────────

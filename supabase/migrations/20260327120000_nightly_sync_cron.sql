@@ -8,7 +8,7 @@ CREATE EXTENSION IF NOT EXISTS pg_cron WITH SCHEMA extensions;
 
 -- Idempotent: drop any existing schedule with the same name before re-adding.
 -- Without this, `pnpm supabase db reset` halts with "duplicate jobname"
--- if the cron table already has a row from a prior apply. P0-8 fix.
+-- if the cron table already has a row from a prior apply.
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'nightly-sync-to-dm-ops') THEN

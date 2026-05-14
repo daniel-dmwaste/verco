@@ -160,9 +160,9 @@ export function ServiceTicketForm({
           },
         }
 
-        // create-ticket requires a valid user JWT (post P0-1 fix) — send the
-        // session access token rather than the anon key. By the time we reach
-        // here both authenticated users and OTP-verified guests have a session.
+        // create-ticket validates the caller JWT; send the user's session
+        // token, not the public anon key. Both authenticated users and
+        // OTP-verified guests have a session by the time we reach here.
         const {
           data: { session },
         } = await supabase.auth.getSession()

@@ -1,18 +1,4 @@
--- =============================================================================
--- TOMBSTONE — superseded by 20260402160000_allocation_override_service_level.sql
---
--- This file was reconstructed on 2026-04-08 from
--- supabase_migrations.schema_migrations after a Supabase-Studio-applied
--- migration was never committed to git. Its original SQL ALTERed the
--- allocation_override table, but the table-creation migration is at
--- 20260402150000 — chronologically LATER. Result: `pnpm supabase db reset`
--- failed with "relation allocation_override does not exist".
---
--- The same ALTER was committed as 20260402160000_allocation_override_service_level.sql
--- (correct ordering — runs after the CREATE TABLE). Prod has already
--- applied the original SQL via Studio; this file is now a no-op so
--- `db reset` can complete cleanly. P0-5 in UAT_READINESS_REVIEW.md.
---
--- DO NOT add SQL here — use a new dated migration if a change is needed.
--- =============================================================================
+-- Tombstone: this timestamp was already applied in prod via Studio.
+-- The corrected SQL ships in 20260402160000_allocation_override_service_level.sql.
+-- Do not add SQL here and do not reuse this timestamp.
 SELECT 1;

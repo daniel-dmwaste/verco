@@ -1,17 +1,4 @@
--- =============================================================================
--- TOMBSTONE — superseded by 20260402170000_eligible_properties_is_eligible.sql
---
--- See sibling tombstone in 20260402141720 for full context. Briefly: this
--- file was reconstructed from prod migration history but ran BEFORE the
--- eligible_properties table (which exists in initial_schema.sql, so this
--- specific migration didn't error — but it's paired with the
--- allocation_override sibling that did). All three Apr-2 tombstones are
--- converted together to keep the pair-set consistent.
---
--- The actual ADD COLUMN was committed as 20260402170000_eligible_properties_is_eligible.sql.
--- Prod already applied the original via Studio; this file is a no-op.
--- P0-5 in UAT_READINESS_REVIEW.md.
---
--- DO NOT add SQL here — use a new dated migration if a change is needed.
--- =============================================================================
+-- Tombstone: this timestamp was already applied in prod via Studio.
+-- The corrected SQL ships in 20260402170000_eligible_properties_is_eligible.sql.
+-- Do not add SQL here and do not reuse this timestamp.
 SELECT 1;

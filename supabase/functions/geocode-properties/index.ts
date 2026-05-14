@@ -31,11 +31,9 @@ type GeocodeOutcome =
   | { id: string; success: false; error: string }
 
 // Dual auth: service-role bearer for CLI/cron callers (import scripts),
-// OR a valid user JWT with role contractor-admin / client-admin for any
-// admin-UI caller. Anything else is rejected. P0-2 in
-// UAT_READINESS_REVIEW.md — header-presence check alone let anyone with
-// the public anon key mutate up to 50k eligible_properties rows or burn
-// Google Places API spend.
+// OR a valid user JWT with an admin role for any admin-UI caller.
+// Presence-only auth would let any anon-key holder mutate eligible_properties
+// or burn Google Places spend.
 const ADMIN_ROLES = ['contractor-admin', 'client-admin'] as const
 
 serve(async (req) => {

@@ -1,15 +1,8 @@
 -- =============================================================================
 -- Reschedule nightly-sync-to-dm-ops from 0 12 UTC to 0 19 UTC
--- = 20:00 AWST (business hours) → 03:00 AWST (overnight, per runbook)
---
--- The original migration (20260327120000_nightly_sync_cron.sql) registered
--- the cron at '0 12 * * *' (12:00 UTC = 20:00 AWST), which hits prod during
--- business hours. UAT_RUNBOOK.md and the DM-Ops integration design call for
--- 03:00 AWST overnight. P0-4 in UAT_READINESS_REVIEW.md.
---
--- The non-`!inner` embed concern in the same EF is split out to P1-10 —
--- the natural dm_job_code skip in the aggregation loop handles null bookings
--- correctly (CPPH numbers right; concern is select size, not correctness).
+-- = 20:00 AWST (business hours) → 03:00 AWST (overnight, per runbook).
+-- The original 20260327120000_nightly_sync_cron.sql registered the wrong
+-- time; that migration is already applied in prod so we drop + reschedule.
 -- =============================================================================
 
 -- Idempotent: drop the existing schedule before re-adding at the new time.

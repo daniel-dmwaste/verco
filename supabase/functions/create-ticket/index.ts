@@ -58,11 +58,9 @@ serve(async (req) => {
     return optionsResponse()
   }
 
-  // ── Auth: validate JWT + role ────────────────────────────────────────────
-  // Previously this only checked for *presence* of an Authorization header,
-  // then service-role-upserted contacts by email — letting anyone with the
-  // public anon key overwrite any contact's PII by colliding on email.
-  // P0-1 in UAT_READINESS_REVIEW.md.
+  // Validate the caller's JWT and gate by role. Presence-only auth checks
+  // would let any anon-key holder upsert contacts by email collision and
+  // overwrite the contact's PII via the service-role mutation below.
 
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) {
