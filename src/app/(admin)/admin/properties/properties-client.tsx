@@ -25,10 +25,11 @@ interface ModalProperty {
 }
 
 interface PropertiesClientProps {
+  clientId: string
   isContractorAdmin: boolean
 }
 
-export function PropertiesClient({ isContractorAdmin }: PropertiesClientProps) {
+export function PropertiesClient({ clientId, isContractorAdmin }: PropertiesClientProps) {
   const supabase = createClient()
   const queryClient = useQueryClient()
 
@@ -73,27 +74,35 @@ export function PropertiesClient({ isContractorAdmin }: PropertiesClientProps) {
     }, 300)
   }
 
-  // Fetch areas
+  // Fetch areas — tenant-scope via client_id. collection_area has a public-
+  // SELECT RLS policy (USING is_active = true) for the resident booking flow,
+  // which means logged-in admins see every tenant's areas without an explicit
+  // filter. CLAUDE.md §21 "Public-SELECT RLS doesn't tenant-scope".
   const { data: areas } = useQuery({
-    queryKey: ['collection-areas'],
+    queryKey: ['collection-areas', clientId],
     queryFn: async () => {
-      const { data } = await supabase
+      let query = supabase
         .from('collection_area')
         .select('id, code, name')
         .eq('is_active', true)
         .order('code')
+      if (clientId) {
+        query = query.eq('client_id', clientId)
+      }
+      const { data } = await query
       return data ?? []
     },
   })
 
-  // Fetch properties
+  // Fetch properties — tenant-scope via the inner-joined collection_area's
+  // client_id (eligible_properties has no direct client_id column).
   const { data: propertiesData, isLoading } = useQuery({
-    queryKey: ['admin-properties', debouncedSearch, areaFilter, mudFilter, page],
+    queryKey: ['admin-properties', debouncedSearch, areaFilter, mudFilter, page, clientId],
     queryFn: async () => {
       let query = supabase
         .from('eligible_properties')
         .select(
-          'id, address, formatted_address, collection_area_id, is_mud, is_eligible, mud_code, mud_onboarding_status, unit_count, has_geocode, latitude, longitude, collection_area!inner(name, code)',
+          'id, address, formatted_address, collection_area_id, is_mud, is_eligible, mud_code, mud_onboarding_status, unit_count, has_geocode, latitude, longitude, collection_area!inner(name, code, client_id)',
           { count: 'exact' }
         )
         .order('formatted_address', { ascending: true, nullsFirst: false })
@@ -110,20 +119,28 @@ export function PropertiesClient({ isContractorAdmin }: PropertiesClientProps) {
       } else if (mudFilter === 'residential') {
         query = query.eq('is_mud', false)
       }
+      if (clientId) {
+        query = query.eq('collection_area.client_id', clientId)
+      }
 
       const { data, count } = await query
       return { properties: data ?? [], total: count ?? 0 }
     },
   })
 
-  // Count ungeocoded
+  // Count ungeocoded — also tenant-scoped. Needs an inner-join on
+  // collection_area so the embedded filter can fire.
   const { data: ungeocodedCount } = useQuery({
-    queryKey: ['ungeocoded-count'],
+    queryKey: ['ungeocoded-count', clientId],
     queryFn: async () => {
-      const { count } = await supabase
+      let query = supabase
         .from('eligible_properties')
-        .select('id', { count: 'exact', head: true })
+        .select('id, collection_area!inner(client_id)', { count: 'exact', head: true })
         .eq('has_geocode', false)
+      if (clientId) {
+        query = query.eq('collection_area.client_id', clientId)
+      }
+      const { count } = await query
       return count ?? 0
     },
   })
@@ -320,14 +337,16 @@ export function PropertiesClient({ isContractorAdmin }: PropertiesClientProps) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleGeocodeAll}
-            disabled={isGeocoding || (ungeocodedCount ?? 0) === 0}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-body-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-          >
-            {isGeocoding ? 'Geocoding...' : `Geocode All (${ungeocodedCount ?? 0} pending)`}
-          </button>
+          {isContractorAdmin && (
+            <button
+              type="button"
+              onClick={handleGeocodeAll}
+              disabled={isGeocoding || (ungeocodedCount ?? 0) === 0}
+              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-body-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+            >
+              {isGeocoding ? 'Geocoding...' : `Geocode All (${ungeocodedCount ?? 0} pending)`}
+            </button>
+          )}
           {isContractorAdmin && (
             <button
               type="button"
