@@ -1,0 +1,78 @@
+import { notFound } from 'next/navigation'
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase/server'
+import { BugReportDetailClient } from './bug-report-detail-client'
+
+interface PageProps {
+  params: Promise<{ id: string }>
+}
+
+export default async function BugReportDetailPage({ params }: PageProps) {
+  const { id } = await params
+  const supabase = await createClient()
+
+  const [bugResult, commentsResult] = await Promise.all([
+    supabase
+      .from('bug_report')
+      .select(
+        `id, display_id, title, description, source_app, category, priority, status,
+         page_url, browser_info, linear_issue_id, linear_issue_url,
+         created_at, updated_at, resolved_at, resolution_notes,
+         reporter_id, assigned_to,
+         reporter:profiles!bug_report_reporter_id_fkey(display_name),
+         assigned:profiles!bug_report_assigned_to_fkey(display_name),
+         client:client_id(name, slug)`
+      )
+      .eq('id', id)
+      .single(),
+    supabase
+      .from('bug_report_comment')
+      .select('id, author_id, comment, is_internal, created_at')
+      .eq('bug_report_id', id)
+      .order('created_at', { ascending: true }),
+  ])
+
+  if (bugResult.error || !bugResult.data) {
+    notFound()
+  }
+
+  const bug = bugResult.data
+  const rawComments = commentsResult.data ?? []
+
+  // Fetch comment authors separately + join in JS (avoid embedded-select
+  // fragility on bug_report_comment.author_id → auth.users → profiles).
+  const authorIds = Array.from(new Set(rawComments.map((c) => c.author_id)))
+  let authorByUserId = new Map<string, { display_name: string | null }>()
+  if (authorIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, display_name')
+      .in('id', authorIds)
+    authorByUserId = new Map((profiles ?? []).map((p) => [p.id, { display_name: p.display_name }]))
+  }
+  const comments = rawComments.map((c) => ({
+    id: c.id,
+    comment: c.comment,
+    is_internal: c.is_internal,
+    created_at: c.created_at,
+    author: authorByUserId.get(c.author_id) ?? null,
+  }))
+
+  return (
+    <div className="flex flex-1 flex-col">
+      <div className="border-b border-gray-100 bg-white px-7 pb-5 pt-6">
+        <Link
+          href="/admin/bug-reports"
+          className="text-body-sm text-gray-500 hover:text-gray-700"
+        >
+          ← Bug reports
+        </Link>
+        <h1 className="mt-2 font-[family-name:var(--font-heading)] text-xl font-bold text-[#293F52]">
+          {bug.display_id} — {bug.title}
+        </h1>
+      </div>
+
+      <BugReportDetailClient bug={bug} comments={comments} />
+    </div>
+  )
+}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
@@ -204,9 +205,12 @@ export function BugReportsClient() {
                         <span className="font-mono text-[12px] text-gray-400">{bug.display_id}</span>
                       </td>
                       <td className="max-w-[240px] px-4 py-2.5">
-                        <span className="font-semibold text-body-sm text-[#293F52]">
+                        <Link
+                          href={`/admin/bug-reports/${bug.id}`}
+                          className="font-semibold text-body-sm text-[#293F52] hover:underline"
+                        >
                           {bug.title.length > 60 ? bug.title.slice(0, 60) + '...' : bug.title}
-                        </span>
+                        </Link>
                         {bug.linear_issue_url && (
                           <a href={bug.linear_issue_url} target="_blank" rel="noopener noreferrer" className="ml-1.5 text-[11px] text-blue-500 hover:underline">Linear</a>
                         )}

@@ -528,6 +528,7 @@ export type Database = {
           client_id: string | null
           collection_area_id: string | null
           created_at: string
+          description: string | null
           display_id: string
           id: string
           linear_issue_id: string | null
@@ -549,7 +550,8 @@ export type Database = {
           client_id?: string | null
           collection_area_id?: string | null
           created_at?: string
-          display_id: string
+          description?: string | null
+          display_id?: string
           id?: string
           linear_issue_id?: string | null
           linear_issue_url?: string | null
@@ -570,6 +572,7 @@ export type Database = {
           client_id?: string | null
           collection_area_id?: string | null
           created_at?: string
+          description?: string | null
           display_id?: string
           id?: string
           linear_issue_id?: string | null
@@ -611,6 +614,82 @@ export type Database = {
             columns: ["reporter_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bug_report_attachment: {
+        Row: {
+          bug_report_id: string
+          created_at: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          uploaded_by: string
+        }
+        Insert: {
+          bug_report_id: string
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          uploaded_by: string
+        }
+        Update: {
+          bug_report_id?: string
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bug_report_attachment_bug_report_id_fkey"
+            columns: ["bug_report_id"]
+            isOneToOne: false
+            referencedRelation: "bug_report"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bug_report_comment: {
+        Row: {
+          author_id: string
+          bug_report_id: string
+          comment: string
+          created_at: string
+          id: string
+          is_internal: boolean
+        }
+        Insert: {
+          author_id: string
+          bug_report_id: string
+          comment: string
+          created_at?: string
+          id?: string
+          is_internal?: boolean
+        }
+        Update: {
+          author_id?: string
+          bug_report_id?: string
+          comment?: string
+          created_at?: string
+          id?: string
+          is_internal?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bug_report_comment_bug_report_id_fkey"
+            columns: ["bug_report_id"]
+            isOneToOne: false
+            referencedRelation: "bug_report"
             referencedColumns: ["id"]
           },
         ]
@@ -2206,6 +2285,7 @@ export type Database = {
       is_client_staff: { Args: never; Returns: boolean }
       is_contractor_user: { Args: never; Returns: boolean }
       is_field_user: { Args: never; Returns: boolean }
+      is_staff_role: { Args: never; Returns: boolean }
       retry_notification_log: { Args: { log_id: string }; Returns: string }
     }
     Enums: {

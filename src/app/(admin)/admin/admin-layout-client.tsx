@@ -1,6 +1,7 @@
 'use client'
 
 import { AdminSidebar } from '@/components/admin/admin-sidebar'
+import { BugReportFab } from '@/components/bug-report/bug-report-fab'
 
 interface AdminLayoutClientProps {
   clientName: string
@@ -75,6 +76,9 @@ export function AdminLayoutClient({
           {children}
         </main>
       </div>
+
+      {/* Bug-report FAB — desktop only, every admin page */}
+      <BugReportFab />
     </div>
   )
 }
