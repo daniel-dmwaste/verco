@@ -130,12 +130,19 @@ export async function updateClient(
 
   const supabase = await createClient()
 
-  const { error } = await supabase
+  // .select().single() so an RLS deny surfaces as PGRST116 instead of a
+  // silent {error:null,data:null}. Without this, write failures look like
+  // success to the UI — branding form was reverting on refresh because
+  // updates silently no-opped. CLAUDE.md §21 RLS write silent-fail.
+  const { data, error } = await supabase
     .from('client')
     .update(parsed.data)
     .eq('id', clientId)
+    .select('id')
+    .single()
 
   if (error) return { ok: false, error: error.message }
+  if (!data) return { ok: false, error: 'Update was not applied (no matching row or insufficient permissions)' }
   return { ok: true, data: undefined }
 }
 
@@ -148,12 +155,15 @@ export async function updateClientFaqs(
 
   const supabase = await createClient()
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('client')
     .update({ faq_items: parsed.data })
     .eq('id', clientId)
+    .select('id')
+    .single()
 
   if (error) return { ok: false, error: error.message }
+  if (!data) return { ok: false, error: 'Update was not applied (no matching row or insufficient permissions)' }
   return { ok: true, data: undefined }
 }
 
@@ -190,15 +200,18 @@ export async function updateSubClient(
 
   const supabase = await createClient()
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('sub_client')
     .update(parsed.data)
     .eq('id', subClientId)
+    .select('id')
+    .single()
 
   if (error) {
     if (error.code === '23505') return { ok: false, error: `Code "${parsed.data.code}" already exists for this client.` }
     return { ok: false, error: error.message }
   }
+  if (!data) return { ok: false, error: 'Update was not applied (no matching row or insufficient permissions)' }
   return { ok: true, data: undefined }
 }
 
@@ -240,12 +253,15 @@ export async function updateCollectionArea(
 
   const supabase = await createClient()
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('collection_area')
     .update(parsed.data)
     .eq('id', areaId)
+    .select('id')
+    .single()
 
   if (error) return { ok: false, error: error.message }
+  if (!data) return { ok: false, error: 'Update was not applied (no matching row or insufficient permissions)' }
   return { ok: true, data: undefined }
 }
 
