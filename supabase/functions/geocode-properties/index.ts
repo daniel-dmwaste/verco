@@ -30,16 +30,49 @@ type GeocodeOutcome =
     }
   | { id: string; success: false; error: string }
 
+// Dual auth: service-role bearer for CLI/cron callers (import scripts),
+// OR a valid user JWT with role contractor-admin / client-admin for any
+// admin-UI caller. Anything else is rejected. P0-2 in
+// UAT_READINESS_REVIEW.md — header-presence check alone let anyone with
+// the public anon key mutate up to 50k eligible_properties rows or burn
+// Google Places API spend.
+const ADMIN_ROLES = ['contractor-admin', 'client-admin'] as const
+
 serve(async (req) => {
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) {
     return new Response('Unauthorized', { status: 401 })
   }
 
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  )
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+  const bearer = authHeader.replace(/^Bearer\s+/i, '')
+
+  // Service-role direct match: CLI / cron callers bypass user-role check.
+  // Otherwise validate the user JWT and gate on admin roles.
+  if (bearer !== serviceRoleKey) {
+    const supabaseUser = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
+      global: { headers: { Authorization: authHeader } },
+    })
+    const { data: userData, error: userError } = await supabaseUser.auth.getUser()
+    if (userError || !userData.user) {
+      return new Response('Unauthorized', { status: 401 })
+    }
+    const { data: roleData, error: roleError } = await supabaseUser.rpc('current_user_role')
+    if (roleError) {
+      return new Response(
+        JSON.stringify({ error: `Role lookup failed: ${roleError.message}` }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+    if (!roleData || !ADMIN_ROLES.includes(roleData as (typeof ADMIN_ROLES)[number])) {
+      return new Response('Forbidden: contractor-admin or client-admin only', {
+        status: 403,
+      })
+    }
+  }
+
+  const supabase = createClient(supabaseUrl, serviceRoleKey)
 
   const apiKey = Deno.env.get('GOOGLE_PLACES_API_KEY')
   if (!apiKey) {
