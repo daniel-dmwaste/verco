@@ -6,6 +6,16 @@
 -- Enable pg_cron extension if not already enabled
 CREATE EXTENSION IF NOT EXISTS pg_cron WITH SCHEMA extensions;
 
+-- Idempotent: drop any existing schedule with the same name before re-adding.
+-- Without this, `pnpm supabase db reset` halts with "duplicate jobname"
+-- if the cron table already has a row from a prior apply. P0-8 fix.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'nightly-sync-to-dm-ops') THEN
+    PERFORM cron.unschedule('nightly-sync-to-dm-ops');
+  END IF;
+END $$;
+
 -- Schedule the Edge Function invocation via pg_net
 -- pg_cron calls the Supabase Edge Function URL using the service role key
 SELECT cron.schedule(
