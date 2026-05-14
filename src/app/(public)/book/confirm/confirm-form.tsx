@@ -279,8 +279,6 @@ export function ConfirmForm() {
         },
         items,
       }
-      console.log('create-booking request:', functionUrl)
-      console.log('create-booking body:', JSON.stringify(requestBody, null, 2))
 
       const res = await fetch(functionUrl, {
         method: 'POST',
