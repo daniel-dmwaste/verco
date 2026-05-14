@@ -160,13 +160,25 @@ export function ServiceTicketForm({
           },
         }
 
+        // create-ticket requires a valid user JWT (post P0-1 fix) — send the
+        // session access token rather than the anon key. By the time we reach
+        // here both authenticated users and OTP-verified guests have a session.
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+        if (!session?.access_token) {
+          setSubmitError('Session expired. Please verify your email again.')
+          setIsSubmitting(false)
+          return
+        }
+
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-ticket`,
           {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+              Authorization: `Bearer ${session.access_token}`,
             },
             body: JSON.stringify(requestBody),
           }

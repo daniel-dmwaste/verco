@@ -33,17 +33,67 @@ function generateDisplayId(): string {
   return `TKT-${code}`
 }
 
+// Roles permitted to call create-ticket. resident/strata create tickets
+// on their own behalf (email pinned to their auth email). Staff roles may
+// create tickets for arbitrary contact emails (legitimate on-behalf flow).
+const ALLOWED_ROLES = [
+  'resident',
+  'strata',
+  'client-admin',
+  'client-staff',
+  'contractor-admin',
+  'contractor-staff',
+] as const
+type AllowedRole = (typeof ALLOWED_ROLES)[number]
+
+const STAFF_ROLES: readonly AllowedRole[] = [
+  'client-admin',
+  'client-staff',
+  'contractor-admin',
+  'contractor-staff',
+]
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return optionsResponse()
   }
+
+  // ── Auth: validate JWT + role ────────────────────────────────────────────
+  // Previously this only checked for *presence* of an Authorization header,
+  // then service-role-upserted contacts by email — letting anyone with the
+  // public anon key overwrite any contact's PII by colliding on email.
+  // P0-1 in UAT_READINESS_REVIEW.md.
 
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) {
     return errorResponse('Unauthorized', 401)
   }
 
-  // Service-role client for writes (contact upsert + ticket insert)
+  const supabaseUser = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_ANON_KEY')!,
+    { global: { headers: { Authorization: authHeader } } },
+  )
+
+  const { data: userData, error: userError } = await supabaseUser.auth.getUser()
+  if (userError || !userData.user) {
+    return errorResponse('Unauthorized', 401)
+  }
+  const authUser = userData.user
+
+  const { data: roleData, error: roleError } = await supabaseUser.rpc('current_user_role')
+  if (roleError) {
+    return errorResponse(`Role lookup failed: ${roleError.message}`, 401)
+  }
+  const role = roleData as AllowedRole | null
+  if (!role || !ALLOWED_ROLES.includes(role)) {
+    return errorResponse('Forbidden: insufficient role', 403)
+  }
+  const isStaff = STAFF_ROLES.includes(role)
+
+  // Service-role client for writes (contact upsert + ticket insert).
+  // Auth has already gated the caller; service role is used only for the
+  // mutations themselves, NOT for identity checks.
   const supabaseService = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -60,6 +110,18 @@ serve(async (req) => {
     }
 
     const { subject, category, message, booking_id, client_id, contact } = parsed.data
+
+    // ── 1b. PII guard: residents/strata cannot upsert someone else's contact
+    // Without this, a logged-in resident could call create-ticket with a
+    // different email and overwrite that contact's PII (first_name, etc).
+    // Staff roles are exempt — legitimate on-behalf flow.
+
+    if (!isStaff && authUser.email && contact.email.toLowerCase() !== authUser.email.toLowerCase()) {
+      return errorResponse(
+        'Forbidden: residents may only submit tickets with their own account email',
+        403,
+      )
+    }
 
     // ── 2. Verify client exists ────────────────────────────────────────────
 
