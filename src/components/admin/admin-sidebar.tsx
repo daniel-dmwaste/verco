@@ -145,7 +145,9 @@ export function AdminSidebar({ counts, role }: AdminSidebarProps) {
       title: 'Admin',
       items: [
         { label: 'Users', href: '/admin/users', icon: ICON.users },
-        { label: 'Bug Reports', href: '/admin/bug-reports', icon: ICON.bug },
+        // Bug Reports nav moved into the contractor-admin block below — it's
+        // the triage queue, contractor-internal. Client roles still submit
+        // via the FAB; they just don't see the queue.
         { label: 'Notifications', href: '/admin/notifications', icon: ICON.notifications },
         { label: 'Audit Log', href: '/admin/audit-log', icon: ICON.auditLog },
       ],
@@ -156,6 +158,7 @@ export function AdminSidebar({ counts, role }: AdminSidebarProps) {
     sections.push({
       title: 'Configuration',
       items: [
+        { label: 'Bug Reports', href: '/admin/bug-reports', icon: ICON.bug },
         { label: 'Clients', href: '/admin/clients', icon: ICON.clients },
       ],
     })
