@@ -83,7 +83,7 @@ serve(async (req) => {
 
   const { data: roleData, error: roleError } = await supabaseUser.rpc('current_user_role')
   if (roleError) {
-    return errorResponse(`Role lookup failed: ${roleError.message}`, 401)
+    return errorResponse(`Role lookup failed: ${roleError.message}`, 500)
   }
   const role = roleData as AllowedRole | null
   if (!role || !ALLOWED_ROLES.includes(role)) {
@@ -111,12 +111,18 @@ serve(async (req) => {
 
     const { subject, category, message, booking_id, client_id, contact } = parsed.data
 
-    // ── 1b. PII guard: residents/strata cannot upsert someone else's contact
-    // Without this, a logged-in resident could call create-ticket with a
-    // different email and overwrite that contact's PII (first_name, etc).
-    // Staff roles are exempt — legitimate on-behalf flow.
+    // PII guard: residents/strata can only upsert the contact whose email
+    // matches their own auth.users.email. Without this, a resident could
+    // call create-ticket with another contact's email and the service-role
+    // upsert below would overwrite first_name/last_name/mobile_e164. Staff
+    // roles are exempt — legitimate on-behalf flow. Fail-closed if the
+    // resident has no auth email at all (shouldn't happen with OTP login,
+    // but the alternative is letting an empty string bypass the gate).
 
-    if (!isStaff && authUser.email && contact.email.toLowerCase() !== authUser.email.toLowerCase()) {
+    if (
+      !isStaff &&
+      (!authUser.email || contact.email.toLowerCase() !== authUser.email.toLowerCase())
+    ) {
       return errorResponse(
         'Forbidden: residents may only submit tickets with their own account email',
         403,

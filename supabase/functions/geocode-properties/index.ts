@@ -44,14 +44,24 @@ serve(async (req) => {
     return new Response('Unauthorized', { status: 401 })
   }
 
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
+  if (!serviceRoleKey || !supabaseUrl || !anonKey) {
+    // Without these, the bearer comparison below would coerce undefined to
+    // the literal string "undefined" and any caller posting "Bearer undefined"
+    // would skip the user-role check.
+    return new Response(
+      JSON.stringify({ error: 'Server misconfiguration: missing Supabase env vars' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
   const bearer = authHeader.replace(/^Bearer\s+/i, '')
 
   // Service-role direct match: CLI / cron callers bypass user-role check.
   // Otherwise validate the user JWT and gate on admin roles.
   if (bearer !== serviceRoleKey) {
-    const supabaseUser = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
+    const supabaseUser = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     })
     const { data: userData, error: userError } = await supabaseUser.auth.getUser()
@@ -60,9 +70,10 @@ serve(async (req) => {
     }
     const { data: roleData, error: roleError } = await supabaseUser.rpc('current_user_role')
     if (roleError) {
+      // Server-side problem (RPC failed) — surface as 500, not 401.
       return new Response(
         JSON.stringify({ error: `Role lookup failed: ${roleError.message}` }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
       )
     }
     if (!roleData || !ADMIN_ROLES.includes(roleData as (typeof ADMIN_ROLES)[number])) {
@@ -304,7 +315,14 @@ serve(async (req) => {
     }
   }
 
+  // Per CLAUDE.md §11: if invoked as a cron, pg_cron only sees HTTP status,
+  // so a 200 with `failed > 0` would silently hide partial failures from
+  // job-run details. Return 500 on partial failure; the chunked-loop runner
+  // parses the body regardless of status (scripts/run-geocode-loop.ts:170).
+  // Dry runs and clean completions stay on 200.
+  const status = !dryRun && failed > 0 ? 500 : 200
   return new Response(JSON.stringify(response), {
+    status,
     headers: { 'Content-Type': 'application/json' },
   })
 })
