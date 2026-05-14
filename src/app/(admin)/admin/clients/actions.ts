@@ -200,15 +200,18 @@ export async function updateSubClient(
 
   const supabase = await createClient()
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('sub_client')
     .update(parsed.data)
     .eq('id', subClientId)
+    .select('id')
+    .single()
 
   if (error) {
     if (error.code === '23505') return { ok: false, error: `Code "${parsed.data.code}" already exists for this client.` }
     return { ok: false, error: error.message }
   }
+  if (!data) return { ok: false, error: 'Update was not applied (no matching row or insufficient permissions)' }
   return { ok: true, data: undefined }
 }
 
@@ -250,12 +253,15 @@ export async function updateCollectionArea(
 
   const supabase = await createClient()
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('collection_area')
     .update(parsed.data)
     .eq('id', areaId)
+    .select('id')
+    .single()
 
   if (error) return { ok: false, error: error.message }
+  if (!data) return { ok: false, error: 'Update was not applied (no matching row or insufficient permissions)' }
   return { ok: true, data: undefined }
 }
 
