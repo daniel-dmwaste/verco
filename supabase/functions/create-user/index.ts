@@ -126,15 +126,19 @@ serve(async (req) => {
     }
 
     let tenantName = ''
+    let tenantCustomDomain: string | null = null
+    let tenantSlug: string | null = null
 
     if (client_id) {
       const { data: row, error } = await supabaseService
         .from('client')
-        .select('id, name')
+        .select('id, name, custom_domain, slug')
         .eq('id', client_id)
         .single()
       if (error || !row) return errorResponse('Client not found.', 404)
       tenantName = row.name
+      tenantCustomDomain = row.custom_domain
+      tenantSlug = row.slug
     }
 
     if (contractor_id && !tenantName) {
@@ -284,7 +288,22 @@ serve(async (req) => {
     // ── 9. Send confirmation email (non-blocking) ───────────────────────
 
     const roleLabel = ROLE_LABELS[role] ?? role
-    const loginUrl = Deno.env.get('SITE_URL') ?? 'https://verco.au'
+
+    // Resolve the login URL to the user's tenant subdomain. The SITE_URL
+    // env var / verco.au fallback points to the marketing site (no /auth
+    // route) — clicking the welcome-email button there 404s. Per-tenant
+    // resolution mirrors the proxy logic: custom_domain → slug.verco.au.
+    let loginBaseUrl: string
+    if (client_id && tenantCustomDomain) {
+      loginBaseUrl = `https://${tenantCustomDomain}`
+    } else if (client_id && tenantSlug) {
+      loginBaseUrl = `https://${tenantSlug}.verco.au`
+    } else {
+      // Contractor roles have no canonical tenant subdomain — the proxy
+      // resolves them by whichever hostname they land on. Fall back to
+      // SITE_URL; follow-up if this surfaces during UAT.
+      loginBaseUrl = Deno.env.get('SITE_URL') ?? 'https://verco.au'
+    }
 
     sendEmail({
       to: { email, name: full_name },
@@ -311,7 +330,7 @@ serve(async (req) => {
             </tr>
           </table>
           <p>You can log in using your email address — a one-time code will be sent to verify your identity.</p>
-          <a href="${loginUrl}/auth" style="display: inline-block; margin-top: 12px; padding: 12px 24px; background: #293F52; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600;">Log In</a>
+          <a href="${loginBaseUrl}/auth" style="display: inline-block; margin-top: 12px; padding: 12px 24px; background: #293F52; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600;">Log In</a>
           <p style="margin-top: 24px; font-size: 13px; color: #888;">If you did not expect this email, please ignore it.</p>
         </div>
       `,
