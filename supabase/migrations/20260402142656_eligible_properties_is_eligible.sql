@@ -1,7 +1,17 @@
--- Recovered from live DB migration history on 2026-04-08.
--- This migration was applied directly via Supabase Studio and never committed
--- to git. Reconstructed verbatim from supabase_migrations.schema_migrations.
-
--- Add is_eligible flag for properties where council offers tip passes in lieu of service
-ALTER TABLE eligible_properties ADD COLUMN is_eligible boolean NOT NULL DEFAULT true;
-CREATE INDEX idx_eligible_properties_is_eligible ON eligible_properties(is_eligible) WHERE NOT is_eligible;
+-- =============================================================================
+-- TOMBSTONE — superseded by 20260402170000_eligible_properties_is_eligible.sql
+--
+-- See sibling tombstone in 20260402141720 for full context. Briefly: this
+-- file was reconstructed from prod migration history but ran BEFORE the
+-- eligible_properties table (which exists in initial_schema.sql, so this
+-- specific migration didn't error — but it's paired with the
+-- allocation_override sibling that did). All three Apr-2 tombstones are
+-- converted together to keep the pair-set consistent.
+--
+-- The actual ADD COLUMN was committed as 20260402170000_eligible_properties_is_eligible.sql.
+-- Prod already applied the original via Studio; this file is a no-op.
+-- P0-5 in UAT_READINESS_REVIEW.md.
+--
+-- DO NOT add SQL here — use a new dated migration if a change is needed.
+-- =============================================================================
+SELECT 1;
