@@ -366,9 +366,6 @@ Attach `audit_trigger_fn()` AFTER INSERT/UPDATE/DELETE in the migration, add col
 ### White-label colours — use CSS vars, not hex
 Public/field use `--brand`, `--brand-accent`, `--brand-foreground` + derived `-light`/`-hover`/`-dark`; admin exempt. `text-white` silently fails under Tailwind v4 + Turbopack — use `--brand-foreground` (defaults `#FFFFFF`) with inline `style={{ color }}` fallback; `VercoButton` primary does this.
 
-### Booking wizard state — URL params are the source of truth
-Every wizard step carries ALL params through back/forward nav via `carryParams`. When adding a param, update all steps.
-
 ### EFs that access PII accept dual auth (per §20 Red Line #3)
 Server actions MUST NOT use the service role key. EFs needing PII (e.g. `send-notification`) accept EITHER a service role bearer (EF→EF callers) OR a valid user JWT whose `current_user_role()` is in a permitted set. Internal loads always use service role inside the EF — the user's role gates the TRIGGER, not the data access.
 
@@ -384,22 +381,19 @@ Set in `.env.local` to pick which client the proxy resolves (default: first by `
 Inlined via Docker build-args (`deploy.yml`). Coolify runtime env is a no-op. New vars: add to `.env.example`, GitHub secrets, `deploy.yml` build-arg, and Dockerfile `ENV`.
 
 ### Shape consistency across consumers — DB columns AND EF response envelopes
-**DB column splits/renames** (e.g. `full_name` → `first_name`+`last_name`): grep every writer (EFs, server actions, forms, MUD flows, wizard URL params, `lib/booking/schemas.ts`) before shipping. Deploy: migration → EFs with a **back-compat shim** (split legacy payload pre-zod) → Coolify ships new app → second EF deploy strips the shim. Skipping the shim 500s every in-flight booking until Coolify catches up.
-
-**EF response envelopes** must emit the same documented fields on every code path — success, no-op, AND error. The `geocode-properties` no-rows envelope once omitted `failed`, which tripped its chunked-loop runner's strict parser on every clean completion (exit 1 after the work succeeded). If a runner/cron/consumer is downstream, missing-field defaults belong in the EF, not the parser.
+DB column splits/renames: grep every writer (EFs, server actions, forms, schemas) before shipping. Ship migration → EFs with a back-compat shim that splits legacy payload pre-zod → Coolify takes new app → second EF deploy strips the shim. Skip the shim and every in-flight request 500s until Coolify catches up. EF response envelopes must emit the same documented fields on every code path (success, no-op, error) — missing-field defaults belong in the EF, not the downstream parser.
 
 ### Generated NOT NULL columns need an explicit constraint
 Supabase CLI infers nullability from metadata, not the expression. After `GENERATED ... STORED` over NOT NULL inputs, add `ALTER COLUMN ... SET NOT NULL` so regen'd TS is `string`, not `string | null`.
 
-### Avoid embedded selects (`table(...)`) on tables with multiple FKs — fetch separately and stitch in JS
-PostgREST embedded selects (`.select('parent_col, related_table(child_col)')` or `related_table(count)`) can **silently return empty results for authenticated users** once the embedded table accumulates additional FKs to other tables — even if the navigating FK is unambiguous. Symptom: outer query returns rows, embedded inner returns `[]` or `[{count: 0}]`; service role works, authenticated user doesn't. Triggered for the `sub_client → collection_area` embed on 2026-05-13 after `collection_area.capacity_pool_id` was added.
-
-Robust pattern: do two `.select()` calls in `Promise.all`, group by FK in JS. Slightly more code, but immune to FK count and RLS-vs-embed quirks. The dual-FK explicit-hint syntax (`related!fk_name(col)`) is the other escape hatch but the separate-query pattern is more durable.
+### Avoid embedded selects on tables with multiple FKs — fetch separately and stitch in JS
+PostgREST `.select('parent_col, related_table(child_col)')` (or `related_table(count)`) can silently return empty inner results for authenticated users once the embedded table accumulates additional FKs — even if the navigating FK is unambiguous. Symptom: outer returns rows, embedded inner returns `[]` or `[{count:0}]`; service role works, authenticated user doesn't. Robust pattern: two `.select()` calls in `Promise.all`, group by FK in JS. The dual-FK explicit-hint syntax `related!fk_name(col)` is the escape hatch, but separate-query is more durable.
 
 ### Auth email templates live in git, not the dashboard
-`supabase/templates/*.html` + `[auth.email.template.*]` blocks in `supabase/config.toml` are the source of truth. Apply with `pnpm supabase config push`. Editing the template in the Supabase Studio dashboard is not durable — the next config push will overwrite it. Currently only `magic_link` is customised (VERCO-branded OTP email triggered by `signInWithOtp`).
-
-**GoTrue uses base Go `html/template`, NOT sprig.** Only variables (`{{ .Token }}`, `{{ .ConfirmationURL }}`, `{{ .Email }}`, `{{ .Data }}`, `{{ .SiteURL }}`, `{{ .TokenHash }}`) — no `{{ now }}`, no `| date`, no `| upper`. Parse errors fall back **silently** to Supabase's default template (no admin alert; only visible in `auth` service logs as `templatemailer_template_body_parse_error`). Always test a template by triggering an OTP and checking the auth logs before declaring the deploy successful.
+`supabase/templates/*.html` + `[auth.email.template.*]` in `supabase/config.toml` are source of truth; apply via `pnpm supabase config push`. Studio dashboard edits get overwritten on next push. GoTrue uses base Go `html/template`, NOT sprig — only the GoTrue-provided variables work, no `{{ now }}` or pipe filters. Parse errors fall back silently to Supabase's default template (visible only in `auth` logs as `templatemailer_template_body_parse_error`). Always test by triggering an OTP after deploy.
 
 ### Never use `--yes` on `supabase config push` until local matches prod
 `config push` syncs the **entire** `[auth]` block, not just the diff you intended. The local `supabase/config.toml` has dev-default values (`site_url = "http://127.0.0.1:3000"`, `mfa.totp.enroll_enabled = false`, `email.max_frequency = "1s"`) that will silently bake into prod if you `--yes` past the diff. Always run once interactively first, eyeball the full diff, then `--yes` if it's clean. The CLI shows the diff exactly once before applying — there's no undo.
+
+### Manual MCP migrations need explicit version sync
+`apply_migration` records `version = <now timestamp>`, NOT the filename's. Future `db push` then sees the file as unapplied and re-runs (failing on non-idempotent DDL like `CREATE POLICY`). When recovering migrations outside `db push`, run the SQL via `execute_sql` plus `INSERT INTO supabase_migrations.schema_migrations (version, name) VALUES ('<filename version>', '<name>')` in one transaction.

@@ -6,7 +6,7 @@ How we get code onto Coolify/BinaryLane, and how to get it back off when somethi
 
 - **Next.js app** — Docker image built by GitHub Actions, pushed to GHCR, pulled by Coolify on webhook trigger.
 - **Edge Functions** — deployed directly by GitHub Actions to Supabase (`supabase functions deploy --no-verify-jwt`). Not part of the Docker image.
-- **Database** — Supabase-hosted Postgres. Migrations are applied manually (`pnpm supabase db push`) — not yet automated. See `docs/VERCO_V2_TECH_SPEC.md`.
+- **Database** — Supabase-hosted Postgres. Migrations are applied automatically by GitHub Actions (`supabase db push --linked`). Requires the `SUPABASE_DB_PASSWORD` GitHub secret.
 
 ```
 push to main
@@ -16,12 +16,17 @@ push to main
       │
       ├──► docker            → ghcr.io/daniel-dmwaste/verco:<sha>  +  :latest
       │
-      └──► edge-functions    → supabase functions deploy <each> --no-verify-jwt
+      └──► migrations        → supabase db push --linked --include-all
+                  │
+                  ▼
+              edge-functions  → supabase functions deploy <each> --no-verify-jwt
                                 then assert verify_jwt=false via management API (VER-156 guard)
       │
       ▼
   coolify                    → POST webhook → poll /api/health until SHA matches
 ```
+
+`migrations` runs before `edge-functions` so an EF that depends on a new column/table/policy doesn't crash on its first invocation. If `migrations` fails, neither EFs nor the new Coolify image ship.
 
 ## Normal deploy
 

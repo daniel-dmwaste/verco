@@ -89,13 +89,56 @@ jobs:
           cache-to: type=gha,mode=max
 
   # ---------------------------------------------------------------
+  # Apply Supabase migrations to prod
+  # Until this job existed, deploy.yml only deployed Edge Functions and the
+  # Docker image — migrations had to be pushed manually (see docs/runbooks/
+  # deploy.md). On 2026-05-14, PR #32 and PR #33 merged but their migrations
+  # never reached prod, leaving RLS write policies and a role gate sitting
+  # in git only. This job closes the gap.
+  # Requires GitHub secret: SUPABASE_DB_PASSWORD (the prod DB password).
+  # ---------------------------------------------------------------
+  migrations:
+    name: Apply Supabase migrations
+    needs: ci
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '9'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Link Supabase project
+        run: |
+          pnpm supabase link \
+            --project-ref "$SUPABASE_PROJECT_REF" \
+            --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Push migrations
+        run: |
+          pnpm supabase db push --linked --include-all
+
+  # ---------------------------------------------------------------
   # Deploy all Edge Functions with --no-verify-jwt
   # Closes VER-156: the guard step at the end asserts verify_jwt=false
   # for every function present in supabase/functions/.
+  # Depends on `migrations`: if a function depends on a new column/table/RLS
+  # policy, we want the migration to land first so the EF doesn't crash on
+  # its first invocation.
   # ---------------------------------------------------------------
   edge-functions:
     name: Deploy Edge Functions
-    needs: ci
+    needs: [ci, migrations]
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
