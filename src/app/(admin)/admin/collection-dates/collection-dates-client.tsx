@@ -30,7 +30,12 @@ function capacityBgColor(booked: number, limit: number): string {
 
 type Frequency = 'weekly' | 'fortnightly' | 'monthly'
 
-export function CollectionDatesClient() {
+interface CollectionDatesClientProps {
+  clientId: string
+  isContractorAdmin: boolean
+}
+
+export function CollectionDatesClient({ clientId, isContractorAdmin }: CollectionDatesClientProps) {
   const supabase = createClient()
   const queryClient = useQueryClient()
 
@@ -73,28 +78,36 @@ export function CollectionDatesClient() {
   const [editIsOpen, setEditIsOpen] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
 
-  // Fetch areas
+  // Fetch areas — must filter by clientId because collection_area has a
+  // public-SELECT RLS policy (`USING (is_active = true)`) for the resident
+  // booking flow, which doesn't tenant-scope (CLAUDE.md §21). Without the
+  // explicit filter a client-admin sees every tenant's areas.
   const { data: areas } = useQuery({
-    queryKey: ['collection-areas'],
+    queryKey: ['collection-areas', clientId],
     queryFn: async () => {
-      const { data } = await supabase
+      let query = supabase
         .from('collection_area')
         .select('id, code, name')
         .eq('is_active', true)
         .order('code')
+      if (clientId) {
+        query = query.eq('client_id', clientId)
+      }
+      const { data } = await query
       return data ?? []
     },
   })
 
-  // Fetch collection dates
+  // Fetch collection dates — same tenant-scoping rule. The embedded
+  // collection_area is `!inner` so we can filter on its client_id.
   const today = format(new Date(), 'yyyy-MM-dd')
   const { data: datesData, isLoading } = useQuery({
-    queryKey: ['admin-collection-dates', showPast, page],
+    queryKey: ['admin-collection-dates', showPast, page, clientId],
     queryFn: async () => {
       let query = supabase
         .from('collection_date')
         .select(
-          'id, date, is_open, for_mud, bulk_capacity_limit, bulk_units_booked, bulk_is_closed, anc_capacity_limit, anc_units_booked, anc_is_closed, id_capacity_limit, id_units_booked, id_is_closed, collection_area_id, collection_area!inner(name, code)',
+          'id, date, is_open, for_mud, bulk_capacity_limit, bulk_units_booked, bulk_is_closed, anc_capacity_limit, anc_units_booked, anc_is_closed, id_capacity_limit, id_units_booked, id_is_closed, collection_area_id, collection_area!inner(name, code, client_id)',
           { count: 'exact' }
         )
         .order('date', { ascending: true })
@@ -102,6 +115,9 @@ export function CollectionDatesClient() {
 
       if (!showPast) {
         query = query.gte('date', today)
+      }
+      if (clientId) {
+        query = query.eq('collection_area.client_id', clientId)
       }
 
       const { data, count } = await query
@@ -252,20 +268,24 @@ export function CollectionDatesClient() {
           >
             {showPast ? 'Hide past dates' : 'Show past dates'}
           </button>
-          <button
-            type="button"
-            onClick={() => { setShowBulkCreate((p) => !p); setShowCreate(false) }}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-body-sm font-medium text-gray-600 hover:bg-gray-50"
-          >
-            Bulk Create
-          </button>
-          <button
-            type="button"
-            onClick={() => { setShowCreate((p) => !p); setShowBulkCreate(false) }}
-            className="rounded-lg bg-[#00E47C] px-4 py-2 text-body-sm font-semibold text-[#293F52]"
-          >
-            + New Date
-          </button>
+          {isContractorAdmin && (
+            <>
+              <button
+                type="button"
+                onClick={() => { setShowBulkCreate((p) => !p); setShowCreate(false) }}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-body-sm font-medium text-gray-600 hover:bg-gray-50"
+              >
+                Bulk Create
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowCreate((p) => !p); setShowBulkCreate(false) }}
+                className="rounded-lg bg-[#00E47C] px-4 py-2 text-body-sm font-semibold text-[#293F52]"
+              >
+                + New Date
+              </button>
+            </>
+          )}
         </div>
       </div>
 

@@ -24,7 +24,11 @@ interface ModalProperty {
   collection_area_code: string
 }
 
-export function PropertiesClient() {
+interface PropertiesClientProps {
+  isContractorAdmin: boolean
+}
+
+export function PropertiesClient({ isContractorAdmin }: PropertiesClientProps) {
   const supabase = createClient()
   const queryClient = useQueryClient()
 
@@ -324,13 +328,15 @@ export function PropertiesClient() {
           >
             {isGeocoding ? 'Geocoding...' : `Geocode All (${ungeocodedCount ?? 0} pending)`}
           </button>
-          <button
-            type="button"
-            onClick={() => setShowImport((p) => !p)}
-            className="rounded-lg bg-[#00E47C] px-4 py-2 text-body-sm font-semibold text-[#293F52]"
-          >
-            Import Properties
-          </button>
+          {isContractorAdmin && (
+            <button
+              type="button"
+              onClick={() => setShowImport((p) => !p)}
+              className="rounded-lg bg-[#00E47C] px-4 py-2 text-body-sm font-semibold text-[#293F52]"
+            >
+              Import Properties
+            </button>
+          )}
         </div>
       </div>
 
