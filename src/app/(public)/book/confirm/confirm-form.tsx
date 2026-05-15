@@ -11,7 +11,8 @@ import { BookingStepper } from '@/components/booking/booking-stepper'
 import { BookingCancelLink } from '@/components/booking/booking-cancel-link'
 import { VercoButton } from '@/components/ui/verco-button'
 import { decodeItems } from '@/lib/booking/search-params'
-import { replaceBookingAfterEdit } from '@/app/(admin)/admin/bookings/[id]/actions'
+// replaceBookingAfterEdit import removed — edits now in-place via the EF's
+// update branch (no cancel-and-replace dance).
 import {
   ContactSchema,
   type ContactFormData,
@@ -360,23 +361,11 @@ export function ConfirmForm() {
         }
       }
 
-      // Admin "Edit services" flow: cancel the old booking so we don't end up
-      // with two bookings at the same address. The booking-detail panel sets
-      // the `replaces` query param when launching the wizard from an existing
-      // booking; absence of it means this is a fresh booking (not an edit) and
-      // nothing needs cancelling.
-      const replacesBookingId = searchParams.get('replaces')
-      if (replacesBookingId && onBehalf) {
-        const cancelResult = await replaceBookingAfterEdit(replacesBookingId, result.ref)
-        if (!cancelResult.ok) {
-          // Soft-fail: new booking exists, old one couldn't be cancelled.
-          // Surface in console; user can cancel the duplicate manually.
-          console.error(
-            `Failed to cancel old booking ${replacesBookingId} after edit:`,
-            cancelResult.error,
-          )
-        }
-      }
+      // Admin "Edit services" flow: the EF now updates the existing booking
+      // in place when `replaces` is sent (same booking_id, same ref, audit
+      // captures the diff). Nothing to clean up client-side — the old
+      // replaceBookingAfterEdit cancel-and-replace pattern was retired in
+      // favour of the update_booking_items_in_place RPC.
 
       // Admin on-behalf → admin detail page; resident → public detail page
       const bookingPath = onBehalf
