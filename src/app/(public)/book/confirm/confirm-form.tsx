@@ -11,6 +11,7 @@ import { BookingStepper } from '@/components/booking/booking-stepper'
 import { BookingCancelLink } from '@/components/booking/booking-cancel-link'
 import { VercoButton } from '@/components/ui/verco-button'
 import { decodeItems } from '@/lib/booking/search-params'
+import { replaceBookingAfterEdit } from '@/app/(admin)/admin/bookings/[id]/actions'
 import {
   ContactSchema,
   type ContactFormData,
@@ -265,6 +266,7 @@ export function ConfirmForm() {
       )
 
       const functionUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-booking`
+      const replacesParam = searchParams.get('replaces')
       const requestBody = {
         property_id: propertyId,
         collection_area_id: collectionAreaId,
@@ -278,6 +280,10 @@ export function ConfirmForm() {
           mobile_e164: contact.mobile,
         },
         items,
+        // Threaded through from the admin "Edit services" wizard launch so
+        // both the server-side re-price AND the post-create cleanup
+        // (replaceBookingAfterEdit) know which booking is being replaced.
+        ...(replacesParam ? { replaces: replacesParam } : {}),
       }
 
       const res = await fetch(functionUrl, {
@@ -338,6 +344,24 @@ export function ConfirmForm() {
         } catch {
           // Non-critical — don't block booking flow
           console.error('Failed to link profile to contact')
+        }
+      }
+
+      // Admin "Edit services" flow: cancel the old booking so we don't end up
+      // with two bookings at the same address. The booking-detail panel sets
+      // the `replaces` query param when launching the wizard from an existing
+      // booking; absence of it means this is a fresh booking (not an edit) and
+      // nothing needs cancelling.
+      const replacesBookingId = searchParams.get('replaces')
+      if (replacesBookingId && onBehalf) {
+        const cancelResult = await replaceBookingAfterEdit(replacesBookingId, result.ref)
+        if (!cancelResult.ok) {
+          // Soft-fail: new booking exists, old one couldn't be cancelled.
+          // Surface in console; user can cancel the duplicate manually.
+          console.error(
+            `Failed to cancel old booking ${replacesBookingId} after edit:`,
+            cancelResult.error,
+          )
         }
       }
 

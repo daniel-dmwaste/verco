@@ -71,6 +71,11 @@ const CreateBookingRequest = z.object({
   notes: z.string().max(500).optional(),
   contact: ContactInput,
   items: z.array(BookingItemInput).min(1).max(20),
+  // Admin "Edit services" flow — exclude the replaced booking from FY-usage
+  // count in the server-side re-price. Without this, the new selection
+  // appears as "additional" services and gets charged as extras even though
+  // the resident is just modifying their existing booking.
+  replaces: z.string().uuid().optional(),
 })
 
 serve(async (req) => {
@@ -108,7 +113,7 @@ serve(async (req) => {
       return jsonResponse({ error: parsed.error.message }, 400)
     }
 
-    const { property_id, collection_area_id, collection_date_id, location, notes, contact, items } = parsed.data
+    const { property_id, collection_area_id, collection_date_id, location, notes, contact, items, replaces } = parsed.data
 
     // ── 2. Resolve collection area → client_id, contractor_id, area code ─────
 
@@ -179,6 +184,7 @@ serve(async (req) => {
       collection_area_id,
       fy.id,
       pricingItems,
+      replaces,
     )
 
     // ── 7. Upsert contact (by email) ────────────────────────────────────────

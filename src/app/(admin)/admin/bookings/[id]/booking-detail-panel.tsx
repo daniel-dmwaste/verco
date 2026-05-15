@@ -133,6 +133,10 @@ export function BookingDetailPanel({
         ...(contact?.email ? { contact_email: contact.email } : {}),
         ...(contact?.mobile_e164 ? { contact_mobile: contact.mobile_e164 } : {}),
         return_url: `/admin/bookings/${booking.id}`,
+        // Signals the wizard that submission should cancel this booking
+        // (the one being edited) after creating the new one — otherwise the
+        // edit flow leaves two bookings at the same address.
+        replaces: booking.id,
       }).toString()}`
     : null
 
