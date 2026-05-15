@@ -350,8 +350,8 @@ export default async function AdminDashboardPage() {
           )}
         </div>
 
-        {/* MUD reminders — full width across both columns */}
-        <div className="rounded-xl bg-white p-5 shadow-sm md:col-span-2">
+        {/* MUD reminders — half width to match the other dashboard tiles */}
+        <div className="rounded-xl bg-white p-5 shadow-sm">
           <div className="mb-3.5 flex items-center justify-between font-[family-name:var(--font-heading)] text-sm font-semibold text-[#293F52]">
             <span>
               MUDs Due Soon
