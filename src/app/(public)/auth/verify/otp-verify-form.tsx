@@ -10,7 +10,11 @@ type VerifyState = 'idle' | 'verifying' | 'success' | 'error'
 const OTP_LENGTH = 6
 const RESEND_COOLDOWN_SECONDS = 30
 
-export function OtpVerifyForm() {
+interface OtpVerifyFormProps {
+  postLoginPath: string
+}
+
+export function OtpVerifyForm({ postLoginPath }: OtpVerifyFormProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const email = searchParams.get('email') ?? ''
@@ -58,10 +62,10 @@ export function OtpVerifyForm() {
       setState('success')
       // Brief delay so the user sees the success state
       setTimeout(() => {
-        router.push('/dashboard')
+        router.push(postLoginPath)
       }, 1200)
     },
-    [email, router]
+    [email, router, postLoginPath]
   )
 
   function handleDigitChange(index: number, value: string) {

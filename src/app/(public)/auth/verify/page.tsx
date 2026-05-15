@@ -1,7 +1,10 @@
 import { Suspense } from 'react'
 import { OtpVerifyForm } from './otp-verify-form'
+import { resolveAuthHostContext } from '../_host-context'
 
-export default function VerifyPage() {
+export default async function VerifyPage() {
+  const { brand, postLoginPath } = await resolveAuthHostContext()
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-100 px-4">
       <div className="w-full max-w-sm">
@@ -12,15 +15,17 @@ export default function VerifyPage() {
               V
             </div>
             <span className="font-[family-name:var(--font-heading)] text-title font-bold text-[var(--brand)]">
-              Verge Collection
+              {brand.serviceName}
             </span>
           </div>
-          <span className="text-body-sm text-gray-500">City of Kwinana</span>
+          {brand.contextLabel && (
+            <span className="text-body-sm text-gray-500">{brand.contextLabel}</span>
+          )}
         </div>
 
         {/* OTP form card */}
         <Suspense>
-          <OtpVerifyForm />
+          <OtpVerifyForm postLoginPath={postLoginPath} />
         </Suspense>
 
         {/* Powered by */}

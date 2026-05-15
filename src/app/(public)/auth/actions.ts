@@ -2,6 +2,7 @@
 
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { isAdminHostname, isFieldHostname } from '@/lib/proxy/hostnames'
 
 type Result<T, E = string> =
   | { ok: true; data: T }
@@ -14,8 +15,15 @@ export async function sendOtp(email: string): Promise<Result<void>> {
 
   const headerStore = await headers()
   const clientId = headerStore.get('x-client-id')
+  const host = headerStore.get('host') ?? ''
 
-  if (!clientId) {
+  // Admin / field hosts have no tenant context — that's expected. For
+  // client subdomains we still require x-client-id so the user-metadata
+  // `client_id` stamp (used to bind residents/strata to their origin
+  // tenant) can be recorded.
+  const isContractorHost = isAdminHostname(host) || isFieldHostname(host)
+
+  if (!clientId && !isContractorHost) {
     return { ok: false, error: 'Unable to resolve tenant.' }
   }
 
@@ -25,9 +33,7 @@ export async function sendOtp(email: string): Promise<Result<void>> {
     email,
     options: {
       shouldCreateUser: true,
-      data: {
-        client_id: clientId,
-      },
+      data: clientId ? { client_id: clientId } : undefined,
     },
   })
 

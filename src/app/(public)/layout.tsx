@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { PublicNav } from '@/components/public/public-nav'
 import { MobileFab } from '@/components/public/mobile-fab'
 import { MobileBottomNav } from '@/components/public/mobile-bottom-nav'
+import { isAdminHostname, isFieldHostname } from '@/lib/proxy/hostnames'
 
 interface ClientBranding {
   name: string
@@ -55,6 +56,32 @@ export default async function PublicLayout({
 }: {
   children: React.ReactNode
 }) {
+  const headerStore = await headers()
+  const host = headerStore.get('host') ?? ''
+  // On admin/field hosts, the (public) layout still wraps /auth — but the
+  // resident nav, FAB, and bottom bar don't belong there. Render a minimal
+  // shell with neutral Verco brand defaults instead.
+  const isContractorHost = isAdminHostname(host) || isFieldHostname(host)
+
+  if (isContractorHost) {
+    return (
+      <div
+        className="min-h-screen bg-gray-50"
+        style={{
+          '--brand': '#293F52',
+          '--brand-foreground': '#FFFFFF',
+          '--brand-light': 'color-mix(in srgb, #293F52 8%, white)',
+          '--brand-hover': 'color-mix(in srgb, #293F52 85%, black)',
+          '--brand-accent': '#00E47C',
+          '--brand-accent-light': 'color-mix(in srgb, #00E47C 10%, white)',
+          '--brand-accent-dark': 'color-mix(in srgb, #00E47C 75%, black)',
+        } as React.CSSProperties}
+      >
+        {children}
+      </div>
+    )
+  }
+
   const [branding, isStaff] = await Promise.all([
     getClientBranding(),
     getIsStaff(),
