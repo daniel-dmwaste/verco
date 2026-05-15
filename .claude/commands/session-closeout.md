@@ -21,6 +21,20 @@ git push
 Run: git log --oneline --since="8 hours ago"
 Scan the modified files to understand what changed this session.
 
+### Step 2.5 — Sync Linear before logging
+
+For every Linear ticket ID referenced in this session's commits, branch names, or PR titles, verify Linear state matches what shipped:
+
+- **PR merged → set state Done** via `mcp__linear__save_issue`. Attach the PR via the `links` param.
+- **Ticket triaged out / superseded → set Duplicate or Cancelled** with a one-line `save_comment` explaining why.
+- **In-progress at session end → leave Open.** Do NOT write "pending next session" in CLAUDE.md or memory files — the ticket is source of truth.
+
+If a ticket's state is ambiguous (touched but no clear completion signal), surface to Dan rather than guessing.
+
+Refuse to proceed to Step 3 until any drift is resolved. The whole point: the next `/startup` against Linear sees ground truth, not yesterday's lag.
+
+**Why this exists:** on 2026-05-15 the startup discovered VER-199 was actually Done (resolved by PR #32 on 14/05) but Linear still showed Backlog. The PR shipped 24 hours earlier — this sync step would have flushed state at session close. Same morning surfaced VER-202/203 as "open" in the brief when they were Duplicates closed the night before. Push consistency at write-time, not at read-time.
+
 ### Step 3 — Update CLAUDE.md (400-line hard cap)
 
 **Before adding anything, triage into three buckets:**
