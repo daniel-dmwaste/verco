@@ -40,8 +40,28 @@ export async function calculatePrice(
   collectionAreaId: string,
   fyId: string,
   items: PricingItem[],
+  /**
+   * Booking ID to exclude from FY-usage counting. Used by the admin
+   * "Edit services" flow: the wizard creates a new booking that REPLACES
+   * an existing one, so the existing booking's items should not count
+   * against the resident's FY allowance during the re-pricing (otherwise
+   * the new selection looks like "additional" services and gets charged
+   * as extras). Pass the old booking's UUID via the `replaces` param.
+   */
+  excludeBookingId?: string,
 ): Promise<PriceCalculationResult> {
   const serviceIds = items.map((i) => i.service_id)
+
+  // FY-usage query — filter out the replaced booking when in edit mode
+  let usageQuery = supabase
+    .from('booking_item')
+    .select('service_id, no_services, booking!inner(property_id, fy_id, status)')
+    .eq('booking.property_id', propertyId)
+    .eq('booking.fy_id', fyId)
+    .not('booking.status', 'in', '("Cancelled","Pending Payment")')
+  if (excludeBookingId) {
+    usageQuery = usageQuery.neq('booking_id', excludeBookingId)
+  }
 
   // Parallel fetches for rules, allocation, services, FY usage, and overrides
   const [rulesResult, allocResult, servicesResult, usageResult, overrideResult] = await Promise.all([
@@ -64,13 +84,7 @@ export async function calculatePrice(
       .select('id, category!inner(code)')
       .in('id', serviceIds),
 
-    // FY usage per service for this property
-    supabase
-      .from('booking_item')
-      .select('service_id, no_services, booking!inner(property_id, fy_id, status)')
-      .eq('booking.property_id', propertyId)
-      .eq('booking.fy_id', fyId)
-      .not('booking.status', 'in', '("Cancelled","Pending Payment")'),
+    usageQuery,
 
     // Allocation overrides for this property and FY
     supabase

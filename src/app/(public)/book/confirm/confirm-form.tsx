@@ -266,6 +266,7 @@ export function ConfirmForm() {
       )
 
       const functionUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-booking`
+      const replacesParam = searchParams.get('replaces')
       const requestBody = {
         property_id: propertyId,
         collection_area_id: collectionAreaId,
@@ -279,6 +280,10 @@ export function ConfirmForm() {
           mobile_e164: contact.mobile,
         },
         items,
+        // Threaded through from the admin "Edit services" wizard launch so
+        // both the server-side re-price AND the post-create cleanup
+        // (replaceBookingAfterEdit) know which booking is being replaced.
+        ...(replacesParam ? { replaces: replacesParam } : {}),
       }
 
       const res = await fetch(functionUrl, {

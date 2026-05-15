@@ -18,6 +18,10 @@ const PriceCalculationRequest = z.object({
   property_id: z.string().uuid(),
   fy_id: z.string().uuid(),
   items: z.array(BookingItemInput).min(1).max(20),
+  // Admin "Edit services" flow — when present, the booking being replaced
+  // is excluded from the FY-usage count so the new selection is priced as
+  // a replacement rather than an addition.
+  replaces: z.string().uuid().optional(),
 })
 
 serve(async (req) => {
@@ -47,7 +51,7 @@ serve(async (req) => {
       )
     }
 
-    const { property_id, fy_id, items } = parsed.data
+    const { property_id, fy_id, items, replaces } = parsed.data
 
     // Resolve property → collection_area_id
     const { data: property, error: propError } = await supabase
@@ -74,6 +78,7 @@ serve(async (req) => {
       property.collection_area_id,
       fy_id,
       pricingItems,
+      replaces,
     )
 
     // Re-attach collection_date_id to line items for the caller
