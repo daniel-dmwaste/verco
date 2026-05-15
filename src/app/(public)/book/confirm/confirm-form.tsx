@@ -286,11 +286,24 @@ export function ConfirmForm() {
         ...(replacesParam ? { replaces: replacesParam } : {}),
       }
 
+      // For admin "on-behalf" bookings, send the staff member's session JWT
+      // so the EF's auth.getUser() resolves and the booking's audit_log entry
+      // records the staff actor (not "System"). Residents reach /book/confirm
+      // pre-auth so anon-key is the only thing available — and correct, since
+      // they ARE anonymous bookers at this point.
+      let authHeader = `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`
+      if (onBehalf) {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.access_token) {
+          authHeader = `Bearer ${session.access_token}`
+        }
+      }
+
       const res = await fetch(functionUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          Authorization: authHeader,
         },
         body: JSON.stringify(requestBody),
       })

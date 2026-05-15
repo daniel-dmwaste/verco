@@ -121,6 +121,13 @@ export interface BookingContactForDispatch {
 
 export interface BookingClientForDispatch extends ClientBranding {
   slug: string
+  /**
+   * Custom domain mapped to this client (e.g. `vvtest.verco.au`). Used by
+   * `buildBookingPortalUrl()` to build resolvable booking-detail links for
+   * email CTAs — Verco uses hostname-based tenant routing, so `appUrl`+slug
+   * path concatenation produces broken URLs.
+   */
+  custom_domain: string | null
   reply_to_email: string | null
   email_from_name: string | null
 }

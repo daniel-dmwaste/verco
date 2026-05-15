@@ -163,8 +163,8 @@ serve(async (req) => {
           id, ref, type, client_id,
           contact:contact_id ( id, full_name, email, mobile_e164 ),
           client:client_id (
-            slug, name, logo_light_url, primary_colour, email_footer_html,
-            reply_to_email, email_from_name
+            slug, custom_domain, name, logo_light_url, primary_colour,
+            email_footer_html, reply_to_email, email_from_name
           ),
           eligible_properties:property_id ( address, formatted_address ),
           booking_item (
@@ -196,6 +196,7 @@ serve(async (req) => {
         data.client as
           | {
               slug: string
+              custom_domain: string | null
               name: string
               logo_light_url: string | null
               primary_colour: string | null
@@ -205,6 +206,7 @@ serve(async (req) => {
             }
           | {
               slug: string
+              custom_domain: string | null
               name: string
               logo_light_url: string | null
               primary_colour: string | null
@@ -271,6 +273,7 @@ serve(async (req) => {
           primary_colour: client.primary_colour,
           email_footer_html: client.email_footer_html,
           slug: client.slug,
+          custom_domain: client.custom_domain,
           reply_to_email: client.reply_to_email,
           email_from_name: client.email_from_name,
         },
