@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { BookingDetailClient } from './booking-detail-client'
 
@@ -118,9 +119,24 @@ export default async function BookingDetailPage({
     receiptUrl = (typeof payment?.receipt_url === 'string' ? payment.receipt_url : null)
   }
 
+  // Per-client place-out window — different councils have different policies
+  // (KWN=48h / 2d, Verge Valet=72h / 3d). Read from the tenant resolved by
+  // hostname; default to 48 if missing.
+  const headerStore = await headers()
+  const tenantClientId = headerStore.get('x-client-id')
+  let placeOutHoursBefore = 48
+  if (tenantClientId) {
+    const { data: c } = await supabase
+      .from('client')
+      .select('place_out_hours_before')
+      .eq('id', tenantClientId)
+      .single()
+    placeOutHoursBefore = c?.place_out_hours_before ?? 48
+  }
+
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-8">
-      <BookingDetailClient booking={booking} tickets={tickets ?? []} receiptUrl={receiptUrl} ncn={ncnData} np={npData} paymentSuccess={paymentSuccess} />
+      <BookingDetailClient booking={booking} tickets={tickets ?? []} receiptUrl={receiptUrl} ncn={ncnData} np={npData} paymentSuccess={paymentSuccess} placeOutHoursBefore={placeOutHoursBefore} />
     </main>
   )
 }

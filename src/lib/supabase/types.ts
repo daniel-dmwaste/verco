@@ -826,6 +826,7 @@ export type Database = {
           logo_dark_url: string | null
           logo_light_url: string | null
           name: string
+          place_out_hours_before: number
           primary_colour: string | null
           privacy_policy_url: string | null
           reply_to_email: string | null
@@ -855,6 +856,7 @@ export type Database = {
           logo_dark_url?: string | null
           logo_light_url?: string | null
           name: string
+          place_out_hours_before?: number
           primary_colour?: string | null
           privacy_policy_url?: string | null
           reply_to_email?: string | null
@@ -884,6 +886,7 @@ export type Database = {
           logo_dark_url?: string | null
           logo_light_url?: string | null
           name?: string
+          place_out_hours_before?: number
           primary_colour?: string | null
           privacy_policy_url?: string | null
           reply_to_email?: string | null
