@@ -1,11 +1,11 @@
 import { Suspense } from 'react'
-import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentAdminClient } from '@/lib/admin/current-client'
 import { PropertiesClient } from './properties-client'
 
 export default async function PropertiesPage() {
-  const headerStore = await headers()
-  const clientId = headerStore.get('x-client-id') ?? ''
+  const currentClient = await getCurrentAdminClient()
+  const clientId = currentClient?.id ?? ''
 
   const supabase = await createClient()
   const { data: role } = await supabase.rpc('current_user_role')

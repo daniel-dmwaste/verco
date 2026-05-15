@@ -1,8 +1,8 @@
 'use server'
 
-import { headers } from 'next/headers'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentAdminClient } from '@/lib/admin/current-client'
 import type { Database } from '@/lib/supabase/types'
 
 type BugCategory = Database['public']['Enums']['bug_report_category']
@@ -49,8 +49,8 @@ export async function createBugReport(
     return { ok: false, error: 'Not authenticated' }
   }
 
-  const headerStore = await headers()
-  const clientId = headerStore.get('x-client-id')
+  const currentClient = await getCurrentAdminClient()
+  const clientId = currentClient?.id ?? null
 
   const { data, error } = await supabase
     .from('bug_report')

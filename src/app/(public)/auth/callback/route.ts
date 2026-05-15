@@ -1,11 +1,13 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import type { Database } from '@/lib/supabase/types'
+import { postLoginPathForHost } from '../_host-context'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl
   const code = searchParams.get('code')
-  const redirectTo = new URL('/dashboard', request.url)
+  const host = request.headers.get('host') ?? ''
+  const redirectTo = new URL(postLoginPathForHost(host), request.url)
 
   if (!code) {
     return NextResponse.redirect(new URL('/auth', request.url))
