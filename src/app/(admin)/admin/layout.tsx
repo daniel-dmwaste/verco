@@ -1,6 +1,9 @@
 import { redirect } from 'next/navigation'
-import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import {
+  getCurrentAdminClient,
+  getAccessibleAdminClients,
+} from '@/lib/admin/current-client'
 import { AdminLayoutClient } from './admin-layout-client'
 
 export default async function AdminLayout({
@@ -35,21 +38,16 @@ export default async function AdminLayout({
 
   const role = userRole?.role ?? null
 
-  // Fetch tenant name from x-client-id header
-  const headerStore = await headers()
-  const clientId = headerStore.get('x-client-id')
+  // "Current client" comes from the switcher cookie (admin.verco.au) or the
+  // proxy x-client-id header (client-subdomain back-compat). Falls back to
+  // the user's first accessible client if neither is set.
+  const [currentClient, accessibleClients] = await Promise.all([
+    getCurrentAdminClient(),
+    getAccessibleAdminClients(),
+  ])
 
-  let clientName = ''
-  if (clientId) {
-    const { data: client } = await supabase
-      .from('client')
-      .select('name')
-      .eq('id', clientId)
-      .single()
-    clientName = client?.name ?? ''
-  }
-
-  // Badge counts (RLS-scoped)
+  // Badge counts (RLS-scoped — contractor users see all their clients;
+  // client users see only their own client).
   const [bookingsResult, ncnResult, npResult, ticketsResult] =
     await Promise.all([
       supabase
@@ -90,7 +88,8 @@ export default async function AdminLayout({
 
   return (
     <AdminLayoutClient
-      clientName={clientName}
+      currentClient={currentClient}
+      accessibleClients={accessibleClients}
       initials={initials}
       counts={counts}
       role={role}

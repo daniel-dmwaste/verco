@@ -19,11 +19,18 @@ const ADMIN_ROLES: AppRole[] = [
 
 const FIELD_ROLES: AppRole[] = ['field', 'ranger']
 
-// Paths legitimately served on admin.verco.au — everything else redirects to
-// /admin (so admin.verco.au/book etc. doesn't leak the resident surface onto
-// the operator host).
-const ADMIN_ALLOWED_PREFIXES = ['/admin', '/auth', '/api']
+// Paths legitimately served on admin.verco.au.
+// - /admin: the operator surface (role-guarded)
+// - /auth, /api: login + healthcheck (no role required)
+// - /book, /survey: staff "act on behalf of resident" flows — switcher-driven
+//   tenant resolution sets x-client-id from the verco_admin_client cookie so
+//   the resident booking wizard runs against the currently-selected client
+const ADMIN_ALLOWED_PREFIXES = ['/admin', '/auth', '/api', '/book', '/survey']
 const FIELD_ALLOWED_PREFIXES = ['/field', '/auth', '/api']
+
+// Switcher-driven tenant cookie. Kept in sync with
+// CURRENT_ADMIN_CLIENT_COOKIE in src/lib/admin/current-client.ts.
+const SWITCHER_COOKIE = 'verco_admin_client'
 
 const DEBUG_PROXY =
   process.env.NODE_ENV === 'development' || process.env.DEBUG_PROXY === '1'
@@ -137,7 +144,7 @@ async function handleContractorHost(
     : FIELD_ALLOWED_PREFIXES
 
   // Path-of-this-host must start with one of the allowed prefixes —
-  // anything else (e.g. /book on admin.verco.au) is a wrong-host request
+  // anything else (e.g. /dashboard on admin.verco.au) is a wrong-host request
   // and redirects to the canonical surface. /auth and /api are allowed
   // because login + healthcheck need to work without a role.
   const isAllowedPath = allowedPrefixes.some((prefix) => path.startsWith(prefix))
@@ -150,11 +157,12 @@ async function handleContractorHost(
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Only /admin or /field paths need role checking — /auth and /api don't.
-  if (!path.startsWith(canonicalPath)) {
+  // /auth and /api: no role required, just refresh session and pass through.
+  if (path.startsWith('/auth') || path.startsWith('/api')) {
     return forwardCookies(NextResponse.next({ request }))
   }
 
+  // Everything else under admin/field requires login + matching role.
   if (!user) {
     return NextResponse.redirect(new URL('/auth', request.url))
   }
@@ -173,11 +181,42 @@ async function handleContractorHost(
     return NextResponse.redirect(new URL('/auth', request.url))
   }
 
-  // Forward contractor scope (no x-client-id — the page picks current client
-  // from the verco_admin_client cookie via getCurrentAdminClient()).
   const requestHeaders = new Headers(request.headers)
   if (matchingRole.contractor_id) {
     requestHeaders.set('x-contractor-id', matchingRole.contractor_id)
+  }
+
+  // Switcher-driven tenant resolution for /book and /survey on admin host
+  // (staff "act on behalf of resident" flows). The downstream wizard reads
+  // x-client-id from headers just as it does on a client subdomain —
+  // hostname is replaced by the cookie as the resolution input.
+  if (isAdmin && (path.startsWith('/book') || path.startsWith('/survey'))) {
+    const switcherClientId = request.cookies.get(SWITCHER_COOKIE)?.value
+    let resolvedClient: {
+      id: string
+      slug: string
+      contractor_id: string
+    } | null = null
+
+    if (switcherClientId) {
+      const { data } = await supabase
+        .from('client')
+        .select('id, slug, contractor_id')
+        .eq('id', switcherClientId)
+        .eq('is_active', true)
+        .maybeSingle()
+      if (data) resolvedClient = data
+    }
+
+    if (!resolvedClient) {
+      // No valid switcher selection — bounce to /admin so the user picks
+      // a client first. Beats serving the booking wizard against an
+      // empty client_id and getting confusing downstream errors.
+      return NextResponse.redirect(new URL('/admin', request.url))
+    }
+
+    requestHeaders.set('x-client-id', resolvedClient.id)
+    requestHeaders.set('x-client-slug', resolvedClient.slug)
   }
 
   return forwardCookies(NextResponse.next({ request: { headers: requestHeaders } }))

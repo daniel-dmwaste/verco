@@ -1,10 +1,12 @@
 'use client'
 
 import { AdminSidebar } from '@/components/admin/admin-sidebar'
+import { ClientSwitcher } from '@/components/admin/client-switcher'
 import { BugReportFab } from '@/components/bug-report/bug-report-fab'
 
 interface AdminLayoutClientProps {
-  clientName: string
+  currentClient: { id: string; name: string } | null
+  accessibleClients: Array<{ id: string; name: string }>
   initials: string
   counts: {
     bookings: number
@@ -17,7 +19,8 @@ interface AdminLayoutClientProps {
 }
 
 export function AdminLayoutClient({
-  clientName,
+  currentClient,
+  accessibleClients,
   initials,
   counts,
   role,
@@ -36,11 +39,10 @@ export function AdminLayoutClient({
           </span>
         </div>
 
-        {/* Tenant pill */}
-        <div className="flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-body-sm font-medium text-white">
-          <div className="size-2 rounded-full bg-[#00E47C]" />
-          {clientName}
-        </div>
+        {/* Tenant pill / switcher */}
+        {currentClient && (
+          <ClientSwitcher current={currentClient} accessible={accessibleClients} />
+        )}
 
         <div className="flex-1" />
 
