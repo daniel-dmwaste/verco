@@ -123,6 +123,7 @@ describe('dispatch', () => {
         id: 'b5',
         client: {
           slug: 'kwn',
+          custom_domain: null,
           name: 'City of Kwinana',
           logo_light_url: null,
           primary_colour: null,
@@ -145,6 +146,7 @@ describe('dispatch', () => {
         id: 'b6',
         client: {
           slug: 'bare',
+          custom_domain: null,
           name: 'Bare Council',
           logo_light_url: null,
           primary_colour: null,

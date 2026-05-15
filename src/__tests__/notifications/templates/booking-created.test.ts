@@ -56,10 +56,37 @@ describe('renderBookingCreated', () => {
     expect(paidHtml).toContain('$55.00')
   })
 
-  it('builds the CTA URL from appUrl + client slug + booking ref', () => {
+  it('falls back to {slug}.verco.au when client has no custom_domain', () => {
+    // Default fixture has client.slug='mock-tenant', custom_domain=null.
+    // Verco uses hostname-based tenant routing — appUrl + slug paths are broken.
     const booking = makeMockBooking({ ref: 'VV-BBB777' })
     const { html } = renderBookingCreated(booking, APP_URL)
-    expect(html).toContain('https://verco.test/mock-tenant/booking/VV-BBB777')
+    expect(html).toContain('https://mock-tenant.verco.au/booking/VV-BBB777')
+  })
+
+  it('uses client.custom_domain when set (preferred over slug fallback)', () => {
+    const booking = makeMockBooking({
+      ref: 'VV-CCC888',
+      client: {
+        slug: 'verge-valet',
+        custom_domain: 'vvtest.verco.au',
+        name: 'Verge Valet',
+        logo_light_url: null,
+        primary_colour: null,
+        email_footer_html: null,
+        reply_to_email: null,
+        email_from_name: null,
+      },
+    })
+    const { html } = renderBookingCreated(booking, APP_URL)
+    expect(html).toContain('https://vvtest.verco.au/booking/VV-CCC888')
+    expect(html).not.toContain('verge-valet.verco.au')
+  })
+
+  it('renders a Services section header above the line items', () => {
+    const booking = makeMockBooking({ ref: 'VV-DDD999' })
+    const { html } = renderBookingCreated(booking, APP_URL)
+    expect(html).toContain('>Services</td>')
   })
 
   it('HTML-escapes the booking reference and address in the body', () => {

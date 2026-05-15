@@ -1,6 +1,11 @@
 import type { BookingForDispatch, RenderedEmail } from './types.ts'
 import { renderEmailLayout } from './_layout.ts'
-import { formatCurrency, formatCollectionDate, escapeHtml } from './template-helpers.ts'
+import {
+  buildBookingPortalUrl,
+  escapeHtml,
+  formatCollectionDate,
+  formatCurrency,
+} from './template-helpers.ts'
 
 /**
  * `booking_created` template — sent on transition to Submitted.
@@ -18,9 +23,12 @@ import { formatCurrency, formatCollectionDate, escapeHtml } from './template-hel
  *   Heading: "Booking confirmed"
  *   Body:
  *     - Brief confirmation line
- *     - Details table: ref, collection date, address, services
+ *     - Details table: ref, collection date, address
+ *     - Services section header + one row per service (free/paid counts)
  *     - (if total_charge_cents > 0) Total paid line
- *   CTA: "View booking" → {appUrl}/{client_slug}/booking/{ref}
+ *   CTA: "View booking" → resolves to client.custom_domain / {slug}.verco.au /
+ *        appUrl fallback via buildBookingPortalUrl (Verco uses hostname-based
+ *        tenant routing, so appUrl+slug path concatenation is broken).
  *
  * ## Pure function
  *
@@ -67,6 +75,14 @@ export function renderBookingCreated(
     })
     .join('')
 
+  // Services section header — separates the booking metadata (ref, date,
+  // address) from the per-service line items. The colspan=2 row spans both
+  // columns so the "Services" label sits flush-left with a subtle divider.
+  const servicesHeader =
+    itemRows.length > 0
+      ? `<tr><td colspan="2" style="padding:14px 0 6px 0;color:#293F52;font-size:13px;font-weight:600;border-top:1px solid #F0F2F5">Services</td></tr>`
+      : ''
+
   const totalRow =
     booking.total_charge_cents > 0
       ? `<tr><td style="padding:12px 12px 0 0;color:#293F52;font-size:13px;font-weight:600;border-top:1px solid #F0F2F5">Total paid</td><td style="padding:12px 0 0 0;color:#293F52;font-size:13px;font-weight:600;text-align:right;border-top:1px solid #F0F2F5">${formatCurrency(booking.total_charge_cents)}</td></tr>`
@@ -78,13 +94,18 @@ export function renderBookingCreated(
       <tr><td style="padding:6px 12px 6px 0;color:#8FA5B8;font-size:13px;white-space:nowrap">Reference</td><td style="padding:6px 0;color:#293F52;font-size:13px;text-align:right;font-family:'SF Mono',monospace">${escapeHtml(ref)}</td></tr>
       <tr><td style="padding:6px 12px 6px 0;color:#8FA5B8;font-size:13px;white-space:nowrap">Collection date</td><td style="padding:6px 0;color:#293F52;font-size:13px;text-align:right">${escapeHtml(dateStr)}</td></tr>
       <tr><td style="padding:6px 12px 6px 0;color:#8FA5B8;font-size:13px;white-space:nowrap;vertical-align:top">Address</td><td style="padding:6px 0;color:#293F52;font-size:13px;text-align:right">${escapeHtml(address)}</td></tr>
+      ${servicesHeader}
       ${itemRows}
       ${totalRow}
     </table>
     <p style="margin:0 0 16px 0">You'll get another email closer to the date with a reminder to put your waste on the verge.</p>
   `
 
-  const ctaUrl = `${appUrl}/${booking.client.slug}/booking/${encodeURIComponent(ref)}`
+  const ctaUrl = buildBookingPortalUrl(
+    booking.client,
+    `/booking/${encodeURIComponent(ref)}`,
+    appUrl,
+  )
 
   return {
     subject: `Booking confirmed — ${ref}`,
