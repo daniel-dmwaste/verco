@@ -262,6 +262,7 @@ export function ServicesForm() {
   const contactEmail = searchParams.get('contact_email')
   const contactMobile = searchParams.get('contact_mobile')
   const returnUrl = searchParams.get('return_url')
+  const replaces = searchParams.get('replaces')
   const carryParams = {
     ...(collectionDateId ? { collection_date_id: collectionDateId } : {}),
     ...(locationParam ? { location: locationParam } : {}),
@@ -271,6 +272,7 @@ export function ServicesForm() {
     ...(contactEmail ? { contact_email: contactEmail } : {}),
     ...(contactMobile ? { contact_mobile: contactMobile } : {}),
     ...(returnUrl ? { return_url: returnUrl } : {}),
+    ...(replaces ? { replaces } : {}),
   }
 
   function handleContinue() {

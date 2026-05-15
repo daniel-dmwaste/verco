@@ -7,6 +7,67 @@ type Result<T, E = string> =
   | { ok: true; data: T }
   | { ok: false; error: E }
 
+/**
+ * Cancel a booking that's being replaced via the admin "Edit services" flow.
+ *
+ * The admin booking-detail's "Edit services" link routes staff through the
+ * /book/services wizard which submits to the `create-booking` EF — that EF
+ * always creates a NEW booking. Without this cleanup, the wizard leaves
+ * two bookings at the same address (one with the old services + ref, one
+ * with the new services + a fresh ref).
+ *
+ * This server action is called by confirm-form.tsx after a successful new
+ * booking is created (when the `replaces` query param is present). It
+ * cancels the old booking with a clear reason linking to the replacement.
+ *
+ * Distinct from cancelBooking:
+ * - No notification email (the resident isn't really losing a booking —
+ *   they're getting a modified one; cancellation email would be confusing)
+ * - No refund flow (replacement may or may not require money movement;
+ *   staff handle that separately — surface as a follow-up)
+ *
+ * Audit log captures the change automatically via the audit_trigger.
+ */
+export async function replaceBookingAfterEdit(
+  oldBookingId: string,
+  newBookingRef: string,
+): Promise<Result<void>> {
+  if (!oldBookingId || !newBookingRef) {
+    return { ok: false, error: 'Old booking ID and new ref are required.' }
+  }
+
+  const supabase = await createClient()
+
+  const { data: role } = await supabase.rpc('current_user_role')
+  const adminRoles = ['client-admin', 'client-staff', 'contractor-admin', 'contractor-staff']
+  if (!role || !adminRoles.includes(role)) {
+    return { ok: false, error: 'Insufficient permissions.' }
+  }
+
+  // State-machine trigger enforces valid transitions (Submitted/Confirmed →
+  // Cancelled is allowed by staff). Chain .select() so any silent RLS gap
+  // surfaces as an explicit error instead of a phantom success.
+  const { data: updated, error } = await supabase
+    .from('booking')
+    .update({
+      status: 'Cancelled',
+      cancellation_reason: `Replaced by booking ${newBookingRef} (services edited)`,
+      cancelled_at: new Date().toISOString(),
+    })
+    .eq('id', oldBookingId)
+    .select('id')
+    .single()
+
+  if (error) return { ok: false, error: error.message }
+  if (!updated) {
+    return {
+      ok: false,
+      error: 'Old booking could not be cancelled (RLS or already in a terminal state).',
+    }
+  }
+  return { ok: true, data: undefined }
+}
+
 export async function confirmBooking(bookingId: string): Promise<Result<void>> {
   if (!bookingId) {
     return { ok: false, error: 'Booking ID is required.' }
