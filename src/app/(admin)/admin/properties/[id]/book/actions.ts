@@ -194,6 +194,13 @@ export async function createMudBooking(
   })
 
   // ── 7. Call the capacity-safe RPC ───────────────────────────────────────
+  // Pass the staff user as p_actor_id so audit_log shows their name on the
+  // booking + booking_item INSERTs. The supabase client here is the
+  // authenticated cookie-session client, but the RPC inserts under its own
+  // execution context — auth.uid() is preserved for direct .update() calls
+  // but the explicit param removes any ambiguity for trigger fallback.
+  const { data: { user: actingUser } } = await supabase.auth.getUser()
+
   const { data: rpcResult, error: rpcError } = await supabase.rpc(
     'create_booking_with_capacity_check',
     {
@@ -209,6 +216,7 @@ export async function createMudBooking(
       p_notes: input.notes ?? '',
       p_status: 'Submitted',
       p_items: rpcItems,
+      p_actor_id: actingUser?.id,
     }
   )
 

@@ -268,6 +268,13 @@ serve(async (req) => {
     }
 
     // ── 10. Call capacity-safe RPC (advisory lock + insert) ──────────────────
+    //
+    // Pass acting user as p_actor_id so the audit_log trigger attributes the
+    // booking to whoever clicked submit:
+    //   - resident on /book/confirm (no auth) → null → audit shows "System"
+    //   - staff on /book?on_behalf=true (admin JWT) → user.id → audit shows
+    //     the staff member's name once the resolver picks it up
+    const { data: { user: actingUser } } = await supabaseAnon.auth.getUser()
 
     const { data: rpcResult, error: rpcError } = await supabaseService
       .rpc('create_booking_with_capacity_check', {
@@ -283,6 +290,7 @@ serve(async (req) => {
         p_notes: notes ?? null,
         p_status: initialStatus,
         p_items: rpcItems,
+        p_actor_id: actingUser?.id ?? null,
       })
 
     if (rpcError) {
