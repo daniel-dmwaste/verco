@@ -80,9 +80,14 @@ export function ServicesForm() {
     },
   })
 
+  // When in admin "Edit services" mode the wizard has `replaces=<old_id>` —
+  // exclude that booking's items from the FY-usage counts so the new
+  // selection is priced as a replacement, not an addition.
+  const replacesBookingId = searchParams.get('replaces')
+
   // Fetch existing FY usage grouped by category code
   const { data: fyUsageByCategory, isLoading: fyUsageByCategoryLoading } = useQuery({
-    queryKey: ['fy-usage-by-category', propertyId],
+    queryKey: ['fy-usage-by-category', propertyId, replacesBookingId],
     enabled: !!propertyId,
     queryFn: async () => {
       const { data: fy } = await supabase
@@ -93,7 +98,7 @@ export function ServicesForm() {
 
       if (!fy) return new Map<string, number>()
 
-      const { data: items } = await supabase
+      let query = supabase
         .from('booking_item')
         .select(
           'no_services, service!inner(category!inner(code)), booking!inner(property_id, fy_id, status)'
@@ -101,6 +106,10 @@ export function ServicesForm() {
         .eq('booking.property_id', propertyId)
         .eq('booking.fy_id', fy.id)
         .not('booking.status', 'in', '("Cancelled","Pending Payment")')
+      if (replacesBookingId) {
+        query = query.neq('booking_id', replacesBookingId)
+      }
+      const { data: items } = await query
 
       const usage = new Map<string, number>()
       if (items) {
@@ -116,7 +125,7 @@ export function ServicesForm() {
 
   // Also fetch per-service FY usage (for individual service pricing calc)
   const { data: fyUsageByService, isLoading: fyUsageByServiceLoading } = useQuery({
-    queryKey: ['fy-usage-by-service', propertyId],
+    queryKey: ['fy-usage-by-service', propertyId, replacesBookingId],
     enabled: !!propertyId,
     queryFn: async () => {
       const { data: fy } = await supabase
@@ -127,7 +136,7 @@ export function ServicesForm() {
 
       if (!fy) return new Map<string, number>()
 
-      const { data: items } = await supabase
+      let query = supabase
         .from('booking_item')
         .select(
           'no_services, service_id, booking!inner(property_id, fy_id, status)'
@@ -135,6 +144,10 @@ export function ServicesForm() {
         .eq('booking.property_id', propertyId)
         .eq('booking.fy_id', fy.id)
         .not('booking.status', 'in', '("Cancelled","Pending Payment")')
+      if (replacesBookingId) {
+        query = query.neq('booking_id', replacesBookingId)
+      }
+      const { data: items } = await query
 
       const usage = new Map<string, number>()
       if (items) {
@@ -262,6 +275,7 @@ export function ServicesForm() {
   const contactEmail = searchParams.get('contact_email')
   const contactMobile = searchParams.get('contact_mobile')
   const returnUrl = searchParams.get('return_url')
+  const replaces = searchParams.get('replaces')
   const carryParams = {
     ...(collectionDateId ? { collection_date_id: collectionDateId } : {}),
     ...(locationParam ? { location: locationParam } : {}),
@@ -271,6 +285,7 @@ export function ServicesForm() {
     ...(contactEmail ? { contact_email: contactEmail } : {}),
     ...(contactMobile ? { contact_mobile: contactMobile } : {}),
     ...(returnUrl ? { return_url: returnUrl } : {}),
+    ...(replaces ? { replaces } : {}),
   }
 
   function handleContinue() {

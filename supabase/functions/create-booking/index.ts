@@ -71,6 +71,11 @@ const CreateBookingRequest = z.object({
   notes: z.string().max(500).optional(),
   contact: ContactInput,
   items: z.array(BookingItemInput).min(1).max(20),
+  // Admin "Edit services" flow — exclude the replaced booking from FY-usage
+  // count in the server-side re-price. Without this, the new selection
+  // appears as "additional" services and gets charged as extras even though
+  // the resident is just modifying their existing booking.
+  replaces: z.string().uuid().optional(),
 })
 
 serve(async (req) => {
@@ -108,7 +113,7 @@ serve(async (req) => {
       return jsonResponse({ error: parsed.error.message }, 400)
     }
 
-    const { property_id, collection_area_id, collection_date_id, location, notes, contact, items } = parsed.data
+    const { property_id, collection_area_id, collection_date_id, location, notes, contact, items, replaces } = parsed.data
 
     // ── 2. Resolve collection area → client_id, contractor_id, area code ─────
 
@@ -179,7 +184,90 @@ serve(async (req) => {
       collection_area_id,
       fy.id,
       pricingItems,
+      replaces,
     )
+
+    // Pre-step: actingUser is needed by both branches (edit + create).
+    const { data: { user: actingUserEarly } } = await supabaseAnon.auth.getUser()
+
+    // ── 6a. Edit-in-place branch ─────────────────────────────────────────────
+    // When `replaces` is set the caller is editing an existing booking. We
+    // update items atomically (capacity refunded + re-allocated under one
+    // advisory lock) preserving the booking row, same ref, same audit lineage
+    // — instead of cancelling + creating a new booking. Contact + status
+    // aren't changed via this path.
+    //
+    // Restriction: in-place edit only supports total_cents = 0 (free-quota
+    // changes). Edits that introduce paid items would need new Stripe
+    // checkout + partial refund of the old, which is out of scope for v1.
+    // Such edits should be handled via cancel + rebook.
+    if (replaces) {
+      if (priceResult.total_cents > 0) {
+        return jsonResponse({
+          error: 'In-place edit cannot introduce new paid services. Cancel and rebook to change paid items.',
+        }, 400)
+      }
+
+      const editItems: Array<{
+        service_id: string
+        no_services: number
+        unit_price_cents: number
+        is_extra: boolean
+        category_code: string
+      }> = []
+      for (const li of priceResult.line_items) {
+        if (li.free_units > 0) {
+          editItems.push({
+            service_id: li.service_id,
+            no_services: li.free_units,
+            unit_price_cents: 0,
+            is_extra: false,
+            category_code: li.category_code,
+          })
+        }
+        // paid_units must be 0 here due to the guard above, but keep the
+        // shape consistent so future loosening doesn't introduce silent
+        // skips of paid rows.
+        if (li.paid_units > 0) {
+          editItems.push({
+            service_id: li.service_id,
+            no_services: li.paid_units,
+            unit_price_cents: li.unit_price_cents,
+            is_extra: true,
+            category_code: li.category_code,
+          })
+        }
+      }
+
+      const { data: editResult, error: editError } = await supabaseService
+        .rpc('update_booking_items_in_place', {
+          p_booking_id: replaces,
+          p_collection_date_id: collection_date_id,
+          p_items: editItems,
+          p_actor_id: actingUserEarly?.id ?? null,
+          p_location: location,
+          p_notes: notes ?? null,
+        })
+
+      if (editError) {
+        console.error('Edit RPC error:', editError)
+        if (editError.message?.includes('Insufficient')) {
+          return jsonResponse({ error: editError.message }, 409)
+        }
+        if (editError.message?.includes('not found')) {
+          return jsonResponse({ error: editError.message }, 404)
+        }
+        return jsonResponse({ error: `Failed to update booking: ${editError.message}` }, 500)
+      }
+
+      const edited = editResult as { booking_id: string; ref: string }
+      return jsonResponse({
+        booking_id: edited.booking_id,
+        ref: edited.ref,
+        requires_payment: false,
+        edited: true,
+      })
+    }
 
     // ── 7. Upsert contact (by email) ────────────────────────────────────────
 
@@ -268,6 +356,13 @@ serve(async (req) => {
     }
 
     // ── 10. Call capacity-safe RPC (advisory lock + insert) ──────────────────
+    //
+    // Pass acting user as p_actor_id so the audit_log trigger attributes the
+    // booking to whoever clicked submit:
+    //   - resident on /book/confirm (no auth) → null → audit shows "System"
+    //   - staff on /book?on_behalf=true (admin JWT) → user.id → audit shows
+    //     the staff member's name once the resolver picks it up
+    const actingUser = actingUserEarly
 
     const { data: rpcResult, error: rpcError } = await supabaseService
       .rpc('create_booking_with_capacity_check', {
@@ -283,6 +378,7 @@ serve(async (req) => {
         p_notes: notes ?? null,
         p_status: initialStatus,
         p_items: rpcItems,
+        p_actor_id: actingUser?.id ?? null,
       })
 
     if (rpcError) {

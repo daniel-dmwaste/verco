@@ -30,12 +30,14 @@ export function DetailsForm() {
   const contactEmail = searchParams.get('contact_email')
   const contactMobile = searchParams.get('contact_mobile')
   const returnUrl = searchParams.get('return_url')
+  const replaces = searchParams.get('replaces')
   const carryParams = {
     ...(contactFirstName ? { contact_first_name: contactFirstName } : {}),
     ...(contactLastName ? { contact_last_name: contactLastName } : {}),
     ...(contactEmail ? { contact_email: contactEmail } : {}),
     ...(contactMobile ? { contact_mobile: contactMobile } : {}),
     ...(returnUrl ? { return_url: returnUrl } : {}),
+    ...(replaces ? { replaces } : {}),
   }
 
   function handleContinue() {

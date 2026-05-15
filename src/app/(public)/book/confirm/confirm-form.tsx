@@ -11,6 +11,8 @@ import { BookingStepper } from '@/components/booking/booking-stepper'
 import { BookingCancelLink } from '@/components/booking/booking-cancel-link'
 import { VercoButton } from '@/components/ui/verco-button'
 import { decodeItems } from '@/lib/booking/search-params'
+// replaceBookingAfterEdit import removed — edits now in-place via the EF's
+// update branch (no cancel-and-replace dance).
 import {
   ContactSchema,
   type ContactFormData,
@@ -265,6 +267,7 @@ export function ConfirmForm() {
       )
 
       const functionUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-booking`
+      const replacesParam = searchParams.get('replaces')
       const requestBody = {
         property_id: propertyId,
         collection_area_id: collectionAreaId,
@@ -278,13 +281,30 @@ export function ConfirmForm() {
           mobile_e164: contact.mobile,
         },
         items,
+        // Threaded through from the admin "Edit services" wizard launch so
+        // both the server-side re-price AND the post-create cleanup
+        // (replaceBookingAfterEdit) know which booking is being replaced.
+        ...(replacesParam ? { replaces: replacesParam } : {}),
+      }
+
+      // For admin "on-behalf" bookings, send the staff member's session JWT
+      // so the EF's auth.getUser() resolves and the booking's audit_log entry
+      // records the staff actor (not "System"). Residents reach /book/confirm
+      // pre-auth so anon-key is the only thing available — and correct, since
+      // they ARE anonymous bookers at this point.
+      let authHeader = `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`
+      if (onBehalf) {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.access_token) {
+          authHeader = `Bearer ${session.access_token}`
+        }
       }
 
       const res = await fetch(functionUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          Authorization: authHeader,
         },
         body: JSON.stringify(requestBody),
       })
@@ -340,6 +360,12 @@ export function ConfirmForm() {
           console.error('Failed to link profile to contact')
         }
       }
+
+      // Admin "Edit services" flow: the EF now updates the existing booking
+      // in place when `replaces` is sent (same booking_id, same ref, audit
+      // captures the diff). Nothing to clean up client-side — the old
+      // replaceBookingAfterEdit cancel-and-replace pattern was retired in
+      // favour of the update_booking_items_in_place RPC.
 
       // Admin on-behalf → admin detail page; resident → public detail page
       const bookingPath = onBehalf

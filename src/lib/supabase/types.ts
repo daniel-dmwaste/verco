@@ -826,6 +826,7 @@ export type Database = {
           logo_dark_url: string | null
           logo_light_url: string | null
           name: string
+          place_out_hours_before: number
           primary_colour: string | null
           privacy_policy_url: string | null
           reply_to_email: string | null
@@ -855,6 +856,7 @@ export type Database = {
           logo_dark_url?: string | null
           logo_light_url?: string | null
           name: string
+          place_out_hours_before?: number
           primary_colour?: string | null
           privacy_policy_url?: string | null
           reply_to_email?: string | null
@@ -884,6 +886,7 @@ export type Database = {
           logo_dark_url?: string | null
           logo_light_url?: string | null
           name?: string
+          place_out_hours_before?: number
           primary_colour?: string | null
           privacy_policy_url?: string | null
           reply_to_email?: string | null
@@ -2254,6 +2257,7 @@ export type Database = {
       accessible_client_ids: { Args: never; Returns: string[] }
       create_booking_with_capacity_check: {
         Args: {
+          p_actor_id?: string
           p_area_code: string
           p_client_id: string
           p_collection_area_id: string
@@ -2287,6 +2291,17 @@ export type Database = {
       is_field_user: { Args: never; Returns: boolean }
       is_staff_role: { Args: never; Returns: boolean }
       retry_notification_log: { Args: { log_id: string }; Returns: string }
+      update_booking_items_in_place: {
+        Args: {
+          p_actor_id?: string
+          p_booking_id: string
+          p_collection_date_id: string
+          p_items: Json
+          p_location?: string
+          p_notes?: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       app_permission_action: "view" | "create" | "edit" | "delete" | "manage"

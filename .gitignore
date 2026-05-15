@@ -50,3 +50,7 @@ next-env.d.ts
 
 # script run reports (geocode-loop, import-vv, etc.)
 /*-report-*.json
+
+# Claude Code worktrees — created on-demand when an agent spins an isolated
+# branch. They have their own .git and shouldn't be tracked by the parent.
+.claude/worktrees/

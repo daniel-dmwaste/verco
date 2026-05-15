@@ -77,6 +77,7 @@ export function makeMockBooking(
     address: '23 Leda Blvd, Wellard WA 6170',
     client: {
       slug: 'mock-tenant',
+      custom_domain: null,
       reply_to_email: 'noreply@mock.wa.gov.au',
       email_from_name: 'City of Mock — Verge Collection',
       ...mockClientMinimal,
