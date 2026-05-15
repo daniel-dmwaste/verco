@@ -1,6 +1,7 @@
 'use client'
 
 import { AdminSidebar } from '@/components/admin/admin-sidebar'
+import { AdminSearchBar } from '@/components/admin/admin-search-bar'
 import { ClientSwitcher } from '@/components/admin/client-switcher'
 import { BugReportFab } from '@/components/bug-report/bug-report-fab'
 
@@ -47,23 +48,7 @@ export function AdminLayoutClient({
         <div className="flex-1" />
 
         {/* Search */}
-        <div className="flex w-60 items-center gap-2 rounded-lg bg-white/10 px-3.5 py-1.5 text-body-sm text-white/60">
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="shrink-0 opacity-60"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          Search bookings, tickets...
-        </div>
+        <AdminSearchBar />
 
         {/* Avatar */}
         <div className="flex size-8 items-center justify-center rounded-full bg-[#3A5A73] text-body-sm font-semibold text-white">
