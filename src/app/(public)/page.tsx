@@ -65,19 +65,82 @@ const STEPS = [
   { title: 'We collect & process', body: 'Your waste is collected and responsibly processed. You\u2019ll get a completion notification.' },
 ]
 
-const SERVICES = [
-  { name: 'General Waste', desc: 'Household bulk items \u2014 furniture, timber, general rubbish', tag: 'Bulk', tagClass: 'bg-[var(--brand-accent-light)] text-[var(--brand-accent-dark)]' },
-  { name: 'Green Waste', desc: 'Garden organics \u2014 prunings, lawn clippings, branches', tag: 'Bulk', tagClass: 'bg-[var(--brand-accent-light)] text-[var(--brand-accent-dark)]' },
-  { name: 'Mattress', desc: 'Bed mattresses of any size \u2014 single, double, queen, king', tag: 'Ancillary', tagClass: 'bg-[#E8EEF2] text-[var(--brand)]' },
-  { name: 'E-Waste', desc: 'Electronics \u2014 TVs, computers, monitors, appliances', tag: 'Ancillary', tagClass: 'bg-[#E8EEF2] text-[var(--brand)]' },
-  { name: 'Whitegoods', desc: 'Fridges, washing machines, dryers, dishwashers', tag: 'Ancillary', tagClass: 'bg-[#E8EEF2] text-[var(--brand)]' },
-]
+// Per-service descriptions. Service names live in the DB (no description
+// column), so we map by name. Keys cover both short ("General") and long
+// ("General Waste") forms \u2014 different clients may rename.
+const SERVICE_DESCRIPTIONS: Record<string, string> = {
+  'General': 'Household bulk items \u2014 furniture, timber, general rubbish',
+  'General Waste': 'Household bulk items \u2014 furniture, timber, general rubbish',
+  'Green': 'Garden organics \u2014 prunings, lawn clippings, branches',
+  'Green Waste': 'Garden organics \u2014 prunings, lawn clippings, branches',
+  'Mattress': 'Bed mattresses of any size \u2014 single, double, queen, king',
+  'E-Waste': 'Electronics \u2014 TVs, computers, monitors, appliances',
+  'Whitegoods': 'Fridges, washing machines, dryers, dishwashers',
+}
+
+const CATEGORY_TAG: Record<string, { label: string; tagClass: string }> = {
+  bulk: {
+    label: 'Bulk',
+    tagClass: 'bg-[var(--brand-accent-light)] text-[var(--brand-accent-dark)]',
+  },
+  anc: {
+    label: 'Ancillary',
+    tagClass: 'bg-[#E8EEF2] text-[var(--brand)]',
+  },
+}
+
+interface ClientService {
+  name: string
+  desc: string
+  tag: string
+  tagClass: string
+}
+
+async function getClientServices(clientId: string | null): Promise<ClientService[]> {
+  if (!clientId) return []
+  const supabase = await createClient()
+  // Distinct services enabled for ANY area of this client. Excludes the
+  // `id` (illegal dumping) category since IDs aren't bookable by residents.
+  const { data } = await supabase
+    .from('service_rules')
+    .select('service:service_id!inner(name, is_active, category:category_id!inner(code)), collection_area:collection_area_id!inner(client_id)')
+    .eq('collection_area.client_id', clientId)
+
+  if (!data) return []
+
+  const seen = new Set<string>()
+  const result: ClientService[] = []
+  for (const row of data) {
+    const svc = Array.isArray(row.service) ? row.service[0] : row.service
+    if (!svc || !svc.is_active) continue
+    if (seen.has(svc.name)) continue
+    const cat = Array.isArray(svc.category) ? svc.category[0] : svc.category
+    if (!cat || cat.code === 'id') continue
+    const tag = CATEGORY_TAG[cat.code] ?? CATEGORY_TAG.bulk
+    seen.add(svc.name)
+    result.push({
+      name: svc.name,
+      desc: SERVICE_DESCRIPTIONS[svc.name] ?? '',
+      tag: tag.label,
+      tagClass: tag.tagClass,
+    })
+  }
+  // Bulk before Ancillary, then alphabetical within category.
+  return result.sort((a, b) => {
+    if (a.tag !== b.tag) return a.tag === 'Bulk' ? -1 : 1
+    return a.name.localeCompare(b.name)
+  })
+}
 
 export default async function LandingPage() {
   const branding = await getBranding()
   const serviceName = branding.service_name ?? 'Verge Collection'
   const headline = branding.landing_headline ?? `Book Your\nVerge Collection\nin Minutes`
   const subheading = branding.landing_subheading ?? 'Simple online booking for bulk verge collection. Check your property eligibility, choose your services, and pick a date.'
+
+  const headerStore = await headers()
+  const clientId = headerStore.get('x-client-id')
+  const services = await getClientServices(clientId)
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -178,17 +241,20 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* What We Collect */}
+      {/* What We Collect — dynamic per client. Hide section entirely if
+          this client has no enabled services (would otherwise be an empty
+          grid with just the info tile). */}
+      {services.length > 0 && (
       <section id="services" className="bg-white px-8 py-[72px] lg:px-20">
         <h2 className="mb-3 font-[family-name:var(--font-heading)] text-3xl md:text-4xl font-bold text-[var(--brand)] lg:text-4xl">
           What We Collect
         </h2>
         <p className="mb-12 text-base md:text-lg text-gray-500">
-          All services are available in {branding.name}. Allocation limits apply
-          per financial year.
+          Available in {branding.name}. Allocation limits apply per financial
+          year.
         </p>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {SERVICES.map((svc) => (
+          {services.map((svc) => (
             <div
               key={svc.name}
               className="flex flex-col gap-2 rounded-xl border-[1.5px] border-gray-100 bg-gray-50 px-5 py-5"
@@ -232,6 +298,7 @@ export default async function LandingPage() {
           </div>
         </div>
       </section>
+      )}
 
       {/* CTA band */}
       <section className="relative overflow-hidden bg-[var(--brand)] px-8 py-[72px] lg:px-20">

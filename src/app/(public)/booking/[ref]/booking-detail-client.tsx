@@ -83,6 +83,15 @@ interface BookingDetailClientProps {
   ncn: NcnInfo | null
   np: NpInfo | null
   paymentSuccess?: boolean
+  placeOutHoursBefore: number
+}
+
+function formatPlaceOutWindow(hours: number): string {
+  if (hours % 24 === 0) {
+    const days = hours / 24
+    return `${days} ${days === 1 ? 'day' : 'days'}`
+  }
+  return `${hours} hours`
 }
 
 
@@ -120,7 +129,7 @@ const TERMINAL_STATUSES: BookingStatus[] = [
   'Completed', 'Cancelled', 'Non-conformance', 'Nothing Presented', 'Rebooked', 'Missed Collection',
 ]
 
-export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np, paymentSuccess }: BookingDetailClientProps) {
+export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np, paymentSuccess, placeOutHoursBefore }: BookingDetailClientProps) {
   const router = useRouter()
   const [isCancelling, setIsCancelling] = useState(false)
   const [cancelError, setCancelError] = useState<string | null>(null)
@@ -315,7 +324,7 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np, pay
               <strong>
                 7am {format(collectionDateObj!, 'EEEE d MMMM')}
               </strong>
-              . Do not place out more than 48 hours before collection.
+              . Do not place out more than {formatPlaceOutWindow(placeOutHoursBefore)} before collection.
             </div>
           </div>
         )}
