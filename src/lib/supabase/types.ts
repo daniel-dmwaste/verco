@@ -2257,6 +2257,7 @@ export type Database = {
       accessible_client_ids: { Args: never; Returns: string[] }
       create_booking_with_capacity_check: {
         Args: {
+          p_actor_id?: string
           p_area_code: string
           p_client_id: string
           p_collection_area_id: string
