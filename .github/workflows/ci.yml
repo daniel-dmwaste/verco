@@ -134,13 +134,19 @@ jobs:
               drift=1
               continue
             fi
-            # Strip import lines (differ between Node and Deno — e.g. Deno
-            # uses explicit .ts extensions) then diff ignoring whitespace
-            # and blank lines so formatter tweaks don't cause false fails.
+            # Strip import statements (Node vs Deno differ on .ts
+            # extensions in specifiers) so the diff only catches real
+            # template-body drift. Handles both single-line and
+            # multi-line (prettier-wrapped) import blocks via brace-aware
+            # awk: enter skip mode on `import ` lines without `from`,
+            # exit on the closing `from '...'` line.
+            #
+            # Inputs are repo-tracked file paths only — no github.event.*
+            # data flows into this script, so no injection surface.
             node_stripped=$(mktemp)
             deno_stripped=$(mktemp)
-            grep -v '^import ' "$f" > "$node_stripped"
-            grep -v '^import ' "$deno_file" > "$deno_stripped"
+            awk '/^import / { if ($0 ~ /from/) { next } skip = 1; next } skip { if ($0 ~ /from/) { skip = 0 } next } { print }' "$f" > "$node_stripped"
+            awk '/^import / { if ($0 ~ /from/) { next } skip = 1; next } skip { if ($0 ~ /from/) { skip = 0 } next } { print }' "$deno_file" > "$deno_stripped"
             if ! diff -q -w -B "$node_stripped" "$deno_stripped" > /dev/null 2>&1; then
               echo "::error::Template drift detected: $name"
               diff -u -w -B "$node_stripped" "$deno_stripped" || true
