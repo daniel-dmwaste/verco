@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { FIELD_LABELS, NOISE_FIELDS, FK_RESOLVE_MAP } from '@/lib/audit/field-labels'
 import { format } from 'date-fns'
-import type { ResolvedAuditEntry, AuditChange } from '@/lib/audit/resolve'
+import { resolveActorNames, type ResolvedAuditEntry, type AuditChange } from '@/lib/audit/resolve'
 
 interface FetchAuditLogsParams {
   tableName?: string
@@ -45,20 +45,9 @@ export async function fetchAuditLogs(
   if (error) return { ok: false, error: error.message }
   if (!entries) return { ok: true, data: [], total: 0 }
 
-  // Resolve actor names
+  // Resolve actor names (display_name → contacts.full_name fallback)
   const actorIds = [...new Set(entries.map((e) => e.changed_by).filter(Boolean))] as string[]
-  const actorMap: Record<string, string> = {}
-  if (actorIds.length > 0) {
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, display_name')
-      .in('id', actorIds)
-    if (profiles) {
-      for (const p of profiles) {
-        if (p.display_name) actorMap[p.id] = p.display_name
-      }
-    }
-  }
+  const actorMap = await resolveActorNames(supabase, actorIds)
 
   // Collect FK UUIDs for label resolution
   const fkUuids: Record<string, Set<string>> = {}
