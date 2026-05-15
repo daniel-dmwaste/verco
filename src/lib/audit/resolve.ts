@@ -245,9 +245,14 @@ function diffData(
   const changes: AuditChange[] = []
 
   if (!oldData && newData) {
-    // INSERT — show all non-noise fields
+    // INSERT — show only fields that actually carry a value. We used to
+    // emit a row for every non-noise column, which rendered a long list
+    // of "Notes: —", "Latitude: —", etc. on freshly-created bookings/
+    // service items. Residents in UAT read that as broken data. A null
+    // on creation just means the column wasn't set yet, so we hide it.
     for (const [col, val] of Object.entries(newData)) {
       if (NOISE_FIELDS.has(col)) continue
+      if (val === null || val === undefined || val === '') continue
       changes.push({
         field: FIELD_LABELS[col] ?? col,
         oldValue: null,
@@ -258,9 +263,10 @@ function diffData(
   }
 
   if (oldData && !newData) {
-    // DELETE — show all non-noise fields
+    // DELETE — show only fields that actually carried a value.
     for (const [col, val] of Object.entries(oldData)) {
       if (NOISE_FIELDS.has(col)) continue
+      if (val === null || val === undefined || val === '') continue
       changes.push({
         field: FIELD_LABELS[col] ?? col,
         oldValue: formatValue(col, val, fkLabelMap),
