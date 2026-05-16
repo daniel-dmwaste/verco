@@ -16,7 +16,7 @@
 | **Email delivery** | SendGrid (`u50012713`, cluster `wl214`) | https://app.sendgrid.com → Activity |
 | **Stripe payments** | Stripe Dashboard | https://dashboard.stripe.com/payments — filter by client account |
 | **DNS** | Netregistry | https://console.netregistry.com.au |
-| **Code** | GitHub `daniel-dmwaste/verco` | Actions tab for CI/deploy runs |
+| **Code** | GitHub `dmwaste/verco` | Actions tab for CI/deploy runs |
 
 ---
 
