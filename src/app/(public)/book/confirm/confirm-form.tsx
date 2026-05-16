@@ -328,39 +328,6 @@ export function ConfirmForm() {
         requires_payment: boolean
       }
 
-      // Link profile → contact if not already linked (skip for on-behalf bookings
-      // to avoid linking the admin's profile to the resident's contact)
-      if (!onBehalf) {
-        try {
-          const { data: { user } } = await supabase.auth.getUser()
-          if (user) {
-            const { data: prof } = await supabase
-              .from('profiles')
-              .select('contact_id')
-              .eq('id', user.id)
-              .single()
-
-            if (prof && !prof.contact_id) {
-              const { data: contactRow } = await supabase
-                .from('contacts')
-                .select('id')
-                .eq('email', contact.email)
-                .maybeSingle()
-
-              if (contactRow) {
-                await supabase
-                  .from('profiles')
-                  .update({ contact_id: contactRow.id })
-                  .eq('id', user.id)
-              }
-            }
-          }
-        } catch {
-          // Non-critical — don't block booking flow
-          console.error('Failed to link profile to contact')
-        }
-      }
-
       // Admin "Edit services" flow: the EF now updates the existing booking
       // in place when `replaces` is sent (same booking_id, same ref, audit
       // captures the diff). Nothing to clean up client-side — the old
@@ -902,7 +869,7 @@ export function ConfirmForm() {
 
       {/* Bottom nav */}
       {!otpStep && (
-        <div className="sticky bottom-0 flex gap-2.5 pb-5 pt-3">
+        <div className="sticky bottom-16 tablet:bottom-0 flex gap-2.5 pb-5 pt-3">
           <VercoButton
             variant="secondary"
             className="flex-1"

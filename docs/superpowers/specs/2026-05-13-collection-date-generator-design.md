@@ -3,7 +3,7 @@
 **Date:** 2026-05-13
 **Author:** Dan Taylor + Claude
 **Status:** Approved + shipped (Dan delegated implementation 2026-05-13)
-**Related work:** Follow-up to [#26](https://github.com/daniel-dmwaste/verco/pull/26) (rules seed) and [#27](https://github.com/daniel-dmwaste/verco/pull/27) (capacity_pool)
+**Related work:** Follow-up to [#26](https://github.com/dmwaste/verco/pull/26) (rules seed) and [#27](https://github.com/dmwaste/verco/pull/27) (capacity_pool)
 
 ---
 

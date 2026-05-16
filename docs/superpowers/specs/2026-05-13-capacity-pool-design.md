@@ -3,7 +3,7 @@
 **Date:** 2026-05-13
 **Author:** Dan Taylor + Claude
 **Status:** Approved (Dan delegated implementation 2026-05-13)
-**Related work:** Follow-up to [#26](https://github.com/daniel-dmwaste/verco/pull/26) (VV allocation/service rules seed)
+**Related work:** Follow-up to [#26](https://github.com/dmwaste/verco/pull/26) (VV allocation/service rules seed)
 
 ---
 

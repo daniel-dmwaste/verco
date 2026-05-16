@@ -317,6 +317,45 @@ serve(async (req) => {
       contactId = newContact.id
     }
 
+    // ── 7b. Link acting user's profile → contact (resident self-bookings only) ─
+    //
+    // When a resident completes the guest-OTP flow, the auth user + profile are
+    // created seconds before this EF runs, so `profile.contact_id` is NULL. The
+    // resident RLS policy on `contacts` requires `current_user_contact_id() =
+    // id` — which returns NULL until this link exists. Without server-side
+    // linking, the resident's dashboard cannot find their own contact, the
+    // booking is invisible to them, and the client-side linking step in
+    // confirm-form.tsx (which depends on the same contacts SELECT) cannot
+    // recover.
+    //
+    // Guard: only link when the acting user's email matches the contact's
+    // email. This skips staff on-behalf bookings (different emails) and any
+    // other case where an authenticated user creates a booking for someone
+    // else, avoiding accidental cross-account links.
+    //
+    // Non-blocking: any error is logged and swallowed — the booking has
+    // already succeeded and the user still gets their confirmation. Worst
+    // case the dashboard fallback won't find them, which the next booking or
+    // a manual backfill will resolve.
+    if (
+      actingUserEarly?.id
+      && actingUserEarly.email
+      && actingUserEarly.email.toLowerCase() === contact.email.toLowerCase()
+    ) {
+      const { error: linkError } = await supabaseService
+        .from('profiles')
+        .update({ contact_id: contactId })
+        .eq('id', actingUserEarly.id)
+        .is('contact_id', null)
+
+      if (linkError) {
+        console.error(
+          '[create-booking] profile-contact link failed (non-fatal):',
+          linkError.message,
+        )
+      }
+    }
+
     // ── 8. Determine initial status ──────────────────────────────────────────
 
     const requiresPayment = priceResult.total_cents > 0
