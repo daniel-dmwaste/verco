@@ -14,7 +14,7 @@ push to main
       ▼
   ci (reused from ci.yml — build + test + typecheck + types-check + template-sync + e2e)
       │
-      ├──► docker            → ghcr.io/daniel-dmwaste/verco:<sha>  +  :latest
+      ├──► docker            → ghcr.io/dmwaste/verco:<sha>  +  :latest
       │
       └──► migrations        → supabase db push --linked --include-all
                   │
@@ -59,7 +59,7 @@ Coolify runtime env is intentionally thin: `NODE_ENV=production`, `PORT=3000`, `
 Every successful deploy tags two images: `:${sha}` and `:latest`. The SHA tag is the authoritative rollback target.
 
 1. Identify the last known-good commit SHA (GitHub Actions history, or `git log`).
-2. Coolify UI → Application → General → Image: change from `ghcr.io/daniel-dmwaste/verco:latest` to `ghcr.io/daniel-dmwaste/verco:<known-good-sha>`.
+2. Coolify UI → Application → General → Image: change from `ghcr.io/dmwaste/verco:latest` to `ghcr.io/dmwaste/verco:<known-good-sha>`.
 3. Click Redeploy.
 4. `curl -s $PROD_HEALTH_URL | jq` → confirm `.sha` matches the rollback SHA.
 5. After root-causing the bad deploy, roll forward by reverting the offending commit on `main` and letting the normal deploy flow ship it. Reset Coolify back to `:latest` so future deploys land automatically.
