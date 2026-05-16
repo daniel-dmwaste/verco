@@ -56,6 +56,25 @@ export function DateForm() {
     },
   })
 
+  // Fetch the collection area's pool membership. For areas that belong to a
+  // capacity_pool (e.g. WMRC's MCP pool — Mosman/Cottesloe/Peppermint Grove/
+  // Fremantle North) the per-date counters on `collection_date` stay at 0 by
+  // design — real capacity lives in `collection_date_pool` keyed by
+  // (capacity_pool_id, date). See migration 20260513080000_capacity_pool.
+  const { data: area, isLoading: areaLoading } = useQuery({
+    queryKey: ['area-pool', collectionAreaId],
+    enabled: !!collectionAreaId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('collection_area')
+        .select('id, capacity_pool_id')
+        .eq('id', collectionAreaId)
+        .single()
+      return data
+    },
+  })
+  const poolId = area?.capacity_pool_id ?? null
+
   // Fetch available collection dates
   const { data: dates, isLoading: datesLoading } = useQuery({
     queryKey: ['collection-dates', collectionAreaId],
@@ -74,15 +93,59 @@ export function DateForm() {
     },
   })
 
+  // For pooled areas, fetch the pool's per-date counters in one go and index
+  // by date string so the render loop can resolve in O(1).
+  const { data: poolDates, isLoading: poolDatesLoading } = useQuery({
+    queryKey: ['pool-dates', poolId],
+    enabled: !!poolId,
+    queryFn: async () => {
+      if (!poolId) return []
+      const { data } = await supabase
+        .from('collection_date_pool')
+        .select(
+          'date, bulk_capacity_limit, bulk_units_booked, bulk_is_closed, anc_capacity_limit, anc_units_booked, anc_is_closed',
+        )
+        .eq('capacity_pool_id', poolId)
+        .gte('date', new Date().toISOString().split('T')[0])
+      return data ?? []
+    },
+  })
+
+  const poolByDate = new Map(
+    (poolDates ?? []).map((p) => [p.date, p]),
+  )
+
   // Show loading state if any critical query is loading
-  const isLoadingData = neededBucketsLoading || datesLoading
+  const isLoadingData = neededBucketsLoading || datesLoading || areaLoading || poolDatesLoading
+
+  // Resolve effective capacity for a collection_date row. For pooled areas a
+  // missing pool row means the pool hasn't been scheduled for that date — the
+  // booking RPC would reject it, so treat it as closed in the UI too.
+  function effectiveCapacity(d: { date: string; bulk_capacity_limit: number; bulk_units_booked: number; bulk_is_closed: boolean; anc_is_closed: boolean }) {
+    if (!poolId) {
+      return {
+        bulk_capacity_limit: d.bulk_capacity_limit,
+        bulk_units_booked: d.bulk_units_booked,
+        bulk_is_closed: d.bulk_is_closed,
+        anc_is_closed: d.anc_is_closed,
+      }
+    }
+    const pool = poolByDate.get(d.date)
+    return {
+      bulk_capacity_limit: pool?.bulk_capacity_limit ?? 0,
+      bulk_units_booked: pool?.bulk_units_booked ?? 0,
+      bulk_is_closed: pool?.bulk_is_closed ?? true,
+      anc_is_closed: pool?.anc_is_closed ?? true,
+    }
+  }
 
   // Filter dates based on needed capacity buckets
   const availableDates = (dates ?? []).filter((d) => {
     if (!neededBuckets) return true
+    const cap = effectiveCapacity(d)
     const { buckets } = neededBuckets
-    if (buckets.has('bulk') && d.bulk_is_closed) return false
-    if (buckets.has('anc') && d.anc_is_closed) return false
+    if (buckets.has('bulk') && cap.bulk_is_closed) return false
+    if (buckets.has('anc') && cap.anc_is_closed) return false
     return true
   })
 
@@ -182,9 +245,10 @@ export function DateForm() {
             <div className="grid grid-cols-3 gap-2">
               {availableDates.map((d) => {
                 const isSelected = d.id === selectedDateId
+                const cap = effectiveCapacity(d)
                 const spotsRemaining = Math.max(
                   0,
-                  d.bulk_capacity_limit - d.bulk_units_booked
+                  cap.bulk_capacity_limit - cap.bulk_units_booked
                 )
                 const isAlmostFull = spotsRemaining <= 10 && spotsRemaining > 0
                 const dateObj = new Date(d.date + 'T00:00:00')
