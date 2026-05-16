@@ -738,6 +738,13 @@ export function BookingDetailClient({ booking, tickets, receiptUrl, ncn, np, pay
                       ...(booking.location ? { location: booking.location } : {}),
                       ...(booking.notes ? { notes: booking.notes } : {}),
                       return_url: `/booking/${booking.ref}`,
+                      // Signals the wizard + create-booking EF to take the
+                      // in-place edit branch (update_booking_items_in_place
+                      // RPC) instead of creating a new booking. Mirrors the
+                      // admin edit flow in booking-detail-panel.tsx. Without
+                      // this, the resident gets a duplicate booking and the
+                      // original remains untouched.
+                      replaces: booking.id,
                     }).toString()}`
                   : `/book?address=${encodeURIComponent(booking.property?.formatted_address ?? booking.property?.address ?? '')}`
                 }
