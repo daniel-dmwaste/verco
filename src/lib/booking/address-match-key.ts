@@ -41,7 +41,7 @@ const STREET_TYPES: Record<string, string> = {
 
 /**
  * Reduces a Google-style formatted address to its first two comma parts
- * (street + suburb-state). This is what the booking flow substring-matches
+ * (street + suburb-state). This is what the booking flow prefix-matches
  * against `formatted_address` so ILIKE requires suburb agreement, not just
  * street.
  *
@@ -51,6 +51,28 @@ export function addressMatchKey(s: string): string {
   const parts = s.split(',').map((p) => p.trim()).filter(Boolean)
   if (parts.length >= 2) return `${parts[0]}, ${parts[1]}`
   return parts[0] ?? s
+}
+
+/**
+ * Builds the ILIKE pattern used to match `eligible_properties.formatted_address`.
+ *
+ * **Anchored at the start, NOT a contains.** Stored `formatted_address` values
+ * always start with the house number (the `geocode-properties` EF strips
+ * premise prefixes at write time), so prefix-matching is correct.
+ *
+ * The original implementation used `%{key}%` (contains), which created a
+ * silent house-number-substring collision: a search for `"32 Lake St, Perth WA"`
+ * would match `"232 Lake St, Perth WA 6000, Australia"` because `"232"`
+ * contains `"32"`. With a single matching row downstream, the resident saw a
+ * "Property found!" confirmation pointing at a completely different house.
+ * See VER-214 / PR for the live repro.
+ *
+ * Escapes `%`, `_`, and `\` in the key so a literal underscore in an address
+ * (rare) doesn't become a wildcard.
+ */
+export function buildAddressIlikePattern(key: string): string {
+  const escaped = key.replace(/[%_\\]/g, (c) => `\\${c}`)
+  return `${escaped}%`
 }
 
 /**

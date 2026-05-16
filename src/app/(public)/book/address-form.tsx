@@ -11,6 +11,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { stripAddressPrefix } from '@/lib/mud/address-strip'
 import {
   addressMatchKey as buildAddressMatchKey,
+  buildAddressIlikePattern,
   buildLookupCandidates,
 } from '@/lib/booking/address-match-key'
 import { decideMudRedirect, type MudLookupCandidate } from '@/lib/mud/mud-lookup'
@@ -75,11 +76,10 @@ export function AddressForm({ clientId }: { clientId: string }) {
 
         const key = addressMatchKey(s)
         if (!key) return null
-        const safe = key.replace(/[%_\\]/g, (c) => `\\${c}`)
         const { data } = await supabase
           .from('eligible_properties')
           .select('*, collection_area!inner(client_id)')
-          .ilike('formatted_address', `%${safe}%`)
+          .ilike('formatted_address', buildAddressIlikePattern(key))
           .eq('collection_area.client_id', clientId)
           .limit(2)
         if (data && data.length === 1) return data[0] as unknown as EligibleProperty

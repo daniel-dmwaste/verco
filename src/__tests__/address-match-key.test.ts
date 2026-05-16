@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   addressMatchKey,
+  buildAddressIlikePattern,
   normaliseStreetTypes,
   buildLookupCandidates,
 } from '@/lib/booking/address-match-key'
@@ -63,6 +64,72 @@ describe('normaliseStreetTypes', () => {
     expect(normaliseStreetTypes('10 Some Building Name, Perth')).toBe(
       '10 Some Building Name, Perth'
     )
+  })
+})
+
+describe('buildAddressIlikePattern', () => {
+  // Anchoring at the start is the whole point of this helper. Regression
+  // for VER-214: the previous `%{key}%` shape made "32 Lake St" match
+  // "232 Lake St" because "232" contains "32".
+  it('anchors the pattern at the start of formatted_address', () => {
+    expect(buildAddressIlikePattern('32 Lake St, Perth WA')).toBe(
+      '32 Lake St, Perth WA%'
+    )
+  })
+
+  it('does NOT produce a leading wildcard (would collide on house-number substrings)', () => {
+    const pattern = buildAddressIlikePattern('32 Lake St, Perth WA')
+    expect(pattern.startsWith('%')).toBe(false)
+  })
+
+  it('escapes literal % so addresses with percent signs do not become wildcards', () => {
+    expect(buildAddressIlikePattern('100% Pure St, Perth WA')).toBe(
+      '100\\% Pure St, Perth WA%'
+    )
+  })
+
+  it('escapes literal underscore (rare but possible in formatted_address)', () => {
+    expect(buildAddressIlikePattern('Lot_1 X Rd, Perth')).toBe(
+      'Lot\\_1 X Rd, Perth%'
+    )
+  })
+
+  it('escapes backslash so an embedded backslash is literal', () => {
+    expect(buildAddressIlikePattern('a\\b')).toBe('a\\\\b%')
+  })
+
+  // Simulate the actual collision against canonical formatted_address values.
+  // PostgreSQL ILIKE semantics: `%` = any-N, `_` = any-one, both case-insensitive.
+  function ilikeMatches(value: string, pattern: string): boolean {
+    let regex = ''
+    for (let i = 0; i < pattern.length; i++) {
+      const c = pattern[i]
+      if (c === '\\' && i + 1 < pattern.length) {
+        const next = pattern[i + 1]
+        regex += next!.replace(/[.+*?^${}()|[\]\\]/g, '\\$&')
+        i++
+      } else if (c === '%') {
+        regex += '.*'
+      } else if (c === '_') {
+        regex += '.'
+      } else {
+        regex += c!.replace(/[.+*?^${}()|[\]\\]/g, '\\$&')
+      }
+    }
+    return new RegExp(`^${regex}$`, 'i').test(value)
+  }
+
+  it('rejects house-number-suffix collisions (regression for VER-214)', () => {
+    const pattern = buildAddressIlikePattern('32 Lake St, Perth WA')
+    expect(
+      ilikeMatches('32 Lake St, Perth WA 6000, Australia', pattern)
+    ).toBe(true)
+    expect(
+      ilikeMatches('232 Lake St, Perth WA 6000, Australia', pattern)
+    ).toBe(false)
+    expect(
+      ilikeMatches('1032 Lake St, Perth WA 6000, Australia', pattern)
+    ).toBe(false)
   })
 })
 
