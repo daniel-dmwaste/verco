@@ -244,7 +244,7 @@ export function DateForm() {
       </div>
 
       {/* Bottom nav */}
-      <div className="sticky bottom-0 flex gap-2.5 pb-5 pt-3">
+      <div className="sticky bottom-16 tablet:bottom-0 flex gap-2.5 pb-5 pt-3">
         <VercoButton
           variant="secondary"
           className="flex-1"
