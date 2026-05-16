@@ -184,7 +184,7 @@ export async function resolveActorNames(
 // ── FK UUID collection ──────────────────────────────────────
 
 /** Collect all unique UUIDs per FK column across all entries */
-function collectFkUuids(
+export function collectFkUuids(
   entries: Array<{ old_data: Json; new_data: Json }>,
 ): Record<string, Set<string>> {
   const result: Record<string, Set<string>> = {}
@@ -205,7 +205,7 @@ function collectFkUuids(
 }
 
 /** Batch-resolve FK UUIDs to display labels */
-async function resolveFkLabels(
+export async function resolveFkLabels(
   supabase: SupabaseClient<Database>,
   fkUuids: Record<string, Set<string>>,
 ): Promise<Record<string, string>> {
@@ -237,7 +237,7 @@ async function resolveFkLabels(
 
 // ── Diff computation ────────────────────────────────────────
 
-function diffData(
+export function diffData(
   oldData: Record<string, unknown> | null,
   newData: Record<string, unknown> | null,
   fkLabelMap: Record<string, string>,
@@ -352,7 +352,7 @@ function formatTimestamp(val: string): string {
 
 // ── Summary generation ──────────────────────────────────────
 
-const TABLE_LABELS: Record<string, string> = {
+export const TABLE_LABELS: Record<string, string> = {
   booking: 'Booking',
   booking_item: 'Service item',
   non_conformance_notice: 'NCN',
