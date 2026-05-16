@@ -2255,6 +2255,10 @@ export type Database = {
     }
     Functions: {
       accessible_client_ids: { Args: never; Returns: string[] }
+      bulk_update_booking_item_actuals: {
+        Args: { p_booking_id: string; p_updates: Json }
+        Returns: undefined
+      }
       create_booking_with_capacity_check: {
         Args: {
           p_actor_id?: string

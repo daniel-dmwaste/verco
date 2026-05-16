@@ -274,34 +274,18 @@ export async function saveMudActualServices(
 
   const supabase = await createClient()
 
-  // Verify all items belong to the same booking we expect — defends against
-  // a tampered client trying to cross-update items from another booking.
-  const itemIds = counts.map((c) => c.booking_item_id)
-  const { data: items, error: fetchError } = await supabase
-    .from('booking_item')
-    .select('id, booking_id')
-    .in('id', itemIds)
-
-  if (fetchError) return { ok: false, error: fetchError.message }
-  if (!items || items.length !== counts.length) {
-    return { ok: false, error: 'One or more booking items not found.' }
-  }
-  for (const item of items) {
-    if (item.booking_id !== bookingId) {
-      return { ok: false, error: 'Booking item does not belong to this booking.' }
-    }
-  }
-
-  // Persist each count. Two-row update can't be done as a single statement
-  // here without a CASE expression — sequential updates are fine for the
-  // typical 1-3 items per MUD booking.
-  for (const c of counts) {
-    const { error } = await supabase
-      .from('booking_item')
-      .update({ actual_services: c.actual_count })
-      .eq('id', c.booking_item_id)
-    if (error) return { ok: false, error: error.message }
-  }
+  // Single round-trip: ownership check + bulk UPDATE inside one RPC under
+  // the caller's role (RLS gates SELECT/UPDATE on booking_item).
+  // Tampered client payloads are rejected SQL-side by the ownership join.
+  const updates = counts.map((c) => ({
+    id: c.booking_item_id,
+    actual_count: c.actual_count,
+  }))
+  const { error } = await supabase.rpc('bulk_update_booking_item_actuals', {
+    p_booking_id: bookingId,
+    p_updates: updates,
+  })
+  if (error) return { ok: false, error: error.message }
 
   return { ok: true, data: undefined }
 }
